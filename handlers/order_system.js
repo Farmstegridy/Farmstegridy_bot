@@ -1257,8 +1257,26 @@ function setupOrderSystem(bot) {
         let finalProductList = productList;
         if (isPriority) finalProductList += `\n🚀 Option Livraison Prioritaire (+${priorityFee.toFixed(2)}€)`;
 
-        // --- 2. DÉTERMINATION FOURNISSEUR (Avant création) ---
+        // --- 2. DÉTERMINATION FOURNISSEUR (Avant création) & VALIDATION STOCKS ---
         const allProducts = await getProducts(true).catch(() => []);
+
+        const outOfStockItems = [];
+        for (const item of cart) {
+            const p = allProducts.find(prod => String(prod.id) === String(item.productId));
+            if (!p) {
+                outOfStockItems.push(`${item.productName} (Indisponible)`);
+            } else if (typeof p.stock === 'number' && p.stock < item.qty) {
+                outOfStockItems.push(`${p.name} (Stock insuffisant : reste ${p.stock})`);
+            }
+        }
+        if (outOfStockItems.length > 0) {
+            const settings = ctx.state?.settings || await getAppSettings();
+            const errorMsg = `⚠️ <b>Stock insuffisant</b>\n\nCertains articles de votre panier ne sont plus disponibles ou le stock est insuffisant :\n\n` +
+                outOfStockItems.map(txt => `- ${txt}`).join('\n') + 
+                `\n\nVeuillez modifier votre panier.`;
+            return safeEdit(ctx, errorMsg, Markup.inlineKeyboard([[Markup.button.callback('🛒 Retour au Panier', 'view_cart')]]));
+        }
+
         let orderSupplierId = null;
         if (cart.length > 0) {
             for (const item of cart) {
@@ -1310,14 +1328,25 @@ function setupOrderSystem(bot) {
             const { saveProduct } = require('../services/database');
             const stockTasks = cart.map(async item => {
                 const p = allProducts.find(prod => String(prod.id) === String(item.productId));
-                if (p && typeof p.stock === 'number' && p.stock > 0) {
+                if (p && typeof p.stock === 'number') {
                     const newStock = Math.max(0, p.stock - item.qty);
-                    // Si le stock tombe à 0, on peut désactiver si une option globale est cochée (ou par défaut ici pour satisfaire la demande)
                     const updates = { id: p.id, stock: newStock };
-                    if (newStock <= 0) {
+                    
+                    let alertMsg = null;
+                    if (newStock <= 0 && p.stock > 0) {
                         updates.is_active = false;
-                        console.log(`[STOCK] Produit ${p.name} épuisé, désactivation automatique.`);
+                        updates.is_available = false;
+                        alertMsg = `🚫 <b>Rupture de Stock</b>\nLe produit <b>${p.name}</b> est épuisé. Il a été automatiquement masqué du catalogue du bot.`;
+                    } else if (newStock <= 2 && p.stock > 2) {
+                        alertMsg = `⚠️ <b>Alerte Stock Critique (${newStock} restants)</b>\nLe produit <b>${p.name}</b> n'a plus que ${newStock} unités en stock ! Veuillez réapprovisionner au plus vite.`;
+                    } else if (newStock <= 5 && p.stock > 5) {
+                        alertMsg = `⚠️ <b>Alerte Stock Bas (${newStock} restants)</b>\nLe produit <b>${p.name}</b> n'a plus que ${newStock} unités en stock. Pensez à réapprovisionner !`;
                     }
+                    
+                    if (alertMsg) {
+                        notifyAdmins(bot, alertMsg).catch(err => console.error("Error sending stock alert:", err.message));
+                    }
+                    
                     return saveProduct(updates).catch(e => console.error(`[STOCK-ERR] ${p.id}:`, e.message));
                 }
                 return Promise.resolve();

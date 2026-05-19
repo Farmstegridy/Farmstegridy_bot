@@ -20,7 +20,8 @@ const products = [
         category: "Fleurs",
         is_active: true,
         unit: "g",
-        unit_value: "1"
+        unit_value: "1",
+        stock: 10
     },
     {
         name: "Double Zero Resin",
@@ -30,7 +31,8 @@ const products = [
         category: "Resines",
         is_active: true,
         unit: "g",
-        unit_value: "1"
+        unit_value: "1",
+        stock: 10
     },
     {
         name: "Full Spectrum Oil 10%",
@@ -40,7 +42,8 @@ const products = [
         category: "Huiles",
         is_active: true,
         unit: "flacon",
-        unit_value: "1"
+        unit_value: "1",
+        stock: 10
     }
 ];
 

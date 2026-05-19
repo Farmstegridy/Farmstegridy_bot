@@ -2542,6 +2542,7 @@
                 <div style="display:flex; background:var(--hover); padding:4px; border-radius:12px; gap:4px;">
                     <button class="btn btn-sm btn-outline active" id="btn-tab-prod-add" onclick="switchProductTab('add')">➕ Ajouter</button>
                     <button class="btn btn-sm btn-outline" id="btn-tab-prod-list" onclick="switchProductTab('list')">📋 Liste</button>
+                    <button class="btn btn-sm btn-outline" id="btn-tab-prod-stock" onclick="switchProductTab('stock')">📦 Stock</button>
                     <!-- <button class="btn btn-sm btn-outline" id="btn-tab-prod-props" onclick="switchProductTab('props')">🤝 Propositions</button> -->
                 </div>
             </div>
@@ -2591,8 +2592,8 @@
                             </label>
                         </div>
                         <div style="flex:1; margin-left:20px;">
-                            <label style="font-size:12px; font-weight:600;">Stock disponible</label>
-                            <input type="number" id="edit_prod_stock" value="0" placeholder="0 = illimité ?" style="margin-bottom:0; height:35px; font-size:14px;">
+                            <label style="font-size:12px; font-weight:600;">Stock disponible *</label>
+                            <input type="number" id="edit_prod_stock" placeholder="Quantité de stock (Obligatoire)" style="margin-bottom:0; height:35px; font-size:14px;">
                         </div>
                     </div>
 
@@ -2738,6 +2739,33 @@
                     </div>
                     <div id="product-cards-list" class="product-cards-container">
                         <!-- Les cartes produits s'afficheront ici -->
+                    </div>
+                </div>
+            </div>
+
+            <div id="sub-products-stock" style="display:none">
+                <div class="card" style="padding:20px;">
+                    <div class="flex justify-between align-center" style="margin-bottom:20px;">
+                        <h3 style="margin:0;">📦 Gestion des Stocks</h3>
+                        <span class="text-muted" style="font-size:12px;">Mettez à jour rapidement les quantités de vos produits</span>
+                    </div>
+                    <div style="overflow-x:auto;">
+                        <table class="responsive-table">
+                            <thead>
+                                <tr>
+                                    <th>Image</th>
+                                    <th>Produit</th>
+                                    <th>Catégorie</th>
+                                    <th>Stock Actuel</th>
+                                    <th>Nouveau Stock</th>
+                                    <th>Statut</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="stock-products-list-body">
+                                <!-- Liste générée dynamiquement -->
+                            </tbody>
+                        </table>
                     </div>
                 </div>
             </div>
@@ -4712,8 +4740,62 @@
                             bundleSelect.value = currentVal;
                         }
 
+                        if (window._productTab === 'stock') {
+                            const stockBody = document.getElementById('stock-products-list-body');
+                            if (stockBody) {
+                                stockBody.innerHTML = products.map((p, idx) => {
+                                    let mediaHtml = '';
+                                    if (p.image_url && p.image_url.length > 5) {
+                                        let firstUrl = p.image_url;
+                                        try {
+                                            if (p.image_url.startsWith('[') && p.image_url.endsWith(']')) {
+                                                const arr = JSON.parse(p.image_url);
+                                                if (arr.length > 0) {
+                                                    firstUrl = typeof arr[0] === 'string' ? arr[0] : arr[0].url;
+                                                }
+                                            }
+                                        } catch (e) {}
+                                        const isVideo = firstUrl.match(/\.(mp4|webm|mov|m4v|avi|mkv)(\?.*)?$/i);
+                                        if (isVideo) {
+                                            mediaHtml = `<video src="${firstUrl}" style="width:40px;height:40px;object-fit:cover;border-radius:6px;" muted></video>`;
+                                        } else {
+                                            mediaHtml = `<img src="${firstUrl}" style="width:40px;height:40px;object-fit:cover;border-radius:6px;">`;
+                                        }
+                                    } else {
+                                        mediaHtml = '<div style="display:flex;align-items:center;justify-content:center;width:40px;height:40px;font-size:20px;background:rgba(255,255,255,0.05);border-radius:6px;">📦</div>';
+                                    }
+                                    
+                                    const stockVal = p.stock !== undefined && p.stock !== null ? p.stock : 0;
+                                    const isAvailable = (p.is_active !== undefined) ? p.is_active : p.is_available;
+                                    const statusLabel = isAvailable && stockVal > 0 
+                                        ? '<span style="background:rgba(39,174,96,0.15); color:#27ae60; padding:4px 8px; border-radius:4px; font-size:11px; font-weight:700;">En vente</span>'
+                                        : '<span style="background:rgba(231,76,60,0.15); color:#e74c3c; padding:4px 8px; border-radius:4px; font-size:11px; font-weight:700;">Indisponible / Épuisé</span>';
+                                        
+                                    return `
+                                        <tr id="stock-row-${p.id}">
+                                            <td>${mediaHtml}</td>
+                                            <td style="font-weight:600;">${p.name}</td>
+                                            <td><span class="badge" style="opacity:0.8;">${p.category || 'Standard'}</span></td>
+                                            <td style="font-size:15px; font-weight:700;" id="stock-current-val-${p.id}">${stockVal}</td>
+                                            <td>
+                                                <div style="display:flex; align-items:center; gap:5px;">
+                                                    <button type="button" class="btn btn-sm" onclick="adjustStockInputValue('${p.id}', -1)" style="padding:0; width:28px; height:28px; font-size:14px; display:flex; align-items:center; justify-content:center;">-</button>
+                                                    <input type="number" id="stock-input-${p.id}" value="${stockVal}" min="0" style="width:60px; height:28px; text-align:center; padding:0; margin:0; font-size:14px; font-weight:700; border-radius:4px; border:1px solid var(--border); background:rgba(255,255,255,0.02);">
+                                                    <button type="button" class="btn btn-sm" onclick="adjustStockInputValue('${p.id}', 1)" style="padding:0; width:28px; height:28px; font-size:14px; display:flex; align-items:center; justify-content:center;">+</button>
+                                                </div>
+                                            </td>
+                                            <td>${statusLabel}</td>
+                                            <td>
+                                                <button type="button" class="btn btn-accent btn-sm" id="btn-save-stock-${p.id}" onclick="saveProductStock('${p.id}')" style="font-size:11px; padding:4px 10px; height:auto; line-height:1.2;">Sauvegarder</button>
+                                            </td>
+                                        </tr>
+                                    `;
+                                }).join('');
+                            }
+                        }
+
                         const listContainer = document.getElementById('product-cards-list');
-                        if (listContainer) {
+                        if (listContainer && window._productTab !== 'stock') {
                             listContainer.innerHTML = filtered.length === 0
                                 ? '<div style="text-align:center; padding:40px 20px; opacity:0.5;"><div style="font-size:40px; margin-bottom:10px;">📦</div><p>Aucun produit correspondant.</p></div>'
                                 : filtered.map((p, idx) => {
@@ -5900,13 +5982,18 @@
 
             if (!name || isNaN(price)) return showToast('Nom et prix requis', 'error');
 
+            const stockValStr = document.getElementById('edit_prod_stock')?.value;
+            if (stockValStr === undefined || stockValStr === '' || isNaN(parseInt(stockValStr)) || parseInt(stockValStr) < 0) {
+                return showToast('Vous devez obligatoirement spécifier une quantité de stock disponible.', 'error');
+            }
+            const stock = parseInt(stockValStr);
+
             const unit = document.getElementById('prod_unit').value;
             const promo = document.getElementById('prod_promo').value;
             const image_url = document.getElementById('prod_image_url').value;
             const is_bundle = document.getElementById('prod_is_bundle').checked;
             const has_discounts = document.getElementById('prod_has_discounts').checked;
             const is_active = document.getElementById('edit_prod_active')?.checked ?? true;
-            const stock = parseInt(document.getElementById('edit_prod_stock')?.value) || 0;
 
             const bundle_config = {
                 trigger_qty: parseInt(document.getElementById('bundle_trigger_qty').value) || 1,
@@ -6199,6 +6286,7 @@
             document.getElementById('edit_prod_id').value = '';
             document.getElementById('prod_name').value = '';
             document.getElementById('prod_description').value = '';
+            if (document.getElementById('edit_prod_stock')) document.getElementById('edit_prod_stock').value = '';
             document.getElementById('prod_price').value = '';
             document.getElementById('prod_unit').value = '';
             document.getElementById('prod_unit_value').value = '';
@@ -6738,16 +6826,17 @@
 
         function switchProductTab(tab) {
             window._productTab = tab;
-            const subs = ['add', 'list']; // Note: props shares list template
-            subs.forEach(s => {
-                const sub = document.getElementById('sub-products-' + s);
-                if (sub) sub.style.display = (s === 'add' ? (tab === 'add' ? 'block' : 'none') : (tab !== 'add' ? 'block' : 'none'));
-
-                const btn = document.getElementById('btn-tab-prod-' + s) || document.getElementById('btn-tab-prod-props');
-            });
+            
+            const addSub = document.getElementById('sub-products-add');
+            const listSub = document.getElementById('sub-products-list');
+            const stockSub = document.getElementById('sub-products-stock');
+            
+            if (addSub) addSub.style.display = (tab === 'add' ? 'block' : 'none');
+            if (listSub) listSub.style.display = ((tab === 'list' || tab === 'props') ? 'block' : 'none');
+            if (stockSub) stockSub.style.display = (tab === 'stock' ? 'block' : 'none');
             
             // Fix highlight correct button
-            ['add', 'list', 'props'].forEach(s => {
+            ['add', 'list', 'stock', 'props'].forEach(s => {
                 const b = document.getElementById('btn-tab-prod-' + s);
                 if(b) {
                     if(s === tab) b.classList.add('active');
@@ -6755,8 +6844,50 @@
                 }
             });
 
-            if (tab === 'list' || tab === 'props') loadData('products');
+            if (tab === 'list' || tab === 'props' || tab === 'stock') loadData('products');
             if (tab === 'add') loadSupplierDropdown();
+        }
+
+        function adjustStockInputValue(id, diff) {
+            const input = document.getElementById('stock-input-' + id);
+            if (input) {
+                let val = parseInt(input.value) || 0;
+                val = Math.max(0, val + diff);
+                input.value = val;
+            }
+        }
+
+        async function saveProductStock(id) {
+            const input = document.getElementById('stock-input-' + id);
+            if (!input) return;
+            const newStock = parseInt(input.value) || 0;
+            const btn = document.getElementById('btn-save-stock-' + id);
+            if (btn) {
+                btn.disabled = true;
+                btn.innerHTML = '...';
+            }
+            try {
+                const p = window._cachedProducts.find(x => String(x.id) === String(id));
+                if (!p) throw new Error('Produit introuvable');
+                
+                const is_active = newStock > 0;
+                const payload = {
+                    ...p,
+                    stock: newStock,
+                    is_active: is_active
+                };
+                
+                await api('/products', 'POST', payload);
+                showToast('Stock mis à jour avec succès !', 'success');
+                loadData('products');
+            } catch (e) {
+                showToast('Erreur: ' + e.message, 'error');
+            } finally {
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = 'Sauvegarder';
+                }
+            }
         }
 
         async function validateProposedProduct(id, btn) {
