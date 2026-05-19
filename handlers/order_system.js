@@ -16,6 +16,7 @@ const { createPersistentMap } = require('../services/persistent_map');
 const { notifyAdmins, notifyLivreurs, notifySuppliers, sendTelegramMessage } = require('../services/notifications');
 const { clearAllAwaitingMaps } = require('./supplier_marketplace');
 const { t } = require('../services/i18n');
+const { logStockMovement, getScarcityBadge, getReservationWarningText } = require('../services/inventory_manager');
 
 // ======= ÉTAT PERSISTANT (survit aux redémarrages via Supabase) =======
 const userCarts = createPersistentMap('userCarts');
@@ -225,7 +226,9 @@ function setupOrderSystem(bot) {
         const unitLabel = (product.unit && product.unit.toLowerCase() !== 'unité') ? product.unit : 'g';
 
         const user = ctx.state?.user || await getUser(`${ctx.platform}_${ctx.from.id}`);
-        let text = `🌟 <b>${esc(product.name)}</b> 🌟\n\n` +
+        const stockBadge = await getScarcityBadge(product);
+        let text = `🌟 <b>${esc(product.name)}</b> 🌟\n` +
+            `📦 Statut : <b>${stockBadge}</b>\n\n` +
             t(user, 'label_unit_price', '💰 Prix Unitaire :') + ` <b>${product.price}€</b>\n` +
             (promoText ? `${promoText}\n` : "") +
             (product.description ? `\n<i>${product.description}</i>\n` : "") +
@@ -394,6 +397,8 @@ function setupOrderSystem(bot) {
         const settings = ctx.state?.settings || await getAppSettings();
         const pending = pendingOrders.get(userId);
         if (!pending) return safeEdit(ctx, settings.msg_session_expired || "❌ Session expirée.", Markup.inlineKeyboard([[Markup.button.callback(settings.btn_back_quick_menu || '◀️ Menu', 'main_menu')]]));
+        
+        pending.addedAt = Date.now(); // Set reservation timestamp
 
         let cart = userCarts.get(userId) || [];
         const products = await getProducts(true);
@@ -466,6 +471,7 @@ function setupOrderSystem(bot) {
         const pending = pendingOrders.get(userId);
         if (!pending) return;
 
+        pending.addedAt = Date.now(); // Set reservation timestamp
         let cart = userCarts.get(userId) || [];
         cart.push(pending);
         userCarts.set(userId, cart);
@@ -493,7 +499,12 @@ function setupOrderSystem(bot) {
             total += price;
             const unit = item.productUnit || 'g';
             const qtyLabel = item.nSachets ? `(x${item.nSachets} sachet${item.nSachets > 1 ? 's' : ''} - ${item.qty}${unit})` : `(x${item.qty}${unit})`;
+            
+            const warningText = getReservationWarningText(item);
             summary += `${idx + 1}. ${item.productName} <b>${qtyLabel}</b>${item.chosen_unit_amount ? ` [${item.chosen_unit_amount}]` : ''} - <b>${formatPrice(price)}€</b>\n`;
+            if (warningText) {
+                summary += `   └─ <i>${warningText}</i>\n`;
+            }
             // Bouton de suppression individuelle
             buttons.push([Markup.button.callback(`❌ ${t(user, 'btn_back', 'Retirer')} ${item.productName}`, `remove_item_${idx}`)]);
         });
@@ -1324,9 +1335,17 @@ function setupOrderSystem(bot) {
         const startTime = Date.now();
 
         try {
-            // DECREMENT STOCK
+            const [createResult, dbSettings] = await Promise.all([
+                createOrder(orderData),
+                getAppSettings()
+            ]);
+
+            if (createResult.error) throw createResult.error;
+            const order = createResult.order;
+
+            // DECREMENT STOCK & LOG TO LEDGER
             const { saveProduct } = require('../services/database');
-            const stockTasks = cart.map(async item => {
+            for (const item of cart) {
                 const p = allProducts.find(prod => String(prod.id) === String(item.productId));
                 if (p && typeof p.stock === 'number') {
                     const newStock = Math.max(0, p.stock - item.qty);
@@ -1347,19 +1366,10 @@ function setupOrderSystem(bot) {
                         notifyAdmins(bot, alertMsg).catch(err => console.error("Error sending stock alert:", err.message));
                     }
                     
-                    return saveProduct(updates).catch(e => console.error(`[STOCK-ERR] ${p.id}:`, e.message));
+                    await saveProduct(updates).catch(e => console.error(`[STOCK-ERR] ${p.id}:`, e.message));
+                    await logStockMovement(p.id, -item.qty, 'order', order?.id || 'unknown');
                 }
-                return Promise.resolve();
-            });
-
-            const [createResult, dbSettings] = await Promise.all([
-                createOrder(orderData),
-                getAppSettings(),
-                ...stockTasks
-            ]);
-
-            if (createResult.error) throw createResult.error;
-            const order = createResult.order;
+            }
             
             // On vérifie si c'est la première commande en utilisant l'ID officiel (possiblement fusionné)
             const officialUserId = ctx.state.user?.id || userId;

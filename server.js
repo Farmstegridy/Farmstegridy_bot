@@ -340,6 +340,21 @@ function createServer(port = 8080) {
         catch (e) { res.status(500).json({ error: 'Erreur serveur' }); }
     });
 
+    app.get('/api/inventory/ledger', authMiddleware, async (req, res) => {
+        try {
+            const { data, error } = await supabase
+                .from('bot_stock_ledger')
+                .select('*')
+                .order('created_at', { ascending: false })
+                .limit(100);
+            if (error) throw error;
+            res.json(data || []);
+        } catch (e) {
+            console.error('[API] Error fetching stock ledger:', e.message);
+            res.status(500).json({ error: e.message });
+        }
+    });
+
     let lastCatalogNotificationTime = 0;
     const CATALOG_NOTIFICATION_COOLDOWN = 10 * 60 * 1000; // 10 minutes
     app.post('/api/products', authMiddleware, async (req, res) => {
@@ -349,12 +364,36 @@ function createServer(port = 8080) {
 
             const isNew = !req.body.id;
             let id;
+            let oldProduct = null;
+            if (req.body.id && !isMp) {
+                const { getProduct } = require('./services/database');
+                oldProduct = await getProduct(req.body.id).catch(() => null);
+            }
 
             if (isMp) {
                 const { saveMarketplaceProduct } = require('./services/database');
                 id = await saveMarketplaceProduct(req.body);
             } else {
                 id = await saveProduct(req.body);
+            }
+
+            // Log stock movement for native products
+            if (!isMp) {
+                const { logStockMovement } = require('./services/inventory_manager');
+                if (isNew) {
+                    if (req.body.stock !== undefined) {
+                        const newStock = parseInt(req.body.stock) || 0;
+                        await logStockMovement(id, newStock, 'replenishment', 'admin_creation');
+                    }
+                } else if (oldProduct && req.body.stock !== undefined) {
+                    const oldStock = parseInt(oldProduct.stock) || 0;
+                    const newStock = parseInt(req.body.stock) || 0;
+                    const diff = newStock - oldStock;
+                    if (diff !== 0) {
+                        const reason = diff > 0 ? 'replenishment' : 'manual_adjustment';
+                        await logStockMovement(id, diff, reason, 'admin_update');
+                    }
+                }
             }
 
             // Notification automatique si nouveau produit
