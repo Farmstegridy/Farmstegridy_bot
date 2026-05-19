@@ -186,14 +186,18 @@ async function safeEdit(ctx, text, opts = {}) {
                     try {
                         if (photo) newMsg = await ctx.replyWithPhoto(photo, { caption: text, ...extra });
                         else newMsg = await ctx.replyWithVideo(video, { caption: text, ...extra });
+                        
+                        if (newMsg && newMsg.success === false) throw new Error('Media reply failed: ' + newMsg.error);
                     } catch (replyErr) {
-                        const desc = String(replyErr.description || '').toLowerCase();
+                        const desc = String(replyErr.description || replyErr.message || '').toLowerCase();
                         if (desc.includes('wrong type of the web page content') || desc.includes('file too large')) {
                             console.log('[SAFE-EDIT] Retry media reply with buffer...');
                             const buf = await downloadToBuffer(photo || video);
                             if (buf) {
                                 if (photo) newMsg = await ctx.replyWithPhoto({ source: buf }, { caption: text, ...extra });
                                 else newMsg = await ctx.replyWithVideo({ source: buf }, { caption: text, ...extra });
+                                
+                                if (newMsg && newMsg.success === false) throw new Error('Media reply with buffer failed');
                             } else throw replyErr;
                         } else throw replyErr;
                     }
@@ -219,13 +223,17 @@ async function safeEdit(ctx, text, opts = {}) {
                 try {
                     if (photo) newMsg = await ctx.replyWithPhoto(photo, { caption: text, ...extra });
                     else newMsg = await ctx.replyWithVideo(video, { caption: text, ...extra });
+                    
+                    if (newMsg && newMsg.success === false) throw new Error('Media reply failed: ' + newMsg.error);
                 } catch (err) {
-                    const desc = String(err.description || '').toLowerCase();
+                    const desc = String(err.description || err.message || '').toLowerCase();
                     if (desc.includes('wrong type of the web page content') || desc.includes('file too large')) {
                         const buf = await downloadToBuffer(photo || video);
                         if (buf) {
                             if (photo) newMsg = await ctx.replyWithPhoto({ source: buf }, { caption: text, ...extra });
                             else newMsg = await ctx.replyWithVideo({ source: buf }, { caption: text, ...extra });
+                            
+                            if (newMsg && newMsg.success === false) throw new Error('Media reply with buffer failed');
                         } else throw err;
                     } else throw err;
                 }

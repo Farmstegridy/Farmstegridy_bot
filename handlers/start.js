@@ -319,7 +319,15 @@ async function getMainMenuKeyboard(ctx, settings, user, isFournisseur = false, i
     if (!settings) settings = ctx.state?.settings || await getAppSettings();
     const buttons = [];
 
-    buttons.push([Markup.button.callback(`${settings.ui_icon_catalog || '🛍'} ${t(user, 'btn_catalog', 'Voir le Menu / Commander')}`, 'view_catalog')]);
+    const baseDomain = process.env.RAILWAY_PUBLIC_DOMAIN || 'farmstegridybot.up.railway.app';
+    const catalogUrl = settings.mini_app_url ? `${settings.mini_app_url}/catalog` : `https://${baseDomain}/catalog`;
+    
+    buttons.push([
+        Markup.button.callback(`${settings.ui_icon_catalog || '🛍'} CATALOGUE CLASSIQUE`, 'view_catalog'),
+    ]);
+    buttons.push([
+        Markup.button.webApp(`✨ CATALOGUE MINI APP ✨`, catalogUrl)
+    ]);
     
     buttons.push([
         Markup.button.callback(`${settings.ui_icon_cart || '🛒'} ${t(user, 'btn_cart', 'Mon Panier (Mes produits)')}`, 'view_cart'),
