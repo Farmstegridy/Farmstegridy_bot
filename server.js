@@ -152,6 +152,7 @@ function createServer(port = 8080) {
     app.get('/dashboard', (req, res) => res.sendFile(path.join(__dirname, 'web', 'views', 'dashboard.html')));
     app.get('/address-picker', (req, res) => res.sendFile(path.join(__dirname, 'web', 'views', 'address_picker.html')));
     app.get('/catalog', (req, res) => res.sendFile(path.join(__dirname, 'web', 'views', 'catalog.html')));
+    app.get('/livreur', (req, res) => res.sendFile(path.join(__dirname, 'web', 'views', 'livreur.html')));
 
 
     // ========== API Routes ==========
