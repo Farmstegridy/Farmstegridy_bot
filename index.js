@@ -114,6 +114,21 @@ async function bootstrap() {
             } catch (e) {
                 console.warn('[System] Broadcast worker failed to start:', e.message);
             }
+
+            // Start expired reservations cleanup interval
+            try {
+                const { cleanupExpiredReservations } = require('./services/inventory_manager');
+                setInterval(async () => {
+                    try {
+                        await cleanupExpiredReservations();
+                    } catch (err) {
+                        console.error('[System] Error in cleanupExpiredReservations:', err.message);
+                    }
+                }, 60000); // run every 1 minute
+                console.log('⏰ Reservation Cleanup Worker active (every 1m, Replica 0)');
+            } catch (e) {
+                console.warn('[System] Reservation Cleanup Worker failed to start:', e.message);
+            }
         }
 
     } catch (error) {

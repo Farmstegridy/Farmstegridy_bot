@@ -45,8 +45,8 @@ async function cleanupExpiredReservations() {
     if (!userCartsLoaded) return;
     const now = Date.now();
     
-    userCarts.forEach(async (cart, userId) => {
-        if (!Array.isArray(cart) || cart.length === 0) return;
+    for (const [userId, cart] of userCarts.entries()) {
+        if (!Array.isArray(cart) || cart.length === 0) continue;
         
         const validItems = [];
         const expiredItems = [];
@@ -74,7 +74,7 @@ async function cleanupExpiredReservations() {
                 userCarts.set(userId, validItems);
             }
         }
-    });
+    }
 }
 
 /**
