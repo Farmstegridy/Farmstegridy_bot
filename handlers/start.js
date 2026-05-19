@@ -62,11 +62,17 @@ function setupStartHandler(bot) {
                     `👇 <b>Veuillez cliquer ci-dessous :</b>`;
                 
                 const b = [];
-                if (settings.private_contact_url) b.push([Markup.button.url('✉️ Telegram : Admin', settings.private_contact_url)]);
+                if (settings.private_contact_url) {
+                    b.push([Markup.button.url('✉️ Telegram : Admin', settings.private_contact_url)]);
+                } else {
+                    // Fallback if the admin hasn't set their contact URL in the dashboard
+                    b.push([Markup.button.callback('✉️ Contacter l\'Admin', 'admin_contact_missing')]);
+                }
+                
                 if (settings.channel_url && settings.channel_url.length > 5) {
                     b.push([Markup.button.url('📢 S’abonner au canal', settings.channel_url)]);
                 }
-                b.push([Markup.button.callback('🔄 Rafraîchir mon statut', 'start')]);
+                b.push([Markup.button.callback('🔄 Rafraîchir mon statut', 'refresh_status')]);
                 
                 const restrictedKeyboard = Markup.inlineKeyboard(b);
 
@@ -129,6 +135,33 @@ function setupStartHandler(bot) {
 
         } catch (error) {
             console.error('❌ Erreur /start:', error);
+        }
+    });
+
+    bot.action('admin_contact_missing', async (ctx) => {
+        if (ctx.callbackQuery) await ctx.answerCbQuery('L\'administrateur n\'a pas encore configuré son lien de contact dans les réglages.', { show_alert: true }).catch(() => {});
+    });
+
+    bot.action('refresh_status', async (ctx) => {
+        if (ctx.callbackQuery) await ctx.answerCbQuery().catch(() => {});
+        const userId = `${ctx.platform}_${ctx.from.id}`;
+        const user = await getUser(userId);
+        const settings = await getAppSettings();
+        
+        let isApproved = true;
+        if (settings.private_mode === true || settings.auto_approve_new === false) {
+            isApproved = user?.is_approved === true || user?.is_livreur === true || (await isAdmin(ctx));
+        }
+
+        if (isApproved) {
+            ctx.deleteMessage().catch(() => {});
+            return showMainMenu(ctx);
+        } else {
+            return ctx.reply('⏳ Votre accès n\'a pas encore été validé par l\'administrateur. Veuillez patienter.', {
+                reply_markup: {
+                    inline_keyboard: [[{ text: '🗑 Fermer', callback_data: 'delete_message' }]]
+                }
+            }).catch(() => {});
         }
     });
 
