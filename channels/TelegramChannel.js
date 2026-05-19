@@ -107,8 +107,9 @@ class TelegramChannel extends Channel {
         const { claimLock, checkLock } = require('../services/database');
         
         // Use a stable ID for the replica (index is better than PID for reboots)
-        const replicaIndex = process.env.RAILWAY_REPLICA_INDEX || '0';
-        const instanceId = `replica-${replicaIndex}`;
+        const replicaIndex = process.env.RAILWAY_REPLICA_INDEX || 0;
+        const processUniqueId = Math.random().toString(36).substring(2, 8);
+        const instanceId = `replica-${replicaIndex}-${processUniqueId}`;
         const telegramLockId = `tg_lock`;
 
         try {
