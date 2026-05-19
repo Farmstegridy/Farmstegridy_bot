@@ -115,12 +115,17 @@ class TelegramChannel extends Channel {
         try {
             const lock = await checkLock(telegramLockId);
             
-            // If lock exists and isn't ours, wait
+            // If lock exists and isn't ours, check if it's expired
             if (lock && lock.owner && lock.owner !== instanceId) {
-                const expiresAt = new Date(lock.expires).toLocaleTimeString();
-                console.log(`[TG-LOCK] ⚠️ Session busy (Owner: ${lock.owner}, Expires: ${expiresAt}). Retrying in 30s...`);
-                setTimeout(() => this.start(), 30000);
-                return;
+                const now = Date.now();
+                const expiresAtDate = new Date(lock.expires).getTime();
+                
+                if (expiresAtDate > now) {
+                    const expiresAt = new Date(lock.expires).toLocaleTimeString();
+                    console.log(`[TG-LOCK] ⚠️ Session busy (Owner: ${lock.owner}, Expires: ${expiresAt}). Retrying in 30s...`);
+                    setTimeout(() => this.start(), 30000);
+                    return;
+                }
             }
 
             // Try to claim
