@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Farmstegridy Bot | Admin Dashboard</title>
+    <link rel="stylesheet" href="static/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <!-- Auth Guard -->
+    <div id="loginOverlay" class="login-overlay">
+        <div class="login-card">
+            <img src="/public/logo.png" alt="Logo" class="login-logo">
+            <h2>Administration</h2>
+            <input type="password" id="adminPassword" placeholder="Mot de passe">
+            <button onclick="login()">Se Connecter</button>
+            <p id="loginError" class="error"></p>
+        </div>
+    </div>
+
+    <div class="app-container">
+        <!-- Sidebar -->
+        <nav class="sidebar">
+            <div class="logo-section">
+                <span class="logo-text">FARMSTEGRIDY</span>
+                <div class="status-indicator">
+                    <span class="pulse"></span>
+                    EN LIGNE
+                </div>
+            </div>
+            
+            <div class="nav-items">
+                <button class="nav-item active" data-view="stats">
+                    <i class="fas fa-chart-line"></i> Dashboard
+                </button>
+                <button class="nav-item" data-view="orders">
+                    <i class="fas fa-shopping-bag"></i> Commandes
+                    <span class="badge" id="pendingOrdersBadge">0</span>
+                </button>
+                <button class="nav-item" data-view="users">
+                    <i class="fas fa-users"></i> Utilisateurs
+                </button>
+                <button class="nav-item" data-view="products">
+                    <i class="fas fa-box"></i> Produits
+                </button>
+                <button class="nav-item" data-view="broadcast">
+                    <i class="fas fa-bullhorn"></i> Diffusion
+                </button>
+                <button class="nav-item" data-view="settings">
+                    <i class="fas fa-cog"></i> Réglages
+                </button>
+            </div>
+
+            <div class="nav-footer">
+                <button onclick="logout()" class="logout-btn">
+                    <i class="fas fa-sign-out-alt"></i> Déconnexion
+                </button>
+            </div>
+        </nav>
+
+        <!-- Main Content -->
+        <main class="content">
+            <header class="top-header">
+                <h1 id="viewTitle">Tableau de bord</h1>
+                <div class="header-actions">
+                    <div class="search-bar">
+                        <i class="fas fa-search"></i>
+                        <input type="text" placeholder="Rechercher...">
+                    </div>
+                    <button class="refresh-btn" onclick="refreshData()">
+                        <i class="fas fa-sync-alt"></i>
+                    </button>
+                </div>
+            </header>
+
+            <!-- View: Stats -->
+            <div id="statsView" class="view">
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-icon users"><i class="fas fa-users"></i></div>
+                        <div class="stat-data">
+                            <h3>Utilisateurs</h3>
+                            <p id="statUsers">0</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon orders"><i class="fas fa-shopping-bag"></i></div>
+                        <div class="stat-data">
+                            <h3>Commandes</h3>
+                            <p id="statOrders">0</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon revenue"><i class="fas fa-euro-sign"></i></div>
+                        <div class="stat-data">
+                            <h3>Actifs (24h)</h3>
+                            <p id="statActive">0</p>
+                        </div>
+                    </div>
+                </div>
+                <!-- Insights hidden for Bronze -->
+            </div>
+
+            <!-- View: Orders -->
+            <div id="ordersView" class="view hidden">
+                <div class="table-container">
+                    <div class="table-header">
+                        <div class="filters">
+                            <button class="filter-btn active" onclick="filterOrders('all')">Tout</button>
+                            <button class="filter-btn" onclick="filterOrders('pending')">En attente</button>
+                            <button class="filter-btn" onclick="filterOrders('delivering')">En cours</button>
+                            <button class="filter-btn" onclick="filterOrders('completed')">Terminées</button>
+                        </div>
+                    </div>
+                    <table id="ordersTable">
+                        <thead>
+                            <tr>
+                                <th>Client</th>
+                                <th>Produits</th>
+                                <th>Total</th>
+                                <th>Statut</th>
+                                <th>Date</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- View: Users -->
+            <div id="usersView" class="view hidden">
+                <div class="table-container">
+                    <table id="usersTable">
+                        <thead>
+                            <tr>
+                                <th>Utilisateur</th>
+                                <th>Telegram ID</th>
+                                <th>Inscrit le</th>
+                                <th>Commandes</th>
+                                <th>Status</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- View: Products -->
+            <div id="productsView" class="view hidden">
+                <div class="section-header">
+                    <button class="primary-btn" onclick="openProductModal()">
+                        <i class="fas fa-plus"></i> Ajouter un Produit
+                    </button>
+                </div>
+                <div class="products-grid" id="productsList"></div>
+            </div>
+
+            <!-- View: Broadcast -->
+            <div id="broadcastView" class="view hidden">
+                <div class="broadcast-card">
+                    <h3>Envoyer une annonce</h3>
+                    <textarea id="bcMessage" placeholder="Écrivez votre message ici..."></textarea>
+                    <div class="bc-actions">
+                        <div class="preview-area">
+                            <label>Image (URL optionnelle):</label>
+                            <input type="text" id="bcImage" placeholder="https://...">
+                        </div>
+                        <button class="send-btn" onclick="sendBroadcast()">
+                            <i class="fas fa-paper-plane"></i> Diffuser à tous
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- View: Settings -->
+            <div id="settingsView" class="view hidden">
+                <div class="settings-grid">
+                    <div class="settings-card">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+                            <h3 style="margin:0;">Informations Bot</h3>
+                            <button class="save-btn" onclick="saveSettings()" style="width:auto; padding:8px 15px; font-size:13px; margin:0;">💾 Sauvegarder</button>
+                        </div>
+                        <div class="form-group">
+                            <label>Nom du Bot</label>
+                            <input type="text" id="settingBotName">
+                        </div>
+                        <div class="form-group">
+                            <label>Couleur Accent (Hex)</label>
+                            <input type="color" id="settingColor">
+                        </div>
+                        <div class="form-group">
+                            <label>Nouveau mot de passe</label>
+                            <input type="password" id="settingNewPassword" placeholder="Laisser vide pour ne pas changer">
+                        </div>
+                        <button class="save-btn" onclick="saveSettings()">Enregistrer</button>
+                    </div>
+                    
+                    <div class="settings-card">
+                        <h3>Maintenance</h3>
+                        <div class="form-group">
+                            <label>Mode Maintenance</label>
+                            <input type="checkbox" id="settingMaintenance">
+                        </div>
+                        <div class="form-group">
+                            <label>Message</label>
+                            <textarea id="settingMaintMessage"></textarea>
+                        </div>
+                        <button class="save-btn" onclick="saveSettings()">Enregistrer</button>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Modals -->
+    <!-- Product Modal -->
+    <div id="productModal" class="modal">
+        <div class="modal-content">
+            <h2 id="productModalTitle">Ajouter un produit</h2>
+            <div class="form-grid">
+                <input type="hidden" id="productId">
+                <div class="form-group">
+                    <label>Nom</label>
+                    <input type="text" id="pName">
+                </div>
+                <div class="form-group">
+                    <label>Catégorie</label>
+                    <input type="text" id="pCategory">
+                </div>
+                <div class="form-group">
+                    <label>Prix (€)</label>
+                    <input type="number" id="pPrice">
+                </div>
+                <div class="form-group">
+                    <label>Image (URL)</label>
+                    <input type="text" id="pImage">
+                </div>
+                <div class="form-group full">
+                    <label>Description</label>
+                    <textarea id="pDesc"></textarea>
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button class="secondary-btn" onclick="closeModal('productModal')">Annuler</button>
+                <button class="primary-btn" onclick="saveProductData()">Enregistrer</button>
+            </div>
+        </div>
+    </div>
+    <script src="static/admin.js"></script>
+</body>
+</html>
