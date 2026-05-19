@@ -152,13 +152,19 @@ class TelegramChannel extends Channel {
         console.log(`[TG-LOCK] Telegram lock claimed by ${instanceId}`);
         console.log(`[TG] Lancement du bot (${this.token.substring(0, 4)}****...)...`);
         
+        // Build launch options
+        const launchOptions = {
+            drop_pending_updates: true,
+            allowedUpdates: ['message', 'callback_query']
+        };
+
         const launch = async (retryCount = 0) => {
             try {
                 this.isActive = true;
                 // Launch the bot. We use Promise.race to detect early startup errors (like 409 conflict)
                 // without hanging the start() sequence indefinitely.
                 await Promise.race([
-                    this.bot.launch().then(() => {
+                    this.bot.launch(launchOptions).then(() => {
                         console.log('✅ [TG] Bot arrêté.');
                         this.isActive = false;
                     }),
@@ -176,6 +182,10 @@ class TelegramChannel extends Channel {
                     setTimeout(() => launch(retryCount + 1), 15000);
                 } else {
                     console.error('❌ [TG] Erreur fatale au lancement:', err.message || err);
+                    if (this.heartbeatInterval) {
+                        clearInterval(this.heartbeatInterval);
+                        this.heartbeatInterval = null;
+                    }
                 }
             }
         };
