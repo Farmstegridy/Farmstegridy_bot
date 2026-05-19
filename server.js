@@ -133,7 +133,12 @@ function createServer(port = 8080) {
             time: new Date().toISOString(),
             branding: 'FARMSTEGRIDY BOT',
             port: process.env.PORT || 'not-set',
-            env: process.env.RAILWAY_ENVIRONMENT || 'local'
+            env: process.env.RAILWAY_ENVIRONMENT || 'local',
+            proxies: {
+                http: process.env.http_proxy || process.env.HTTP_PROXY || 'not-set',
+                https: process.env.https_proxy || process.env.HTTPS_PROXY || 'not-set',
+                all: process.env.ALL_PROXY || process.env.all_proxy || 'not-set'
+            }
         });
     });
 
