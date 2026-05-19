@@ -151,6 +151,7 @@ function createServer(port = 8080) {
     app.get('/favicon.ico', (req, res) => res.status(204).end());
     app.get('/dashboard', (req, res) => res.sendFile(path.join(__dirname, 'web', 'views', 'dashboard.html')));
     app.get('/address-picker', (req, res) => res.sendFile(path.join(__dirname, 'web', 'views', 'address_picker.html')));
+    app.get('/catalog', (req, res) => res.sendFile(path.join(__dirname, 'web', 'views', 'catalog.html')));
 
 
     // ========== API Routes ==========
