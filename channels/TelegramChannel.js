@@ -350,7 +350,7 @@ class TelegramChannel extends Channel {
             // Sécurité: si c'est un lien URL
             if (b.url) return [Markup.button.url(b.title, b.url)];
             // Si c'est un webApp
-            if (b.web_app) return [Markup.button.webApp(b.title, b.web_app)];
+            if (b.web_app) return [Markup.button.webApp(b.title, b.web_app.url || b.web_app)];
             // Sinon c'est un callback
             return [Markup.button.callback(b.title, b.id)];
         });
