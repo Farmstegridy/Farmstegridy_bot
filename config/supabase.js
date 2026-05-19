@@ -14,10 +14,10 @@ let supabaseKey = process.env.SUPABASE_KEY;
 
 // Fallback "debrouille toi" si les variables d'environnement sont manquantes ou factices
 if (!supabaseUrl || supabaseUrl.includes('xyqjyjqyqjyjqyqjyjqy') || !supabaseUrl.startsWith('https')) {
-    supabaseUrl = 'https://tsafkhhyqmlknxrgnqgw.supabase.co';
+    supabaseUrl = 'https://todfwctsutqmlhwctgnl.supabase.co';
 }
 if (!supabaseKey || supabaseKey.includes('xycmpmcmpm') || supabaseKey.length < 50) {
-    supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRzYWZraGh5cW1sa254cmducWd3Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MjY3MDg0MCwiZXhwIjoyMDg4MjQ2ODQwfQ.1-AzrYIDY9PU-VbWRHe_KoIzlpzD6Fj3Q_nCOIOeXnQ';
+    supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRvZGZ3Y3RzdXRxbWxod2N0Z25sIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3OTIxMTQ3OCwiZXhwIjoyMDk0Nzg3NDc4fQ.hb_b_N7c89ayBwK9bEIORN6ORQuzRkz7NNepsYkLxOs';
 }
 
 const supabase = createClient(supabaseUrl, supabaseKey);
