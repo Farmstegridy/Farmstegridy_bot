@@ -148,15 +148,28 @@ class TelegramChannel extends Channel {
         
         const launch = async (retryCount = 0) => {
             try {
-                await this.bot.launch();
-                console.log('✅ [TG] Bot lancé avec succès !');
                 this.isActive = true;
+                // Launch the bot. We use Promise.race to detect early startup errors (like 409 conflict)
+                // without hanging the start() sequence indefinitely.
+                await Promise.race([
+                    this.bot.launch().then(() => {
+                        console.log('✅ [TG] Bot arrêté.');
+                        this.isActive = false;
+                    }),
+                    new Promise((resolve) => {
+                        setTimeout(() => {
+                            resolve();
+                        }, 5000);
+                    })
+                ]);
+                console.log('✅ [TG] Bot lancé avec succès !');
             } catch (err) {
-                if (err.message.includes('409') && retryCount < 5) {
+                this.isActive = false;
+                if (err.message && err.message.includes('409') && retryCount < 5) {
                     console.warn(`⚠️ [TG] Conflit 409 (déjà une instance). Tentative ${retryCount + 1}/5 dans 15s...`);
                     setTimeout(() => launch(retryCount + 1), 15000);
                 } else {
-                    console.error('❌ [TG] Erreur fatale au lancement:', err.message);
+                    console.error('❌ [TG] Erreur fatale au lancement:', err.message || err);
                 }
             }
         };
