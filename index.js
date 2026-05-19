@@ -57,7 +57,17 @@ async function bootstrap() {
         
         // --- IMPORTANT: Enregistrement du bot dans le serveur pour les notifs admin ---
         const { TelegramChannel } = require('./channels/TelegramChannel');
-        const tgToken = process.env.BOT_TOKEN;
+        let tgToken = process.env.BOT_TOKEN;
+        
+        try {
+            const settings = await getAppSettings();
+            if (settings && settings.telegram_token) {
+                tgToken = settings.telegram_token;
+                console.log('[System] Using Telegram token from Database configuration');
+            }
+        } catch (e) {
+            console.warn('[System] Failed to load telegram token from Database, using env fallback:', e.message);
+        }
         
         let telegramChannel = null;
         if (tgToken) {
