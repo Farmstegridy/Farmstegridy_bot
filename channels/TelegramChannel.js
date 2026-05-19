@@ -98,6 +98,11 @@ class TelegramChannel extends Channel {
     }
 
     async start() {
+        if (this.isActive) {
+            console.log('[TG] Telegram channel is already active. Skipping start.');
+            return;
+        }
+
         // --- DISTRIBUTED LOCK ---
         const { claimLock, checkLock } = require('../services/database');
         
@@ -128,7 +133,8 @@ class TelegramChannel extends Channel {
             console.log(`[TG-LOCK] 🎉 Lock obtained by ${instanceId}. launching bot...`);
             
             // Launch bot via heartbeat
-            setInterval(async () => {
+            if (this.heartbeatInterval) clearInterval(this.heartbeatInterval);
+            this.heartbeatInterval = setInterval(async () => {
                 await claimLock(telegramLockId, instanceId);
             }, 45000); // refresh every 45s (lock TTL is 60s)
         } catch (err) {
@@ -163,6 +169,10 @@ class TelegramChannel extends Channel {
 
     async stop() {
         if (this.bot) this.bot.stop('SIGTERM');
+        if (this.heartbeatInterval) {
+            clearInterval(this.heartbeatInterval);
+            this.heartbeatInterval = null;
+        }
         this.isActive = false;
     }
 
