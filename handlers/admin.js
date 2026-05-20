@@ -332,6 +332,10 @@ function setupAdminHandlers(bot) {
             const supportCount = pendingSupportRequests.size;
             const supportLabel = t(user, 'btn_admin_support', '💬 Support') + (supportCount > 0 ? ` (${supportCount})` : '');
 
+            const baseDomain = process.env.RENDER_EXTERNAL_URL || (process.env.RAILWAY_PUBLIC_DOMAIN ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}` : 'https://farmstegridy-bot.onrender.com');
+            const dashboardUrl = `${baseDomain}/dashboard`;
+            rows.push([Markup.button.webApp('✨ ACCÉDER AU DASHBOARD (MINI APP) ✨', dashboardUrl)]);
+
             rows.push([Markup.button.callback(t(user, 'btn_admin_orders', '📦 Commandes'), 'admin_orders'), Markup.button.callback(t(user, 'btn_admin_users', '👥 Utilisateurs'), 'admin_users')]);
             rows.push([Markup.button.callback(t(user, 'btn_admin_livreurs', '🚴 Livreurs'), 'admin_livreurs')]);
             rows.push([Markup.button.callback(t(user, 'btn_admin_stats', '📊 Statistiques'), 'admin_stats')]);
@@ -344,7 +348,7 @@ function setupAdminHandlers(bot) {
         }
 
         rows.push([Markup.button.callback(t(user, 'btn_admin_features', '✨ Guide Bot'), 'admin_features')]);
-        [Markup.button.url('👨‍💻 Contacter le dev', 'https://t.me/Bottelegramt_bot')],
+        rows.push([Markup.button.url('👨‍💻 Contacter le dev', 'https://t.me/Bottelegramt_bot')]);
         rows.push([Markup.button.callback(t(user, 'btn_quit_console', '◀️ Quitter la console'), 'main_menu')]);
 
         const keyboard = Markup.inlineKeyboard(rows);
