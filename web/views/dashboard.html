@@ -12,6 +12,7 @@
         rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
         :root {
             /* Palette de Couleurs Ultra-Premium */
@@ -4121,11 +4122,36 @@
     </main>
 
     <script>
-        const TOKEN = localStorage.getItem('admin_token');
+        let TOKEN = localStorage.getItem('admin_token');
         let chartInstances = {};
         window.lastAnalytics = null;
         window.currentTimeframe = 'hour';
-        if (!TOKEN) window.location.href = '/';
+
+        async function checkAuthAndRedirect() {
+            const tg = window.Telegram?.WebApp;
+            if (!TOKEN && tg && tg.initData) {
+                try {
+                    const res = await fetch('/api/login-telegram', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ initData: tg.initData })
+                    });
+                    const data = await res.json();
+                    if (res.ok && data.token) {
+                        localStorage.setItem('admin_token', data.token);
+                        TOKEN = data.token;
+                        return true;
+                    }
+                } catch (e) {
+                    console.error("Auto-login failed:", e);
+                }
+            }
+            if (!TOKEN) {
+                window.location.href = '/';
+                return false;
+            }
+            return true;
+        }
 
         // Cache : sections déjà chargées
         const _loadedSections = {};
@@ -4665,6 +4691,48 @@
             }
         }
 
+        function updatePlatformStats() {
+            const s = window.appStats || {};
+            const setStat = (id, val) => {
+                const el = document.getElementById(id);
+                if (el) el.innerText = (val !== undefined && val !== null) ? val : '—';
+            };
+            const platform = document.getElementById('insights-platform-filter')?.value || 'all';
+            const analytics = window.lastAnalytics;
+            
+            if (analytics && platform !== 'all' && analytics.byPlatform && analytics.byPlatform[platform]) {
+                const pf = analytics.byPlatform[platform];
+                const filteredCA = (pf.ca || 0).toLocaleString('fr-FR') + ' €';
+                const filteredCount = pf.count || 0;
+                const filteredAvg = (parseFloat(pf.avgBasket) || 0).toFixed(2) + ' €';
+
+                setStat('ovStatOrders', filteredCount);
+                setStat('ovStatCA', filteredCA);
+                setStat('statCA', filteredCA);
+                
+                const abEl = document.getElementById('avg-basket-size');
+                if (abEl) abEl.innerText = filteredAvg;
+            } else {
+                setStat('ovStatOrders', s.totalOrders || 0);
+                setStat('ovStatCA', (s.totalCA || 0).toLocaleString('fr-FR') + ' €');
+                setStat('statCA', (s.totalCA || 0).toLocaleString('fr-FR') + ' €');
+                
+                const abEl = document.getElementById('avg-basket-size');
+                if (abEl && s.avgBasket) abEl.innerText = (parseFloat(s.avgBasket) || 0).toFixed(2) + ' €';
+            }
+            
+            setStat('ovStatUsers', s.totalUsers || 0);
+            setStat('ovStatActive', s.activeUsers || 0);
+            setStat('ovStatLivreurs', s.totalLivreurs || 0);
+            setStat('statUsers', s.totalUsers || 0);
+            setStat('statActive', s.activeUsers || 0);
+            
+            // Set Individual User Counters
+            setStat('count-active', s.activeUsers || 0);
+            setStat('count-pending', s.totalPending || 0);
+            setStat('count-blocked', s.totalBlocked || 0);
+        }
+
         async function loadData(id, silent = false) {
             // Lock: prevent concurrent non-silent loads of the same section
             const currentTab = window._currentMainTab || '';
@@ -4710,48 +4778,6 @@
                 if (id === 'overview' || id === 'insights') {
                     updatePlatformStats();
                 }
-
-        function updatePlatformStats() {
-            const s = window.appStats || {};
-            const setStat = (id, val) => {
-                const el = document.getElementById(id);
-                if (el) el.innerText = (val !== undefined && val !== null) ? val : '—';
-            };
-            const platform = document.getElementById('insights-platform-filter')?.value || 'all';
-            const analytics = window.lastAnalytics;
-            
-            if (analytics && platform !== 'all' && analytics.byPlatform && analytics.byPlatform[platform]) {
-                const pf = analytics.byPlatform[platform];
-                const filteredCA = (pf.ca || 0).toLocaleString('fr-FR') + ' €';
-                const filteredCount = pf.count || 0;
-                const filteredAvg = (parseFloat(pf.avgBasket) || 0).toFixed(2) + ' €';
-
-                setStat('ovStatOrders', filteredCount);
-                setStat('ovStatCA', filteredCA);
-                setStat('statCA', filteredCA);
-                
-                const abEl = document.getElementById('avg-basket-size');
-                if (abEl) abEl.innerText = filteredAvg;
-            } else {
-                setStat('ovStatOrders', s.totalOrders || 0);
-                setStat('ovStatCA', (s.totalCA || 0).toLocaleString('fr-FR') + ' €');
-                setStat('statCA', (s.totalCA || 0).toLocaleString('fr-FR') + ' €');
-                
-                const abEl = document.getElementById('avg-basket-size');
-                if (abEl && s.avgBasket) abEl.innerText = (parseFloat(s.avgBasket) || 0).toFixed(2) + ' €';
-            }
-            
-            setStat('ovStatUsers', s.totalUsers || 0);
-            setStat('ovStatActive', s.activeUsers || 0);
-            setStat('ovStatLivreurs', s.totalLivreurs || 0);
-            setStat('statUsers', s.totalUsers || 0);
-            setStat('statActive', s.activeUsers || 0);
-            
-            // Set Individual User Counters
-            setStat('count-active', s.activeUsers || 0);
-            setStat('count-pending', s.totalPending || 0);
-            setStat('count-blocked', s.totalBlocked || 0);
-        }
 
                 if (id === 'users') {
                     const tab = window._userTab || 'active';
@@ -8104,6 +8130,9 @@
         // ========== FIN MARKETPLACE FUNCTIONS ==========
 
         (async () => {
+            const authed = await checkAuthAndRedirect();
+            if (!authed) return;
+
             initCustomTimers();
             const initSection = location.hash.replace('#', '') || 'overview';
             

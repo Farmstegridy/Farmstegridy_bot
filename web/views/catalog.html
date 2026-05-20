@@ -314,7 +314,7 @@
                 <div id="p-promo-encart" style="display:none; background:linear-gradient(135deg, rgba(255,170,0,0.15), rgba(255,0,80,0.15)); border:1px solid #ffaa00; color:#ffaa00; font-size:12px; font-weight:900; padding:8px 12px; border-radius:10px; margin-bottom:15px;"></div>
                 <div id="p-desc" style="font-size:14px; opacity:0.6; line-height:1.6; margin-bottom:30px;">Description...</div>
                 
-                <div style="font-size:11px; font-weight:900; opacity:0.3; letter-spacing:1px; margin-bottom:15px;">FORMATS DISPONIBLES 📦</div>
+                <div id="p-options-title" style="font-size:11px; font-weight:900; opacity:0.3; letter-spacing:1px; margin-bottom:15px;">FORMATS DISPONIBLES 📦</div>
                 <div id="p-options" style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:40px;"></div>
 
                 <div style="font-size:11px; font-weight:900; opacity:0.3; letter-spacing:1px; margin-bottom:15px;">AVIS CLIENTS ⭐</div>
@@ -385,6 +385,12 @@
             } catch(e) {}
             if (typeof raw === 'string' && raw.startsWith('http')) return raw;
             return null;
+        }
+
+        function compareCategories(catA, catB) {
+            if (!catA || !catB) return false;
+            const normalize = s => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim().toLowerCase();
+            return normalize(catA) === normalize(catB);
         }
 
         async function init() {
@@ -481,11 +487,15 @@
             else favorites.push(pid);
             localStorage.setItem('stb_favorites', JSON.stringify(favorites));
             
+            favoriteToggle();
+        }
+
+        function favoriteToggle() {
             const activeCat = document.querySelector('#categories .cat-chip.active')?.innerText;
             const demoProducts = allProducts.filter(p => !p.category || (!p.category.includes('PACK') && !p.category.includes('MODULE')));
             if (activeCat === 'TOUT') renderGrid(demoProducts, 'products');
             else if (activeCat === 'FAVORIS ❤️') renderGrid(demoProducts.filter(p => favorites.includes(p.id)), 'products');
-            else renderGrid(demoProducts.filter(p => p.category && p.category.toUpperCase() === activeCat), 'products');
+            else renderGrid(demoProducts.filter(p => compareCategories(p.category, activeCat)), 'products');
             
             tg.HapticFeedback.impactOccurred('light');
         }
@@ -526,7 +536,7 @@
                     d.classList.add('active'); 
                     if (c === 'TOUT') renderGrid(demoProducts, 'products');
                     else if (c === 'FAVORIS ❤️') renderGrid(demoProducts.filter(p => favorites.includes(p.id)), 'products');
-                    else renderGrid(demoProducts.filter(p => p.category === c), 'products'); 
+                    else renderGrid(demoProducts.filter(p => compareCategories(p.category, c)), 'products'); 
                 };
                 if (catContainer) catContainer.appendChild(d);
             });
@@ -834,7 +844,7 @@
                 const headerTitle = document.querySelector('#product-detail-modal .modal-header div:nth-child(2)');
                 if (headerTitle) headerTitle.innerText = "CONFIGURATION DU BOT";
                 
-                const optHeader = document.querySelector('#product-detail-modal div:nth-child(2) div:nth-child(2) div:nth-child(5)');
+                const optHeader = document.getElementById('p-options-title');
                 if (optHeader) optHeader.innerText = "OPTIONS DISPONIBLES 🚀";
                 
                 const botOptions = [
@@ -855,7 +865,7 @@
                 const headerTitle = document.querySelector('#product-detail-modal .modal-header div:nth-child(2)');
                 if (headerTitle) headerTitle.innerText = "DÉTAILS DU PRODUIT";
                 
-                const optHeader = document.querySelector('#product-detail-modal div:nth-child(2) div:nth-child(2) div:nth-child(5)');
+                const optHeader = document.getElementById('p-options-title');
                 if (optHeader) optHeader.innerText = "FORMATS DISPONIBLES 📦";
                 
                 const uv = parseFloat(String(activeProduct.unit_value || '1').replace(',','.')) || 1;

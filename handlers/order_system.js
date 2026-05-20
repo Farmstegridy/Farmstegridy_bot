@@ -145,7 +145,7 @@ function setupOrderSystem(bot) {
         for (const cat of categories) {
             // Un bandeau pour la catégorie si plus d'une catégorie existe
             if (categories.length > 1) {
-                buttons.push([Markup.button.callback(`─── ${cat.toUpperCase()} ───`, 'noop')]);
+                buttons.push([Markup.button.callback(`─── ${cat.toUpperCase()} ───`, `cat_header_${cat.substring(0, 30)}`)]);
             }
             
             const prods = productsByCategory[cat];
@@ -168,6 +168,13 @@ function setupOrderSystem(bot) {
 
         await safeEdit(ctx, text, Markup.inlineKeyboard(buttons));
     }
+
+    bot.action(/^cat_header_(.+)$/, async (ctx) => {
+        try {
+            const cat = ctx.match[1];
+            await ctx.answerCbQuery(`🏷️ Catégorie : ${cat.toUpperCase()}\n\nVeuillez sélectionner un produit dans la liste ci-dessous.`, { show_alert: true }).catch(() => {});
+        } catch(e) {}
+    });
 
     bot.action('noop', async (ctx) => {
         try { await ctx.answerCbQuery().catch(() => {}); } catch(e) {}
@@ -196,7 +203,7 @@ function setupOrderSystem(bot) {
         const product = products.find(p => p.id == productId);
         const settings = ctx.state?.settings || await getAppSettings();
 
-        if (!product) return safeEdit(ctx, settings.msg_product_not_found || '❌ Produit non trouvé.', [Markup.button.callback(settings.btn_back_menu || '◀️ Retour Menu', 'view_catalog')]);
+        if (!product) return safeEdit(ctx, settings.msg_product_not_found || '❌ Produit non trouvé.', Markup.inlineKeyboard([[Markup.button.callback(settings.btn_back_menu || '◀️ Retour Menu', 'view_catalog')]]));
 
         let promoText = "";
         if (product.is_bundle) {

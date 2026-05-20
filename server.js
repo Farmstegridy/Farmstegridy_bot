@@ -186,6 +186,87 @@ function createServer(port = 8080) {
         }
     });
 
+    function verifyTelegramWebAppData(initData, botToken) {
+        if (!initData || !botToken) return false;
+        try {
+            const crypto = require('crypto');
+            let cleanToken = botToken.trim();
+            if (cleanToken.startsWith('=')) {
+                cleanToken = cleanToken.substring(1).trim();
+            }
+
+            const params = new URLSearchParams(initData);
+            const hash = params.get('hash');
+            if (!hash) return false;
+
+            params.delete('hash');
+
+            const keys = Array.from(params.keys()).sort();
+            const dataCheckString = keys.map(key => `${key}=${params.get(key)}`).join('\n');
+
+            const secretKey = crypto.createHmac('sha256', 'WebAppData').update(cleanToken).digest();
+            const signature = crypto.createHmac('sha256', secretKey).update(dataCheckString).digest('hex');
+
+            return signature === hash;
+        } catch (e) {
+            console.error('[AUTH-TG] Error validating Telegram WebApp initData:', e);
+            return false;
+        }
+    }
+
+    app.post('/api/login-telegram', async (req, res) => {
+        try {
+            const { initData } = req.body;
+            if (!initData) return res.status(400).json({ error: 'initData manquant' });
+
+            let token = process.env.BOT_TOKEN;
+            const settings = await getAppSettings().catch(() => ({}));
+            if (settings && settings.telegram_token) {
+                token = settings.telegram_token;
+            }
+
+            if (!token) {
+                console.error('[AUTH-TG] Bot token introuvable');
+                return res.status(500).json({ error: 'Configuration serveur incomplète' });
+            }
+
+            const isValid = verifyTelegramWebAppData(initData, token);
+            if (!isValid) {
+                console.warn('[AUTH-TG] Signature initData invalide');
+                return res.status(401).json({ error: 'Signature invalide' });
+            }
+
+            const params = new URLSearchParams(initData);
+            const userStr = params.get('user');
+            if (!userStr) {
+                return res.status(400).json({ error: 'Utilisateur non spécifié' });
+            }
+
+            const tgUser = JSON.parse(userStr);
+            const userId = `telegram_${tgUser.id}`;
+
+            const { getUser } = require('./services/database');
+            const user = await getUser(userId);
+            if (!user || !user.is_admin) {
+                console.warn(`[AUTH-TG] Accès refusé pour ${userId} (non-admin)`);
+                return res.status(403).json({ error: 'Accès réservé aux administrateurs' });
+            }
+
+            // Générer le jeton JWT admin
+            const jwtToken = jwt.sign(
+                { role: 'admin', userId: userId, iat: Math.floor(Date.now() / 1000) },
+                JWT_SECRET,
+                { expiresIn: '12h' }
+            );
+
+            console.log(`[AUTH-TG] Connexion automatique admin réussie pour ${user.first_name || ''} (${userId})`);
+            return res.json({ success: true, token: jwtToken });
+        } catch (e) {
+            console.error('❌ Erreur auto-login Telegram:', e);
+            return res.status(500).json({ error: 'Erreur serveur' });
+        }
+    });
+
     app.post('/api/forgot-password', async (req, res) => {
         try {
             const settings = await getAppSettings();
@@ -1168,21 +1249,6 @@ function createServer(port = 8080) {
 
     // ========== FIN MARKETPLACE API ==========
 
-    app.use('/api/*', (req, res) => {
-        res.status(404).json({ error: 'Route API non trouvée' });
-    });
-
-    // Global error handler for Express
-    app.use((err, req, res, next) => {
-        console.error('❌ [EXPRESS ERROR]', err);
-        res.status(500).json({ error: 'Erreur interne du serveur' });
-    });
-
-    // START SERVER
-    app.listen(port, () => {
-        console.log(`✅ [System] Dashboard accessible sur le port ${port}`);
-    });
-
     app.post('/api/mini-app/cart', async (req, res) => {
         try {
             const { userId, items } = req.body;
@@ -1902,6 +1968,21 @@ function createServer(port = 8080) {
         } catch (e) {
             res.status(500).json({ error: e.message });
         }
+    });
+
+    app.use('/api/*', (req, res) => {
+        res.status(404).json({ error: 'Route API non trouvée' });
+    });
+
+    // Global error handler for Express
+    app.use((err, req, res, next) => {
+        console.error('❌ [EXPRESS ERROR]', err);
+        res.status(500).json({ error: 'Erreur interne du serveur' });
+    });
+
+    // START SERVER
+    app.listen(port, () => {
+        console.log(`✅ [System] Dashboard accessible sur le port ${port}`);
     });
 
     return app;
