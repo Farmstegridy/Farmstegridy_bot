@@ -248,11 +248,15 @@
   </div>
 
   <script>
+    const tg = window.Telegram?.WebApp;
+    if (tg) {
+      tg.expand();
+      tg.ready();
+    }
     const token = localStorage.getItem('admin_token');
     if (token) {
       window.location.href = '/dashboard';
     } else {
-      const tg = window.Telegram?.WebApp;
       if (tg && tg.initData) {
         (async () => {
           try {

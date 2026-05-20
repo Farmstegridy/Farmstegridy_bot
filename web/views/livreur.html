@@ -135,7 +135,7 @@
             position: fixed; bottom: 0; left: 0; right: 0;
             background: rgba(10,10,10,0.85); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
             border-top: 1px solid var(--border);
-            display: grid; grid-template-columns: 1fr 1fr;
+            display: grid; grid-template-columns: repeat(3, 1fr);
             padding: 10px 0 calc(10px + var(--safe-area-bottom)) 0;
             z-index: 9000;
         }
@@ -168,6 +168,11 @@
             </div>
         </div>
 
+        <div id="tab-chat" class="tab-content" style="display:none; padding-bottom: 80px;">
+            <div class="section-title">Discussions actives 💬</div>
+            <div id="chat-active-list"></div>
+        </div>
+
         <div id="tab-history" class="tab-content" style="display:none;">
             <div class="section-title">Mon historique cumulé 📈</div>
             <div id="history-orders-list"></div>
@@ -178,6 +183,10 @@
         <div class="tab-item active" onclick="switchTab('deliveries')">
             <div class="tab-icon">🚚</div>
             <div>COURSES</div>
+        </div>
+        <div class="tab-item" onclick="switchTab('chat')">
+            <div class="tab-icon">💬</div>
+            <div>CHAT</div>
         </div>
         <div class="tab-item" onclick="switchTab('history')">
             <div class="tab-icon">📈</div>
@@ -225,8 +234,12 @@
                 document.querySelector('.tab-item:nth-child(1)').classList.add('active');
                 document.getElementById('tab-deliveries').style.display = 'block';
                 refreshOrders();
-            } else if (tab === 'history') {
+            } else if (tab === 'chat') {
                 document.querySelector('.tab-item:nth-child(2)').classList.add('active');
+                document.getElementById('tab-chat').style.display = 'block';
+                renderChatTabList();
+            } else if (tab === 'history') {
+                document.querySelector('.tab-item:nth-child(3)').classList.add('active');
                 document.getElementById('tab-history').style.display = 'block';
                 loadHistory();
             }
@@ -271,8 +284,16 @@
                 const active = await activeRes.json();
                 const available = await availRes.json();
 
+                window.lastActiveOrders = active;
+
                 renderActive(active);
                 renderAvailable(available);
+
+                // Si le chat tab est actif, on le met à jour aussi en direct
+                const chatTab = document.getElementById('tab-chat');
+                if (chatTab && chatTab.style.display === 'block') {
+                    renderChatTabList();
+                }
             } catch(e){}
         }
 
@@ -427,6 +448,89 @@
             } catch (e) {
                 input.disabled = false;
                 tg.showAlert("Erreur réseau lors de l'envoi.");
+            }
+        }
+
+        function renderChatTabList() {
+            const list = window.lastActiveOrders || [];
+            const cont = document.getElementById('chat-active-list');
+            if (!cont) return;
+            if (!list.length) {
+                cont.innerHTML = '<div class="empty-state">Aucune discussion active en cours.</div>';
+                return;
+            }
+            cont.innerHTML = '';
+            list.forEach(o => {
+                const d = document.createElement('div');
+                d.className = 'order-card';
+                d.style.marginBottom = '12px';
+                
+                const h = o.chatHistory;
+                const count = h ? h.count : (parseInt(o.chat_count) || 0);
+                
+                let chatHistoryHtml = '';
+                if (h) {
+                    chatHistoryHtml = `
+                        <div class="chat-history-box" id="tab-chat-box-${o.id}">
+                            <span style="opacity:0.4; font-size:10px;">Dernier échange (${count}/6) :</span><br>
+                            <b style="color:${h.senderRole === 'client' ? 'var(--accent)' : '#00ff88'}">${h.senderRole === 'client' ? 'Client' : 'Vous'} :</b> <i>${h.lastMessage}</i>
+                        </div>
+                    `;
+                } else if (count > 0) {
+                    chatHistoryHtml = `
+                        <div class="chat-history-box" id="tab-chat-box-${o.id}">
+                            <span style="opacity:0.4; font-size:10px;">Discussion entamée (${count}/6)</span>
+                        </div>
+                    `;
+                } else {
+                    chatHistoryHtml = `
+                        <div class="chat-history-box" id="tab-chat-box-${o.id}">
+                            <span style="opacity:0.4; font-size:10px;">Aucun message échangé (${count}/6)</span>
+                        </div>
+                    `;
+                }
+
+                d.innerHTML = `
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                        <div style="font-weight:900; font-size:14px;"><i class="ph-fill ph-receipt"></i> Commande #${o.id.slice(-5).toUpperCase()}</div>
+                        <div style="font-size:11px; opacity:0.6; font-weight:800; color:var(--accent);">${count}/6 msgs</div>
+                    </div>
+                    <div style="font-size:12px; opacity:0.7; margin-bottom:12px;"><b>Adresse :</b> ${o.address}</div>
+                    ${chatHistoryHtml}
+                    <div class="chat-input-group" style="margin-top:12px; display:flex; gap:8px;">
+                        <input type="text" class="chat-input" id="tab-chat-input-${o.id}" placeholder="Message au client..." onkeydown="if(event.key==='Enter') sendTabChatMessage('${o.id}')"
+                            style="flex:1; background:rgba(0,0,0,0.4); border:1px solid var(--border); border-radius:12px; color:#fff; padding:10px 14px; font-size:13px; outline:none;">
+                        <button class="btn-send" onclick="sendTabChatMessage('${o.id}')" 
+                            style="background:var(--accent); border:none; border-radius:12px; color:#fff; padding:0 15px; font-size:12px; font-weight:800; cursor:pointer;">ENVOYER</button>
+                    </div>
+                `;
+                cont.appendChild(d);
+            });
+        }
+
+        async function sendTabChatMessage(orderId) {
+            const input = document.getElementById(`tab-chat-input-${orderId}`);
+            const text = input?.value?.trim();
+            if (!text) return;
+            input.disabled = true;
+            try {
+                const res = await fetch('/api/livreur/send-chat-message', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ userId: `telegram_${tg.initDataUnsafe.user.id}`, orderId, text })
+                });
+                const data = await res.json();
+                input.disabled = false;
+                if (data.error) {
+                    tg.showAlert(data.error);
+                } else {
+                    input.value = '';
+                    try { tg.HapticFeedback.notificationOccurred('success'); } catch(e){}
+                    refreshOrders();
+                }
+            } catch(e) {
+                input.disabled = false;
+                tg.showAlert("Erreur réseau");
             }
         }
 

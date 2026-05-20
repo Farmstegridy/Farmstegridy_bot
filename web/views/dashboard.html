@@ -2166,6 +2166,7 @@
         <div class="nav-group">
             <span class="nav-label">Outils</span>
             <a class="nav-item" onclick="switchSection('broadcast')" id="side-nav-broadcast"><i>📣</i> Diffusion</a>
+            <a class="nav-item" onclick="switchSection('insights')" id="side-nav-insights"><i>📊</i> Insights</a>
             <a class="nav-item" onclick="switchSection('support-chat')" id="side-nav-support-chat" style="position:relative;"><i>💬</i> Chat Support<span id="chat-unread-dot" style="display:none; width:8px; height:8px; background:#ff0050; border-radius:50%; position:absolute; right:15px; top:50%; transform:translateY(-50%);"></span></a>
             <a class="nav-item" onclick="switchSection('features')" id="side-nav-features"><i>📖</i> Guide</a>
         </div>
@@ -2262,8 +2263,11 @@
                     </div>
 
                     <div style="display:flex; gap:10px; align-items:center; flex: 1; min-width: 200px;">
-                        <select id="insights-platform-filter" style="display:none;" onchange="updatePlatformStats(); renderMainChart(window.currentTimeframe || 'hour')">
-                            <option value="all">Toutes Plateformes</option>
+                        <select id="insights-platform-filter" onchange="updatePlatformStats(); renderMainChart(window.currentTimeframe || 'hour')" 
+                            style="background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.2); border-radius:12px; padding:0 15px; color:white; font-size:14px; font-weight:600; cursor:pointer; flex: 1; height: 42px; appearance: none; background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23FFFFFF%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E'); background-repeat: no-repeat; background-position: right 12px top 50%; background-size: 12px auto;">
+                            <option value="all" style="background:#222; color:#fff;">📱 Toutes Plateformes</option>
+                            <option value="telegram" style="background:#222; color:#fff;">🔹 Telegram Only</option>
+                            <option value="whatsapp" style="background:#222; color:#fff;">🔸 WhatsApp Only</option>
                         </select>
                         <button class="btn btn-accent" style="height: 42px; border-radius:12px; padding: 0 20px;" onclick="exportAnalyticsCSV()">📥 CSV</button>
                     </div>
@@ -2300,6 +2304,22 @@
                     <div class="stat-label">Secteurs Actifs</div>
                     <div class="stat-value" id="insights-total-cities" style="font-size:24px;">—</div>
                 </div>
+                <div class="stat-card premium-card" style="border-color: #00f0ff;">
+                    <div class="stat-label">Top Arr. (75)</div>
+                    <div class="stat-value" id="stat-top-arr" style="font-size:22px; color:#00f0ff; letter-spacing:-1px;">—</div>
+                </div>
+                <div class="stat-card premium-card" style="border-color: #a855f7;">
+                    <div class="stat-label">Valeur du Stock</div>
+                    <div class="stat-value" id="insights-stock-value" style="font-size:24px; color:#a855f7;">—</div>
+                </div>
+                <div class="stat-card premium-card" style="border-color: #ff3b30;">
+                    <div class="stat-label">Stock en Rupture</div>
+                    <div class="stat-value" id="insights-stock-out" style="font-size:24px; color:#ff3b30;">—</div>
+                </div>
+                <div class="stat-card premium-card" style="border-color: #34c759;">
+                    <div class="stat-label">Total Articles</div>
+                    <div class="stat-value" id="insights-stock-qty" style="font-size:24px; color:#34c759;">—</div>
+                </div>
             </div>
 
 
@@ -2309,6 +2329,7 @@
                     <div style="display:flex; background:rgba(255,255,255,0.05); padding:3px; border-radius:10px; gap:3px; border:1px solid var(--border);">
                         <button id="btn-view-charts" class="btn btn-sm btn-outline active" onclick="switchInsightsView('charts')">📊 Graphiques</button>
                         <button id="btn-view-table" class="btn btn-sm btn-outline" onclick="switchInsightsView('table')">📋 Tableau</button>
+                        <button id="btn-view-stocks" class="btn btn-sm btn-outline" onclick="switchInsightsView('stocks')">📦 Stocks Live</button>
                     </div>
                     <button class="btn btn-sm btn-outline" id="btn-backfill-cities" onclick="runBackfillCities()" style="border-color:orange; color:orange; font-size:11px;">🔧 Nettoyer villes (LE/LA...)</button>
                 </div>
@@ -2351,6 +2372,10 @@
                             <div class="col">
                                 <h4 style="font-size:13px; color:var(--accent); margin-bottom:12px; text-transform:uppercase;">📦 Top Produits</h4>
                                 <div id="list-top-products"></div>
+                            </div>
+                            <div class="col">
+                                <h4 style="font-size:13px; color:#00f0ff; margin-bottom:12px; text-transform:uppercase;">📍 Secteurs / Arr.</h4>
+                                <div id="list-top-districts"></div>
                             </div>
                             <div class="col">
                                 <h4 style="font-size:13px; color:var(--success); margin-bottom:12px; text-transform:uppercase;">👤 Top Clients</h4>
@@ -2456,6 +2481,55 @@
                             </thead>
                             <tbody id="raw-deliveries-table">
                                 <tr><td colspan="9" style="text-align:center; padding:20px; opacity:0.5;">Chargement...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- STOCKS VIEW -->
+            <div id="insights-view-stocks" style="display:none; margin-top: 15px;">
+                <div class="stats-grid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)) !important; gap:12px; margin-bottom:25px;">
+                    <div class="stat-card premium-card" style="border-color:#a855f7;">
+                        <div class="stat-label">Valeur Totale du Stock</div>
+                        <div class="stat-value" id="stock-total-value" style="font-size:24px; color:#a855f7;">—</div>
+                    </div>
+                    <div class="stat-card premium-card" style="border-color:#ff3b30;">
+                        <div class="stat-label">Produits en Rupture</div>
+                        <div class="stat-value" id="stock-out-count" style="font-size:24px; color:#ff3b30;">—</div>
+                    </div>
+                    <div class="stat-card premium-card" style="border-color:#ff9500;">
+                        <div class="stat-label">Stock Faible (&le; 5)</div>
+                        <div class="stat-value" id="stock-low-count" style="font-size:24px; color:#ff9500;">—</div>
+                    </div>
+                    <div class="stat-card premium-card" style="border-color:#34c759;">
+                        <div class="stat-label">Total Articles en Stock</div>
+                        <div class="stat-value" id="stock-total-qty" style="font-size:24px; color:#34c759;">—</div>
+                    </div>
+                </div>
+
+                <div class="premium-card">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:18px; flex-wrap:wrap; gap:10px;">
+                        <h3 style="margin:0; font-size:18px;">📦 État des Stocks en Temps Réel</h3>
+                        <div style="position:relative; width:250px;">
+                            <input type="text" id="stock-search" placeholder="Rechercher un produit..." onkeyup="filterStockTable()"
+                                style="width:100%; padding:10px 15px; border-radius:10px; background:rgba(255,255,255,0.05); border:1px solid var(--border); color:#fff; font-size:13px; outline:none;">
+                        </div>
+                    </div>
+                    <div style="overflow-x:auto;">
+                        <table class="responsive-table" style="width:100%;">
+                            <thead>
+                                <tr>
+                                    <th style="text-align:left;">Produit</th>
+                                    <th style="text-align:left;">Catégorie</th>
+                                    <th style="text-align:right;">Prix</th>
+                                    <th style="text-align:center;">Niveau de Stock</th>
+                                    <th style="text-align:right;">Quantité</th>
+                                    <th style="text-align:center;">Statut</th>
+                                </tr>
+                            </thead>
+                            <tbody id="stock-analytics-table">
+                                <tr><td colspan="6" style="text-align:center; padding:30px; opacity:0.5;">Chargement...</td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -4122,6 +4196,11 @@
     </main>
 
     <script>
+        const tg = window.Telegram?.WebApp;
+        if (tg) {
+            tg.expand();
+            tg.ready();
+        }
         let TOKEN = localStorage.getItem('admin_token');
         let chartInstances = {};
         window.lastAnalytics = null;
@@ -4272,21 +4351,21 @@
             document.addEventListener(evt, () => { lastUserActivity = Date.now(); }, { passive: true });
         });
 
-        // Refresh toutes les 60s si l'utilisateur n'a pas interagi depuis 10s
+        // Refresh toutes les 15s si l'utilisateur n'a pas interagi depuis 5s
         setInterval(() => {
             if (isRefreshing) return;
             const timeSinceActivity = Date.now() - lastUserActivity;
-            if (timeSinceActivity < 10000) return; // Skip si activité récente
+            if (timeSinceActivity < 5000) return; // Skip si activité récente
 
             const activeSection = document.querySelector('.section.active');
             if (activeSection && !document.body.classList.contains('loading')) {
                 const id = activeSection.id.replace('section-', '');
-                if (id === 'overview' || id === 'logistique' || id === 'livreurs' || id === 'orders' || id === 'users') {
+                if (id === 'overview' || id === 'logistique' || id === 'livreurs' || id === 'orders' || id === 'users' || id === 'insights' || id === 'products') {
                     isRefreshing = true;
                     loadData(id, true).finally(() => { isRefreshing = false; });
                 }
             }
-        }, 60000);
+        }, 15000);
 
         function safeDate(val) {
             if (!val) return new Date();
@@ -5151,7 +5230,7 @@
                     // Platform Chart
                     if (chartInstances.platforms) chartInstances.platforms.destroy();
                     const tgData = data.byPlatform?.telegram || { ca: 0, count: 0 };
-                    const waData = { ca: 0, count: 0 };
+                    const waData = data.byPlatform?.whatsapp || { ca: 0, count: 0 };
                     chartInstances.platforms = new Chart(document.getElementById('canvas-platforms'), {
                         type: 'doughnut',
                         data: {
@@ -5162,6 +5241,37 @@
                     });
 
                     renderMainChart(window.currentTimeframe || 'hour');
+
+                    // --- Districts Ranking ---
+                    const topDistricts = Object.entries(data.byDistrict || {})
+                        .sort((a,b) => b[1].ca - a[1].ca)
+                        .slice(0, 10);
+                    
+                    const districtsHtml = topDistricts.map(([name, val]) => `
+                        <div style="display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid rgba(255,255,255,0.05); align-items:center;">
+                            <div style="display:flex; flex-direction:column;">
+                                <span style="font-size:13px; font-weight:600;">${name}</span>
+                                <span style="font-size:10px; opacity:0.5;">${val.city || ''}</span>
+                            </div>
+                            <div style="text-align:right;">
+                                <div style="font-weight:700; color:#00f0ff; font-size:13px;">${val.ca.toFixed(2)}€</div>
+                                <div style="font-size:10px; opacity:0.6;">${val.count} cmd.</div>
+                            </div>
+                        </div>
+                    `).join('');
+                    if (document.getElementById('list-top-districts')) {
+                        document.getElementById('list-top-districts').innerHTML = districtsHtml || '<div style="padding:10px;opacity:0.5;">—</div>';
+                    }
+
+                    // Top Arr. (75) summary card
+                    const parisDistricts = topDistricts.filter(([name]) => name.toUpperCase().startsWith('PARIS') || name.startsWith('75') || name.startsWith('750'));
+                    if (parisDistricts.length > 0 && document.getElementById('stat-top-arr')) {
+                        document.getElementById('stat-top-arr').innerText = parisDistricts[0][0].replace('Paris ', '');
+                    } else if (topDistricts.length > 0 && document.getElementById('stat-top-arr')) {
+                        document.getElementById('stat-top-arr').innerText = topDistricts[0][0];
+                    } else if (document.getElementById('stat-top-arr')) {
+                        document.getElementById('stat-top-arr').innerText = '—';
+                    }
 
                     // Leaderboards
                     const topProds = Object.entries(data.byProduct || {}).sort((a, b) => b[1].qty - a[1].qty).slice(0, 8);
@@ -5352,6 +5462,74 @@
                                 <td><span style="font-size:10px; padding:2px 6px; border-radius:10px; background:${r.platform==='whatsapp'?'rgba(37,211,102,0.15)':'rgba(0,136,204,0.15)'}; color:${r.platform==='whatsapp'?'#25D366':'#0088cc'};">${r.platform}</span></td>
                                 <td style="text-align:center;">${r.is_priority ? '<span style="color:orange; font-size:14px;">⚡</span>' : ''}</td>
                             </tr>`).join('');
+                    }
+
+                    // --- LIVE STOCKS ---
+                    try {
+                        const products = await api('/products', 'GET', null, true);
+                        let totalValue = 0;
+                        let outCount = 0;
+                        let lowCount = 0;
+                        let totalQty = 0;
+
+                        const stockRows = products.map(p => {
+                            const stock = typeof p.stock === 'number' ? p.stock : 0;
+                            const price = parseFloat(p.price) || 0;
+                            totalValue += price * stock;
+                            totalQty += stock;
+
+                            let statusBadge = '';
+                            let progressColor = 'var(--success)';
+                            if (stock <= 0) {
+                                outCount++;
+                                statusBadge = '<span style="background:rgba(255,59,48,0.15); color:#ff3b30; padding:3px 8px; border-radius:6px; font-size:11px; font-weight:700;">RUPTURE</span>';
+                                progressColor = '#ff3b30';
+                            } else if (stock <= 5) {
+                                lowCount++;
+                                statusBadge = '<span style="background:rgba(255,149,0,0.15); color:#ff9500; padding:3px 8px; border-radius:6px; font-size:11px; font-weight:700;">FAIBLE</span>';
+                                progressColor = '#ff9500';
+                            } else {
+                                statusBadge = '<span style="background:rgba(52,199,89,0.15); color:#34c759; padding:3px 8px; border-radius:6px; font-size:11px; font-weight:700;">CORRECT</span>';
+                                progressColor = '#34c759';
+                            }
+
+                            const percent = Math.min(100, Math.max(0, (stock / 30) * 100));
+
+                            return {
+                                name: p.name || 'Inconnu',
+                                category: p.category || 'N/A',
+                                price: price.toFixed(2) + '€',
+                                stock,
+                                statusBadge,
+                                progressHtml: `
+                                    <div style="width:100px; height:8px; background:rgba(255,255,255,0.05); border-radius:4px; overflow:hidden; margin:0 auto;">
+                                        <div style="width:${percent}%; height:100%; background:${progressColor}; border-radius:4px;"></div>
+                                    </div>
+                                `
+                            };
+                        });
+
+                        const stockValEl = document.getElementById('stock-total-value');
+                        if (stockValEl) stockValEl.innerText = totalValue.toFixed(2) + '€';
+                        const stockOutEl = document.getElementById('stock-out-count');
+                        if (stockOutEl) stockOutEl.innerText = outCount;
+                        const stockLowEl = document.getElementById('stock-low-count');
+                        if (stockLowEl) stockLowEl.innerText = lowCount;
+                        const stockQtyEl = document.getElementById('stock-total-qty');
+                        if (stockQtyEl) stockQtyEl.innerText = totalQty;
+
+                        // Update Insights stock cards
+                        const isv = document.getElementById('insights-stock-value');
+                        if (isv) isv.innerText = totalValue.toFixed(2) + '€';
+                        const iso = document.getElementById('insights-stock-out');
+                        if (iso) iso.innerText = outCount;
+                        const isq = document.getElementById('insights-stock-qty');
+                        if (isq) isq.innerText = totalQty;
+
+                        window.stockData = stockRows;
+                        renderStockTable(stockRows);
+                    } catch(e) {
+                        console.error('Stock load error:', e);
                     }
                 }
                 if (id === 'settings') {
@@ -5893,8 +6071,33 @@
         function switchInsightsView(mode) {
             document.getElementById('insights-view-charts').style.display = mode === 'charts' ? '' : 'none';
             document.getElementById('insights-view-table').style.display = mode === 'table' ? '' : 'none';
+            document.getElementById('insights-view-stocks').style.display = mode === 'stocks' ? '' : 'none';
             document.getElementById('btn-view-charts').classList.toggle('active', mode === 'charts');
             document.getElementById('btn-view-table').classList.toggle('active', mode === 'table');
+            document.getElementById('btn-view-stocks').classList.toggle('active', mode === 'stocks');
+        }
+
+        function renderStockTable(rows) {
+            const tbody = document.getElementById('stock-analytics-table');
+            if (!tbody) return;
+            tbody.innerHTML = rows.map(r => `
+                <tr>
+                    <td style="font-weight:600;">${r.name}</td>
+                    <td style="opacity:0.8;">${r.category}</td>
+                    <td style="text-align:right;">${r.price}</td>
+                    <td style="text-align:center; vertical-align:middle;">${r.progressHtml}</td>
+                    <td style="text-align:right; font-weight:700;">${r.stock}</td>
+                    <td style="text-align:center;">${r.statusBadge}</td>
+                </tr>
+            `).join('') || '<tr><td colspan="6" style="text-align:center; padding:20px; opacity:0.5;">Aucun produit.</td></tr>';
+        }
+
+        function filterStockTable() {
+            const query = document.getElementById('stock-search').value.toLowerCase();
+            const filtered = (window.stockData || []).filter(r => 
+                r.name.toLowerCase().includes(query) || r.category.toLowerCase().includes(query)
+            );
+            renderStockTable(filtered);
         }
 
         async function runBackfillCities() {
@@ -8164,7 +8367,7 @@
             await switchSection(initSection);
 
             // 3. Sequential preload (one by one, avoiding server pressure)
-            const allSections = ['users', 'products', 'logistique', 'broadcast'];
+            const allSections = ['users', 'products', 'logistique', 'broadcast', 'insights'];
             const toPreload = allSections.filter(s => s !== initSection);
             
             for (const s of toPreload) {

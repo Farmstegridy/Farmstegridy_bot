@@ -56,8 +56,9 @@ let _bot = null;
 function setBotInstance(bot) { _bot = bot; }
 function getBotInstance() { return _bot; }
 
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'admin123';
-const JWT_SECRET = process.env.ENCRYPTION_KEY || require('crypto').randomBytes(64).toString('hex');
+const JWT_SECRET = process.env.ENCRYPTION_KEY || process.env.SUPABASE_KEY || process.env.BOT_TOKEN || require('crypto').randomBytes(64).toString('hex');
+const authLogs = [];
+
 
 // Rate limiter : 5 tentatives max par 15 minutes sur le login
 const loginLimiter = rateLimit({
@@ -214,40 +215,79 @@ function createServer(port = 8080) {
         }
     }
 
+    app.get('/api/debug-auth-logs', (req, res) => {
+        res.json(authLogs);
+    });
+
     app.post('/api/login-telegram', async (req, res) => {
+        const logEntry = {
+            timestamp: new Date().toISOString(),
+            ip: req.ip || req.socket?.remoteAddress,
+            initDataTruncated: req.body.initData ? (req.body.initData.substring(0, 100) + '...') : null,
+            initDataFullLength: req.body.initData ? req.body.initData.length : 0,
+            hasInitData: !!req.body.initData,
+            isValid: false
+        };
+        authLogs.push(logEntry);
+        if (authLogs.length > 50) authLogs.shift();
+
         try {
             const { initData } = req.body;
-            if (!initData) return res.status(400).json({ error: 'initData manquant' });
+            if (!initData) {
+                logEntry.error = 'initData manquant';
+                return res.status(400).json({ error: 'initData manquant' });
+            }
 
             let token = process.env.BOT_TOKEN;
-            const settings = await getAppSettings().catch(() => ({}));
+            const settings = await getAppSettings().catch((err) => {
+                logEntry.getSettingsError = err.message;
+                return {};
+            });
             if (settings && settings.telegram_token) {
                 token = settings.telegram_token;
             }
+            logEntry.tokenUsed = token ? (token.substring(0, 10) + '...') : null;
 
             if (!token) {
+                logEntry.error = 'Bot token introuvable';
                 console.error('[AUTH-TG] Bot token introuvable');
                 return res.status(500).json({ error: 'Configuration serveur incomplète' });
             }
 
             const isValid = verifyTelegramWebAppData(initData, token);
+            logEntry.isValid = isValid;
             if (!isValid) {
+                logEntry.error = 'Signature initData invalide';
                 console.warn('[AUTH-TG] Signature initData invalide');
                 return res.status(401).json({ error: 'Signature invalide' });
             }
 
             const params = new URLSearchParams(initData);
             const userStr = params.get('user');
+            logEntry.hasUserStr = !!userStr;
             if (!userStr) {
+                logEntry.error = 'Utilisateur non spécifié dans initData';
                 return res.status(400).json({ error: 'Utilisateur non spécifié' });
             }
 
             const tgUser = JSON.parse(userStr);
+            logEntry.tgUser = tgUser;
             const userId = `telegram_${tgUser.id}`;
+            logEntry.userId = userId;
 
             const { getUser } = require('./services/database');
-            const user = await getUser(userId);
+            const user = await getUser(userId).catch(err => {
+                logEntry.getUserError = err.message;
+                return null;
+            });
+            logEntry.foundUser = !!user;
+            if (user) {
+                logEntry.userIsAdmin = !!user.is_admin;
+                logEntry.userFirstName = user.first_name;
+            }
+
             if (!user || !user.is_admin) {
+                logEntry.error = `Accès refusé pour ${userId} (non-admin)`;
                 console.warn(`[AUTH-TG] Accès refusé pour ${userId} (non-admin)`);
                 return res.status(403).json({ error: 'Accès réservé aux administrateurs' });
             }
@@ -259,9 +299,11 @@ function createServer(port = 8080) {
                 { expiresIn: '12h' }
             );
 
+            logEntry.success = true;
             console.log(`[AUTH-TG] Connexion automatique admin réussie pour ${user.first_name || ''} (${userId})`);
             return res.json({ success: true, token: jwtToken });
         } catch (e) {
+            logEntry.error = e.message;
             console.error('❌ Erreur auto-login Telegram:', e);
             return res.status(500).json({ error: 'Erreur serveur' });
         }
@@ -922,8 +964,8 @@ function createServer(port = 8080) {
                     // Ajouter bouton annulation si pas encore livré ou annulé
                     if (!['delivered', 'cancelled', 'refused'].includes(status)) {
                         keyboard.push([Markup.button.callback('❌ Annuler ma commande', `cancel_order_client_${orderId}`)]);
-                        // Si c'est une notification de temps, permettre de répondre
-                        if (status.startsWith('arrival_')) {
+                        // Si c'est en livraison, arrivé ou notification de temps, permettre de répondre
+                        if (status.startsWith('arrival_') || status === 'arrived' || status === 'taken' || status === 'delivering') {
                             keyboard.push([Markup.button.callback('💬 Répondre au livreur', `chat_livreur_${orderId}`)]);
                         }
                     } else if (status === 'delivered') {

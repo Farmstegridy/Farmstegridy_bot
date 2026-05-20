@@ -685,7 +685,7 @@
                         `;
                     }
 
-                    const btnContact = (o.status === 'taken' || o.status === 'pending') ? `<button class="btn-primary" style="margin-top:10px; background:rgba(0,255,255,0.1); border:1px solid var(--secondary); color:var(--secondary); height:40px;" onclick="toggleChatModule('${o.id}')"><i class="ph-fill ph-chat-circle-dots"></i> CHAT ASSISTANCE (${count}/6)</button>` : '';
+                    const btnContact = (!['delivered', 'cancelled', 'refused'].includes(o.status) && o.livreur_id) ? `<button class="btn-primary" style="margin-top:10px; background:rgba(0,255,255,0.1); border:1px solid var(--secondary); color:var(--secondary); height:40px;" onclick="toggleChatModule('${o.id}')"><i class="ph-fill ph-chat-circle-dots"></i> CHAT LIVREUR (${count}/6)</button>` : '';
                     const btnNoter = ['delivered'].includes(o.status) && !o.feedback_rating ? `<button class="btn-primary" style="margin-top:10px; background:var(--card); border:1px solid var(--accent); color:var(--accent); height:40px;" onclick="openRating('${o.id}')"><i class="ph-fill ph-star"></i> NOTER</button>` : '';
                     const btnReorder = `<button class="btn-primary" style="margin-top:10px; background:none; border:1px solid var(--border); color:#fff; height:40px;" onclick="reorder('${o.id}')"><i class="ph-fill ph-arrows-clockwise"></i> RECOMMANDER</button>`;
                     const btnCancel = (o.status === 'pending') ? `<button class="btn-primary" style="margin-top:10px; background:rgba(255,0,80,0.1); border:1px solid rgba(255,0,80,0.5); color:#ff0050; height:40px;" onclick="cancelOrder('${o.id}')"><i class="ph-bold ph-x"></i> ANNULER</button>` : '';
@@ -1465,8 +1465,19 @@
         function editAddress(id) {
             const addr = savedAddresses.find(a => a.id === id);
             if (!addr) return;
+            const presets = ['Domicile', 'Bureau', 'Ami(e)', 'Hôtel'];
+            const currentName = addr.name.replace(/"/g, '&quot;');
+            const isPreset = presets.includes(addr.name);
             const html = `
-                <input type="text" id="edit-addr-name" placeholder="Nom (ex: Domicile)" value="${addr.name.replace(/"/g, '&quot;')}" style="width:100%; padding:15px; background:rgba(0,0,0,0.3); border:1px solid var(--border); border-radius:12px; color:#fff; font-family:'Outfit', sans-serif; font-size:14px; margin-bottom:10px; box-sizing:border-box;">
+                <div style="margin-bottom:14px;">
+                    <div style="font-size:11px; font-weight:800; text-transform:uppercase; letter-spacing:1px; opacity:0.5; margin-bottom:8px;">Type d'adresse</div>
+                    <div class="address-type-carousel" style="display:flex; gap:8px; overflow-x:auto; padding-bottom:6px; -webkit-overflow-scrolling:touch;">
+                        ${presets.map(p => `<div class="addr-chip${addr.name === p ? ' active' : ''}" onclick="selectAddressType('${p}', this, 'edit')" style="flex-shrink:0; padding:10px 18px; border-radius:30px; font-size:13px; font-weight:700; cursor:pointer; border:1.5px solid ${addr.name === p ? 'var(--accent)' : 'var(--border)'}; background:${addr.name === p ? 'rgba(255,0,80,0.15)' : 'rgba(255,255,255,0.04)'}; color:${addr.name === p ? 'var(--accent)' : '#fff'}; transition:all 0.2s;">${p === 'Domicile' ? '🏠' : p === 'Bureau' ? '💼' : p === 'Ami(e)' ? '👥' : '🏨'} ${p}</div>`).join('')}
+                        <div class="addr-chip${!isPreset ? ' active' : ''}" onclick="selectAddressType('Autre', this, 'edit')" style="flex-shrink:0; padding:10px 18px; border-radius:30px; font-size:13px; font-weight:700; cursor:pointer; border:1.5px solid ${!isPreset ? 'var(--accent)' : 'var(--border)'}; background:${!isPreset ? 'rgba(255,0,80,0.15)' : 'rgba(255,255,255,0.04)'}; color:${!isPreset ? 'var(--accent)' : '#fff'}; transition:all 0.2s;">📍 Autre</div>
+                    </div>
+                    <input type="hidden" id="edit-addr-type" value="${isPreset ? addr.name : 'Autre'}">
+                    <input type="text" id="edit-addr-custom" placeholder="Nom personnalisé" value="${!isPreset ? currentName : ''}" style="width:100%; padding:15px; background:rgba(0,0,0,0.3); border:1px solid var(--border); border-radius:12px; color:#fff; font-family:'Outfit',sans-serif; font-size:14px; margin-top:10px; box-sizing:border-box; display:${!isPreset ? 'block' : 'none'};">
+                </div>
                 <textarea id="edit-addr-val" placeholder="Adresse complète" oninput="handleAddressAutocomplete(this.value, 'edit-addr-val')" style="width:100%; padding:15px; background:rgba(0,0,0,0.3); border:1px solid var(--border); border-radius:12px; color:#fff; font-family:'Outfit', sans-serif; font-size:14px; margin-bottom:5px; box-sizing:border-box; height:80px;">${addr.address.replace(/"/g, '&quot;')}</textarea>
                 <div id="address-suggestions-edit-addr-val" style="display:none; background:var(--card); border:1px solid var(--accent); border-radius:12px; margin-bottom:10px; max-height:150px; overflow-y:auto; box-shadow:0 5px 15px rgba(0,0,0,0.5); text-align:left;"></div>
                 <input type="text" id="edit-addr-digicode" placeholder="Digicode / Instructions" value="${(addr.digicode || '').replace(/"/g, '&quot;')}" style="width:100%; padding:15px; background:rgba(0,0,0,0.3); border:1px solid var(--border); border-radius:12px; color:#fff; font-family:'Outfit', sans-serif; font-size:14px; margin-bottom:20px; box-sizing:border-box;">
@@ -1478,7 +1489,8 @@
         }
 
         async function saveEditedAddress(id) {
-            const name = document.getElementById('edit-addr-name').value.trim();
+            const typeVal = document.getElementById('edit-addr-type').value;
+            const name = typeVal === 'Autre' ? document.getElementById('edit-addr-custom').value.trim() : typeVal;
             const address = document.getElementById('edit-addr-val').value.trim();
             const digicode = document.getElementById('edit-addr-digicode').value.trim();
             
@@ -1544,8 +1556,17 @@
         }
 
         function showAddAddressForm() {
+            const presets = ['Domicile', 'Bureau', 'Ami(e)', 'Hôtel'];
             const html = `
-                <input type="text" id="new-addr-name" placeholder="Nom (ex: Domicile, Bureau)" style="width:100%; padding:15px; background:rgba(0,0,0,0.3); border:1px solid var(--border); border-radius:12px; color:#fff; font-family:'Outfit', sans-serif; font-size:14px; margin-bottom:10px; box-sizing:border-box;">
+                <div style="margin-bottom:14px;">
+                    <div style="font-size:11px; font-weight:800; text-transform:uppercase; letter-spacing:1px; opacity:0.5; margin-bottom:8px;">Type d'adresse</div>
+                    <div class="address-type-carousel" style="display:flex; gap:8px; overflow-x:auto; padding-bottom:6px; -webkit-overflow-scrolling:touch;">
+                        ${presets.map((p, i) => `<div class="addr-chip${i === 0 ? ' active' : ''}" onclick="selectAddressType('${p}', this, 'new')" style="flex-shrink:0; padding:10px 18px; border-radius:30px; font-size:13px; font-weight:700; cursor:pointer; border:1.5px solid ${i === 0 ? 'var(--accent)' : 'var(--border)'}; background:${i === 0 ? 'rgba(255,0,80,0.15)' : 'rgba(255,255,255,0.04)'}; color:${i === 0 ? 'var(--accent)' : '#fff'}; transition:all 0.2s;">${p === 'Domicile' ? '🏠' : p === 'Bureau' ? '💼' : p === 'Ami(e)' ? '👥' : '🏨'} ${p}</div>`).join('')}
+                        <div class="addr-chip" onclick="selectAddressType('Autre', this, 'new')" style="flex-shrink:0; padding:10px 18px; border-radius:30px; font-size:13px; font-weight:700; cursor:pointer; border:1.5px solid var(--border); background:rgba(255,255,255,0.04); color:#fff; transition:all 0.2s;">📍 Autre</div>
+                    </div>
+                    <input type="hidden" id="new-addr-type" value="Domicile">
+                    <input type="text" id="new-addr-custom" placeholder="Nom personnalisé" style="width:100%; padding:15px; background:rgba(0,0,0,0.3); border:1px solid var(--border); border-radius:12px; color:#fff; font-family:'Outfit',sans-serif; font-size:14px; margin-top:10px; box-sizing:border-box; display:none;">
+                </div>
                 <textarea id="new-addr-val" placeholder="Adresse complète (Autocomplétion en temps réel)" oninput="handleAddressAutocomplete(this.value, 'new-addr-val')" style="width:100%; padding:15px; background:rgba(0,0,0,0.3); border:1px solid var(--border); border-radius:12px; color:#fff; font-family:'Outfit', sans-serif; font-size:14px; margin-bottom:5px; box-sizing:border-box; height:80px;"></textarea>
                 <div id="address-suggestions-new-addr-val" style="display:none; background:var(--card); border:1px solid var(--accent); border-radius:12px; margin-bottom:10px; max-height:150px; overflow-y:auto; box-shadow:0 5px 15px rgba(0,0,0,0.5); text-align:left;"></div>
                 <input type="text" id="new-addr-digicode" placeholder="Digicode / Instructions (optionnel)" style="width:100%; padding:15px; background:rgba(0,0,0,0.3); border:1px solid var(--border); border-radius:12px; color:#fff; font-family:'Outfit', sans-serif; font-size:14px; margin-bottom:20px; box-sizing:border-box;">
@@ -1556,8 +1577,30 @@
             openCustomModal('NOUVELLE ADRESSE', html);
         }
 
+        function selectAddressType(val, chipEl, prefix) {
+            const carousel = chipEl.parentElement;
+            carousel.querySelectorAll('.addr-chip').forEach(c => {
+                c.classList.remove('active');
+                c.style.borderColor = 'var(--border)';
+                c.style.background = 'rgba(255,255,255,0.04)';
+                c.style.color = '#fff';
+            });
+            chipEl.classList.add('active');
+            chipEl.style.borderColor = 'var(--accent)';
+            chipEl.style.background = 'rgba(255,0,80,0.15)';
+            chipEl.style.color = 'var(--accent)';
+            document.getElementById(prefix + '-addr-type').value = val;
+            const customInput = document.getElementById(prefix + '-addr-custom');
+            if (customInput) {
+                customInput.style.display = val === 'Autre' ? 'block' : 'none';
+                if (val !== 'Autre') customInput.value = '';
+            }
+            try { tg.HapticFeedback.impactOccurred('light'); } catch(e){}
+        }
+
         async function saveNewAddress() {
-            const name = document.getElementById('new-addr-name').value.trim();
+            const typeVal = document.getElementById('new-addr-type').value;
+            const name = typeVal === 'Autre' ? document.getElementById('new-addr-custom').value.trim() : typeVal;
             const address = document.getElementById('new-addr-val').value.trim();
             const digicode = document.getElementById('new-addr-digicode').value.trim();
             
@@ -1662,7 +1705,7 @@
             try {
                 const res = await fetch(`/api/user-orders?userId=telegram_${uid}`);
                 const orders = await res.json();
-                const active = orders.filter(o => o.status === 'taken' || o.status === 'pending');
+                const active = orders.filter(o => !['delivered', 'cancelled', 'refused'].includes(o.status) && o.livreur_id);
                 const cont = document.getElementById('active-orders-chat-list');
                 if (!cont) return;
                 if (!active.length) {
