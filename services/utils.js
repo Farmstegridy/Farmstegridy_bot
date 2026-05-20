@@ -5,10 +5,23 @@ const https = require('https');
 const http = require('http');
 
 async function downloadToBuffer(url) {
-    if (typeof url !== 'string' || !url.startsWith('http')) return null;
+    if (typeof url !== 'string') return null;
+    if (url.includes('/public/')) {
+        try {
+            const parts = url.split('/public/');
+            const relativePath = parts[parts.length - 1];
+            const localPath = path.join(__dirname, '..', 'web', 'public', relativePath);
+            if (fs.existsSync(localPath)) {
+                return fs.readFileSync(localPath);
+            }
+        } catch (e) {
+            console.error('[downloadToBuffer] Local read failed:', e.message);
+        }
+    }
+    if (!url.startsWith('http')) return null;
     return new Promise((resolve) => {
         const mod = url.startsWith('https') ? https : http;
-        mod.get(url, (res) => {
+        const req = mod.get(url, (res) => {
             const chunks = [];
             res.on('data', chunk => chunks.push(chunk));
             res.on('end', () => {
@@ -16,7 +29,12 @@ async function downloadToBuffer(url) {
                 resolve(buffer.length > 0 ? buffer : null);
             });
             res.on('error', () => resolve(null));
-        }).on('error', () => resolve(null));
+        });
+        req.on('error', () => resolve(null));
+        req.setTimeout(5000, () => {
+            req.destroy();
+            resolve(null);
+        });
     });
 }
 

@@ -1547,7 +1547,7 @@ function setupOrderSystem(bot) {
             user.data.is_available = isAvailable;
         }
 
-        const { getLivreurMenuKeyboard } = require('./start');
+        const { getLivreurMenuKeyboard, updateMenuButton } = require('./start');
         const city = user?.current_city || user?.data?.current_city || 'Non défini';
         const text = `${settings.ui_icon_livreur} <b>${settings.label_livreur || 'Espace Livreur'}</b>\n\n` +
             `👤 ${user ? (user.first_name || 'Inconnu') : ctx.from.first_name}\n` +
@@ -1558,8 +1558,8 @@ function setupOrderSystem(bot) {
         const keyboard = await getLivreurMenuKeyboard(ctx, settings, user || { is_available: isAvailable, data: { is_available: isAvailable } });
         await safeEdit(ctx, text, keyboard);
 
-        // 5. Cleanup bouton "Démarrer"
-        ctx.telegram.setChatMenuButton(ctx.chat.id, { type: 'commands' }).catch(() => { });
+        // 5. Update menu button dynamically
+        await updateMenuButton(ctx, user, settings, false);
 
         // 6. Relayer à l'admin
         await notifyAdmins(bot, `🔔 <b>STATUT LIVREUR</b>\n\n👤 ${ctx.from.first_name}\n📍 Secteur : ${city.toUpperCase()}\n🔘 ${isAvailable ? '✅ DISPONIBLE' : '❌ INDISPONIBLE'}`);

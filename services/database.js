@@ -44,6 +44,12 @@ function decryptUser(userData) {
     // Derive platform_id (raw numeric telegram ID) from the doc ID (telegram_XXXX)
     const rawId = String(userData.id || '');
     const platformId = rawId.includes('_') ? rawId.split('_').pop() : rawId;
+    
+    let meta = userData.data || {};
+    if (typeof meta === 'string') {
+        try { meta = JSON.parse(meta); } catch (e) { meta = {}; }
+    }
+
     const decrypted = {
         ...userData,
         doc_id: userData.id,
@@ -51,16 +57,13 @@ function decryptUser(userData) {
         username: encryption.decrypt(userData.username) || userData.username || '',
         first_name: encryption.decrypt(userData.first_name) || userData.first_name || 'Utilisateur',
         last_name: encryption.decrypt(userData.last_name) || userData.last_name || '',
-        platform: userData.platform || (String(userData.id).startsWith('whatsapp') ? 'whatsapp' : 'telegram')
+        address: userData.address || meta.address || '',
+        platform: userData.platform || (String(userData.id).startsWith('whatsapp') ? 'whatsapp' : 'telegram'),
+        data: meta,
+        is_available: !!(meta.is_available ?? userData.is_available),
+        current_city: meta.current_city || userData.current_city || null
     };
 
-    let meta = userData.data || {};
-    if (typeof meta === 'string') {
-        try { meta = JSON.parse(meta); } catch (e) { meta = {}; }
-    }
-    decrypted.data = meta;
-    decrypted.is_available = !!(meta.is_available ?? userData.is_available);
-    decrypted.current_city = meta.current_city || userData.current_city || null;
     return decrypted;
 }
 
@@ -246,6 +249,12 @@ async function registerUser(platformUser, platform = 'telegram', referrerId = nu
 }
 
 async function updateUser(docId, data) {
+    if (data.address !== undefined) {
+        const user = await getUser(docId);
+        const currentData = user?.data || {};
+        data.data = { ...currentData, address: data.address };
+        delete data.address;
+    }
     const { data: updated, error } = await supabase.from(COL_USERS).update(data).eq('id', docId).select().single();
     if (updated) _userCacheSet(docId, decryptUser(updated));
     return updated;

@@ -129,9 +129,7 @@ function setupStartHandler(bot) {
                 reply_markup: keyboard.reply_markup || keyboard
             });
 
-            if (ctx.telegram) {
-                ctx.telegram.setChatMenuButton(ctx.chat.id, { type: 'commands' }).catch(() => { });
-            }
+            await updateMenuButton(ctx, registeredUser, settings);
 
         } catch (error) {
             console.error('❌ Erreur /start:', error);
@@ -298,7 +296,9 @@ async function showMainMenu(ctx, forceClient = false) {
             `📍 Secteur : <b>${(user.current_city || 'INCONNU').toUpperCase()}</b>\n` +
             `🔘 Statut : <b>${isAvail ? '✅ DISPONIBLE' : '❌ INDISPONIBLE'}</b>`;
         const keyboard = await getLivreurMenuKeyboard(ctx, settings, user, hasActive);
-        return await safeEdit(ctx, livreurText, keyboard);
+        await safeEdit(ctx, livreurText, keyboard);
+        await updateMenuButton(ctx, user, settings, false);
+        return;
     }
 
     // Mode client (normal ou forcé pour un livreur)
@@ -313,6 +313,7 @@ async function showMainMenu(ctx, forceClient = false) {
         photo: settings.welcome_photo || null,
         reply_markup: keyboard.reply_markup || keyboard
     });
+    await updateMenuButton(ctx, user, settings, forceClient);
 }
 
 async function getMainMenuKeyboard(ctx, settings, user, isFournisseur = false, isAdminUser = false) {
@@ -371,4 +372,39 @@ async function getLivreurMenuKeyboard(ctx, settings, user, hasActiveOrders = fal
     return Markup.inlineKeyboard(buttons);
 }
 
-module.exports = { setupStartHandler, getLivreurMenuKeyboard, getMainMenuKeyboard };
+async function updateMenuButton(ctx, user, settings, forceClient = false) {
+    if (!ctx.telegram || !ctx.chat) return;
+    try {
+        if (!settings) settings = await getAppSettings();
+        const baseDomain = process.env.RENDER_EXTERNAL_URL || (process.env.RAILWAY_PUBLIC_DOMAIN ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}` : 'https://farmstegridy-bot.onrender.com');
+        const catalogUrl = settings.mini_app_url ? `${settings.mini_app_url}/catalog` : `${baseDomain}/catalog`;
+        const livreurUrl = settings.mini_app_url ? `${settings.mini_app_url}/livreur` : `${baseDomain}/livreur`;
+        const dashboardUrl = settings.mini_app_url ? `${settings.mini_app_url}/dashboard` : `${baseDomain}/dashboard`;
+
+        const isAdminUser = await isAdmin(ctx);
+
+        if (isAdminUser && !forceClient) {
+            await ctx.telegram.setChatMenuButton(ctx.chat.id, {
+                type: 'web_app',
+                text: `${settings.ui_icon_admin || '🛠️'} Dashboard`,
+                web_app: { url: dashboardUrl }
+            }).catch(() => {});
+        } else if (user && user.is_livreur && !forceClient) {
+            await ctx.telegram.setChatMenuButton(ctx.chat.id, {
+                type: 'web_app',
+                text: `${settings.ui_icon_livreur || '🚴'} Livreur`,
+                web_app: { url: livreurUrl }
+            }).catch(() => {});
+        } else {
+            await ctx.telegram.setChatMenuButton(ctx.chat.id, {
+                type: 'web_app',
+                text: `${settings.ui_icon_catalog || '🛍️'} Catalogue`,
+                web_app: { url: catalogUrl }
+            }).catch(() => {});
+        }
+    } catch (e) {
+        console.error('Error updating chat menu button:', e.message);
+    }
+}
+
+module.exports = { setupStartHandler, getLivreurMenuKeyboard, getMainMenuKeyboard, updateMenuButton };

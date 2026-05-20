@@ -741,7 +741,7 @@ function setupAdminHandlers(bot) {
         const uid = ctx.match[1];
         const u = await getUser(uid);
         if (u) {
-            const { setLivreurStatus } = require('../services/database');
+            const { setLivreurStatus, getAppSettings } = require('../services/database');
             const { sendMessageToUser } = require('../services/notifications');
             
             const newStatus = !u.is_livreur;
@@ -752,6 +752,29 @@ function setupAdminHandlers(bot) {
                 await sendMessageToUser(uid, `🚴 <b>PROMOTION LIVREUR !</b>\n\nVous avez été promu au rang de livreur par l'administration.\n\nCliquez sur /start pour accéder à votre interface de livraison.`);
             } else {
                 await sendMessageToUser(uid, `👤 <b>MISE À JOUR DE RÔLE</b>\n\nVotre rôle de livreur a été révoqué par l'administration. Vous repassez en mode Client. Cliquez sur /start pour voir le menu.`);
+            }
+
+            try {
+                const targetChatId = u.platform_id.replace('telegram_', '');
+                const baseDomain = process.env.RENDER_EXTERNAL_URL || (process.env.RAILWAY_PUBLIC_DOMAIN ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}` : 'https://farmstegridy-bot.onrender.com');
+                const settings = await getAppSettings();
+                if (newStatus) {
+                    const livreurUrl = settings.mini_app_url ? `${settings.mini_app_url}/livreur` : `${baseDomain}/livreur`;
+                    await ctx.telegram.setChatMenuButton(targetChatId, {
+                        type: 'web_app',
+                        text: `${settings.ui_icon_livreur || '🚴'} Livreur`,
+                        web_app: { url: livreurUrl }
+                    }).catch(() => {});
+                } else {
+                    const catalogUrl = settings.mini_app_url ? `${settings.mini_app_url}/catalog` : `${baseDomain}/catalog`;
+                    await ctx.telegram.setChatMenuButton(targetChatId, {
+                        type: 'web_app',
+                        text: `${settings.ui_icon_catalog || '🛍️'} Catalogue`,
+                        web_app: { url: catalogUrl }
+                    }).catch(() => {});
+                }
+            } catch (e) {
+                console.error('Error updating menu button on livreur status change:', e.message);
             }
             
             return renderUserView(ctx, uid).catch(() => {});
@@ -866,6 +889,29 @@ function setupAdminHandlers(bot) {
             if (u.platform_id) clearAuthCache(u.platform_id);
             
             await ctx.answerCbQuery(newState ? '👑 Promu Admin' : '🚫 Admin retiré');
+
+            try {
+                const targetChatId = u.platform_id.replace('telegram_', '');
+                const baseDomain = process.env.RENDER_EXTERNAL_URL || (process.env.RAILWAY_PUBLIC_DOMAIN ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}` : 'https://farmstegridy-bot.onrender.com');
+                const settings = await getAppSettings();
+                if (newState) {
+                    const dashboardUrl = settings.mini_app_url ? `${settings.mini_app_url}/dashboard` : `${baseDomain}/dashboard`;
+                    await ctx.telegram.setChatMenuButton(targetChatId, {
+                        type: 'web_app',
+                        text: `${settings.ui_icon_admin || '🛠️'} Dashboard`,
+                        web_app: { url: dashboardUrl }
+                    }).catch(() => {});
+                } else {
+                    const catalogUrl = settings.mini_app_url ? `${settings.mini_app_url}/catalog` : `${baseDomain}/catalog`;
+                    await ctx.telegram.setChatMenuButton(targetChatId, {
+                        type: 'web_app',
+                        text: `${settings.ui_icon_catalog || '🛍️'} Catalogue`,
+                        web_app: { url: catalogUrl }
+                    }).catch(() => {});
+                }
+            } catch (e) {
+                console.error('Error updating menu button on admin status change:', e.message);
+            }
         } else {
             const newState = !u.is_moderator;
             await setModeratorStatus(uid, newState);

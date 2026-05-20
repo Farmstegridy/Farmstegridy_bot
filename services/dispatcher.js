@@ -267,7 +267,12 @@ class Dispatcher {
                     }
                     return [];
                 },
-                setChatMenuButton: async () => {},
+                setChatMenuButton: async (cid, menuButton) => {
+                    const tgCh = registry.query('telegram');
+                    const tgBot = tgCh?.getBotInstance?.();
+                    if (tgBot) return tgBot.telegram.setChatMenuButton(cid || userId, menuButton).catch(() => {});
+                    return true;
+                },
                 getFileLink: async (fileId) => {
                     const tgCh = registry.query('telegram');
                     const tgBot = tgCh?.getBotInstance?.();
