@@ -7,6 +7,7 @@ const path = require('path');
 
 // Détection d'environnement strict
 const IS_RAILWAY = process.env.RAILWAY_ENVIRONMENT || process.env.RAILWAY_PROJECT_ID;
+const IS_RENDER = !!process.env.RENDER_EXTERNAL_URL;
 
 async function bootstrap() {
     try {
@@ -76,7 +77,7 @@ async function bootstrap() {
             server.setBotInstance(telegramChannel.bot); // Permet au dashboard d'envoyer des messages
         }
 
-        const staticUrl = process.env.RAILWAY_STATIC_URL || 'localhost';
+        const staticUrl = process.env.RENDER_EXTERNAL_URL || process.env.RAILWAY_STATIC_URL || 'localhost';
         console.log(`🔗 TEST HEALTH : https://${staticUrl}/_health`);
 
         // 4. Initialisation des canaux de communication
@@ -85,7 +86,7 @@ async function bootstrap() {
         // Initialisation des canaux enregistrés dans le dispatcher
         const channels = await dispatcher.initChannels();
         
-        const replicaIndex = process.env.RAILWAY_REPLICA_INDEX || 0;
+        const replicaIndex = process.env.RAILWAY_REPLICA_INDEX || process.env.RENDER_REPLICA_INDEX || 0;
         console.log(`[System] Replica ${replicaIndex}: Starting Telegram channel...`);
         
         // Lancement du canal telegram
