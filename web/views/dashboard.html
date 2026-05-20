@@ -2165,6 +2165,7 @@
         <div class="nav-group">
             <span class="nav-label">Outils</span>
             <a class="nav-item" onclick="switchSection('broadcast')" id="side-nav-broadcast"><i>📣</i> Diffusion</a>
+            <a class="nav-item" onclick="switchSection('support-chat')" id="side-nav-support-chat" style="position:relative;"><i>💬</i> Chat Support<span id="chat-unread-dot" style="display:none; width:8px; height:8px; background:#ff0050; border-radius:50%; position:absolute; right:15px; top:50%; transform:translateY(-50%);"></span></a>
             <a class="nav-item" onclick="switchSection('features')" id="side-nav-features"><i>📖</i> Guide</a>
         </div>
 
@@ -2181,6 +2182,7 @@
         <a class="m-nav-item active" onclick="switchSection('overview')" id="m-nav-overview"><i>🏠</i><span>Accueil</span></a>
         <a class="m-nav-item" onclick="switchSection('logistique')" id="m-nav-logistique"><i>🛵</i><span>Commandes</span></a>
         <a class="m-nav-item" onclick="switchSection('products')" id="m-nav-products"><i>👟</i><span>Produits</span></a>
+        <a class="m-nav-item" onclick="switchSection('support-chat')" id="m-nav-support-chat"><i>💬</i><span>Chat</span></a>
         <a class="m-nav-item" onclick="switchSection('settings')" id="m-nav-settings"><i>⚙️</i><span>Réglages</span></a>
         <a class="m-nav-item" onclick="toggleSidebar()"><i>☰</i><span>Menu</span></a>
     </nav>
@@ -2886,6 +2888,43 @@
         <!-- OLD SECTIONS (Keep IDs for JS consistency but they won't be in sidebar) -->
         <section class="section" id="section-orders" style="display:none;"></section>
         <section class="section" id="section-livreurs" style="display:none;"></section>
+
+        <!-- SUPPORT CHAT ADMIN-CLIENT -->
+        <section class="section" id="section-support-chat">
+            <div class="section-header flex justify-between items-center" style="margin-bottom:25px;">
+                <h1 style="margin:0;">💬 Chat Support Client</h1>
+                <button class="btn btn-outline btn-sm" onclick="loadData('support-chat')">🔄 Rafraîchir</button>
+            </div>
+            <!-- Search bar -->
+            <div class="card" style="margin-bottom:20px; padding:20px;">
+                <div style="display:flex; gap:12px; align-items:center;">
+                    <input type="text" id="chat-search-input" placeholder="Rechercher par @username ou ID Telegram..." oninput="filterAdminChats()" style="flex:1;">
+                    <div style="color:var(--text-muted); font-size:13px; font-weight:700;" id="chat-count-label">0 conversation(s)</div>
+                </div>
+            </div>
+
+            <div id="admin-chat-list" style="display:flex; flex-direction:column; gap:15px;">
+                <div style="text-align:center; opacity:0.4; padding:40px;">Aucune conversation ouverte.</div>
+            </div>
+
+            <!-- Reply Modal -->
+            <div id="chat-reply-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.85); z-index:9999; align-items:center; justify-content:center;">
+                <div style="background:#111; border:1px solid rgba(255,255,255,0.1); border-radius:28px; padding:30px; width:90%; max-width:550px; max-height:80vh; display:flex; flex-direction:column;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+                        <div id="chat-reply-header" style="font-size:18px; font-weight:900;">Chat</div>
+                        <button onclick="closeChatReplyModal()" style="background:none; border:none; color:#fff; font-size:22px; cursor:pointer; opacity:0.5;">✕</button>
+                    </div>
+                    <div id="chat-reply-messages" style="flex:1; overflow-y:auto; display:flex; flex-direction:column; gap:10px; margin-bottom:15px; padding:5px; max-height:350px;"></div>
+                    <div style="display:flex; gap:8px;">
+                        <input type="text" id="chat-reply-input" placeholder="Votre réponse..." maxlength="500"
+                            style="flex:1; background:rgba(255,255,255,0.05); border:1px solid rgba(0,150,255,0.4); border-radius:12px; color:#fff; padding:12px 15px; font-size:13px; outline:none;"
+                            onkeydown="if(event.key==='Enter') sendAdminReply()">
+                        <button onclick="sendAdminReply()" style="background:linear-gradient(135deg,#0096ff,#0050cc); border:none; border-radius:12px; color:#fff; width:48px; height:48px; font-size:20px; cursor:pointer; flex-shrink:0;">➤</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
 
         <!-- BROADCAST / DIFFUSION -->
         <section class="section" id="section-broadcast">
@@ -5027,6 +5066,17 @@
                         console.error("BC load error", e);
                         const historyTbody = document.querySelector('#bcHistoryTable tbody');
                         if (historyTbody) historyTbody.innerHTML = '<tr><td colspan="7" style="color:var(--danger);padding:20px">Erreur de chargement.</td></tr>';
+                    }
+                }
+
+                if (id === 'support-chat') {
+                    try {
+                        const chats = await api('/admin-chat/all', 'GET', null, silent);
+                        window._adminChatsData = chats;
+                        filterAdminChats();
+                    } catch (e) {
+                        console.error("Support Chat load error", e);
+                        document.getElementById('admin-chat-list').innerHTML = '<div style="color:var(--danger);padding:20px;text-align:center;">Erreur de chargement des conversations.</div>';
                     }
                 }
 
@@ -8099,6 +8149,120 @@
                 }, 100);
             }
         })();
+        // ═══════════════════════════════════════════════════════════
+        // ADMIN SUPPORT CHAT FUNCTIONS
+        // ═══════════════════════════════════════════════════════════
+        function filterAdminChats() {
+            const list = document.getElementById('admin-chat-list');
+            const q = document.getElementById('chat-search-input').value.toLowerCase();
+            const chats = window._adminChatsData || [];
+
+            const filtered = chats.filter(c => {
+                const searchStr = `${c.username || ''} ${c.first_name || ''} ${c.platform_id || ''}`.toLowerCase();
+                return searchStr.includes(q);
+            });
+
+            document.getElementById('chat-count-label').innerText = `${filtered.length} conversation(s)`;
+
+            let unreadTotal = 0;
+            if (filtered.length === 0) {
+                list.innerHTML = `<div style="text-align:center; opacity:0.4; padding:40px;">Aucune conversation trouvée.</div>`;
+            } else {
+                list.innerHTML = filtered.map(c => {
+                    unreadTotal += (c.unreadCount || 0);
+                    const lastMsg = c.lastMessage ? c.lastMessage.text : '...';
+                    const lastTs = c.lastMessage ? new Date(c.lastMessage.ts).toLocaleString('fr-FR', {hour:'2-digit', minute:'2-digit'}) : '';
+                    return `
+                    <div class="card" style="padding:15px 20px; cursor:pointer; margin-bottom:0; display:flex; justify-content:space-between; align-items:center;" onclick="openChatReplyModal('${c.userId}')">
+                        <div style="display:flex; flex-direction:column; gap:4px; max-width:70%;">
+                            <div style="font-weight:700; font-size:15px;">${c.first_name} <span style="opacity:0.5; font-size:12px; font-weight:400;">${c.username ? '@'+c.username : 'ID:'+c.platform_id}</span></div>
+                            <div style="font-size:13px; color:var(--text-muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${lastMsg}</div>
+                        </div>
+                        <div style="display:flex; flex-direction:column; align-items:flex-end; gap:8px;">
+                            <div style="font-size:11px; opacity:0.6; font-weight:700;">${lastTs}</div>
+                            ${c.unreadCount > 0 ? `<div style="background:var(--accent); color:#fff; font-size:11px; font-weight:800; padding:2px 8px; border-radius:10px;">${c.unreadCount} NEW</div>` : ''}
+                        </div>
+                    </div>
+                    `;
+                }).join('');
+            }
+
+            const unreadDot = document.getElementById('chat-unread-dot');
+            if (unreadDot) {
+                unreadDot.style.display = unreadTotal > 0 ? 'block' : 'none';
+            }
+        }
+
+        window._currentReplyUserId = null;
+        function openChatReplyModal(userId) {
+            window._currentReplyUserId = userId;
+            const chat = (window._adminChatsData || []).find(c => c.userId === userId);
+            if (!chat) return;
+
+            document.getElementById('chat-reply-header').innerText = `Chat - ${chat.first_name}`;
+            const msgContainer = document.getElementById('chat-reply-messages');
+            
+            if (!chat.messages || chat.messages.length === 0) {
+                msgContainer.innerHTML = '<div style="text-align:center; opacity:0.5; padding:20px;">Aucun message.</div>';
+            } else {
+                msgContainer.innerHTML = chat.messages.map(m => {
+                    const isAdmin = m.role === 'admin';
+                    const time = new Date(m.ts).toLocaleString('fr-FR', {hour:'2-digit', minute:'2-digit'});
+                    return `
+                    <div style="display:flex; flex-direction:column; align-items:${isAdmin ? 'flex-end' : 'flex-start'}; margin-bottom:5px;">
+                        <div style="background:${isAdmin ? 'linear-gradient(135deg,#0096ff,#0050cc)' : 'rgba(255,255,255,0.08)'}; color:#fff; padding:10px 14px; border-radius:18px; max-width:85%; font-size:14px; line-height:1.4; word-break:break-word;">
+                            ${m.text}
+                        </div>
+                        <div style="font-size:10px; opacity:0.4; margin-top:3px; padding:0 5px;">${time}</div>
+                    </div>
+                    `;
+                }).join('');
+            }
+
+            document.getElementById('chat-reply-modal').style.display = 'flex';
+            msgContainer.scrollTop = msgContainer.scrollHeight;
+            setTimeout(() => document.getElementById('chat-reply-input').focus(), 100);
+        }
+
+        function closeChatReplyModal() {
+            document.getElementById('chat-reply-modal').style.display = 'none';
+            window._currentReplyUserId = null;
+        }
+
+        async function sendAdminReply() {
+            if (!window._currentReplyUserId) return;
+            const input = document.getElementById('chat-reply-input');
+            const text = input.value.trim();
+            if (!text) return;
+
+            try {
+                input.disabled = true;
+                const adminName = "Support"; // Could be dynamically fetched
+                await api('/admin-chat/reply', 'POST', {
+                    targetUserId: window._currentReplyUserId,
+                    text: text,
+                    adminName: adminName
+                });
+                input.value = '';
+                showToast('Réponse envoyée');
+                
+                // Optimistic UI update
+                const chat = window._adminChatsData.find(c => c.userId === window._currentReplyUserId);
+                if (chat) {
+                    chat.messages.push({ role: 'admin', text: text, ts: Date.now(), from: adminName });
+                    chat.lastMessage = chat.messages[chat.messages.length - 1];
+                    chat.unreadCount = 0; // mark as read locally
+                    openChatReplyModal(window._currentReplyUserId); // re-render modal
+                    filterAdminChats(); // update list
+                }
+            } catch (e) {
+                showToast('Erreur envoi réponse', 'error');
+            } finally {
+                input.disabled = false;
+                input.focus();
+            }
+        }
+
     </script>
 </body>
 

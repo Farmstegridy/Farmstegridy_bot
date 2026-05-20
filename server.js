@@ -1799,10 +1799,106 @@ function createServer(port = 8080) {
         try {
             const { userId, address } = req.body;
             const { updateUser } = require('./services/database');
-            // Mettre à jour l'adresse via updateUser pour invalider correctement le cache utilisateur
-            const { error } = await updateUser(userId, { address: address });
-            if (error) throw error;
+            await updateUser(userId, { address: address });
             res.json({ success: true });
+        } catch (e) {
+            res.status(500).json({ error: e.message });
+        }
+    });
+
+    // ═══════════════════════════════════════════════════════════
+    // ADMIN-CLIENT SUPPORT CHAT (permanent)
+    // ═══════════════════════════════════════════════════════════
+    // In-memory store: Map<userId, Array<{role, text, ts}>>
+    const _adminChats = new Map();
+
+    app.post('/api/admin-chat/send', async (req, res) => {
+        try {
+            const { userId, text } = req.body;
+            if (!userId || !text) return res.status(400).json({ error: 'Missing fields' });
+
+            const msg = { role: 'client', text, ts: Date.now() };
+            const history = _adminChats.get(userId) || [];
+            history.push(msg);
+            _adminChats.set(userId, history);
+
+            // Forward to admins via Telegram
+            const bot = getBotInstance();
+            if (bot) {
+                const { notifyAdmins } = require('./services/notifications');
+                const { getUser } = require('./services/database');
+                const user = await getUser(userId).catch(() => null);
+                const name = user?.first_name || userId;
+                const uname = user?.username ? `@${user.username}` : `ID:${userId.split('_')[1] || userId}`;
+                const adminMsg = `💬 <b>SUPPORT CLIENT (Mini App)</b>\n\n👤 <b>${name}</b> ${uname}\n📝 "${text}"\n\n<i>Répondre via Dashboard → Clients → Chat</i>`;
+                await notifyAdmins(bot, adminMsg).catch(() => {});
+            }
+
+            res.json({ success: true });
+        } catch (e) {
+            res.status(500).json({ error: e.message });
+        }
+    });
+
+    app.get('/api/admin-chat/history', async (req, res) => {
+        try {
+            const { userId } = req.query;
+            if (!userId) return res.status(400).json({ error: 'Missing userId' });
+            const messages = _adminChats.get(userId) || [];
+            res.json({ messages });
+        } catch (e) {
+            res.status(500).json({ error: e.message });
+        }
+    });
+
+    // Admin replies to a client from the dashboard
+    app.post('/api/admin-chat/reply', authMiddleware, async (req, res) => {
+        try {
+            const { targetUserId, text, adminName } = req.body;
+            if (!targetUserId || !text) return res.status(400).json({ error: 'Missing fields' });
+
+            const msg = { role: 'admin', text, ts: Date.now(), from: adminName || 'Support' };
+            const history = _adminChats.get(targetUserId) || [];
+            history.push(msg);
+            _adminChats.set(targetUserId, history);
+
+            // Notify the client via Telegram
+            const bot = getBotInstance();
+            if (bot) {
+                const tgId = targetUserId.split('_')[1];
+                if (tgId) {
+                    await bot.telegram.sendMessage(tgId,
+                        `💬 <b>Réponse du Support</b>\n\n${text}`,
+                        { parse_mode: 'HTML' }
+                    ).catch(() => {});
+                }
+            }
+
+            res.json({ success: true });
+        } catch (e) {
+            res.status(500).json({ error: e.message });
+        }
+    });
+
+    // Admin: list all open support chats
+    app.get('/api/admin-chat/all', authMiddleware, async (req, res) => {
+        try {
+            const { getUser } = require('./services/database');
+            const result = [];
+            for (const [userId, messages] of _adminChats.entries()) {
+                const user = await getUser(userId).catch(() => null);
+                result.push({
+                    userId,
+                    username: user?.username || '',
+                    first_name: user?.first_name || userId,
+                    platform_id: userId.split('_')[1] || userId,
+                    lastMessage: messages[messages.length - 1] || null,
+                    unreadCount: messages.filter(m => m.role === 'client').length,
+                    messages
+                });
+            }
+            result.sort((a, b) => (b.lastMessage?.ts || 0) - (a.lastMessage?.ts || 0));
+            res.json(result);
         } catch (e) {
             res.status(500).json({ error: e.message });
         }
@@ -1812,3 +1908,4 @@ function createServer(port = 8080) {
 }
 
 module.exports = { createServer, setBotInstance, getBotInstance };
+
