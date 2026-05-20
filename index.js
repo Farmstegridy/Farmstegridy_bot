@@ -149,9 +149,17 @@ async function bootstrap() {
 
 bootstrap();
 
-// Shutdown handling
-process.on('SIGTERM', () => {
-    console.log('SIGTERM received. Shutting down...');
+// Shutdown handling — libère le verrou TG avant de s'arrêter
+process.on('SIGTERM', async () => {
+    console.log('SIGTERM received. Releasing TG lock and shutting down...');
+    try {
+        const { createClient } = require('@supabase/supabase-js');
+        const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY);
+        await supabase.from('bot_stats').update({ tg_lock_owner: null, tg_lock_expires: null }).eq('id', 1);
+        console.log('[TG-LOCK] 🔓 Lock released on SIGTERM.');
+    } catch (e) {
+        console.warn('[TG-LOCK] Could not release lock on SIGTERM:', e.message);
+    }
     process.exit(0);
 });
 
