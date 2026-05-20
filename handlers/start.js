@@ -319,8 +319,8 @@ async function getMainMenuKeyboard(ctx, settings, user, isFournisseur = false, i
     if (!settings) settings = ctx.state?.settings || await getAppSettings();
     const buttons = [];
 
-    const baseDomain = process.env.RAILWAY_PUBLIC_DOMAIN || 'farmstegridybot.up.railway.app';
-    const catalogUrl = settings.mini_app_url ? `${settings.mini_app_url}/catalog` : `https://${baseDomain}/catalog`;
+    const baseDomain = process.env.RENDER_EXTERNAL_URL || (process.env.RAILWAY_PUBLIC_DOMAIN ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}` : 'https://farmstegridy-bot.onrender.com');
+    const catalogUrl = settings.mini_app_url ? `${settings.mini_app_url}/catalog` : `${baseDomain}/catalog`;
     
     buttons.push([
         Markup.button.callback(`${settings.ui_icon_catalog || '🛍'} CATALOGUE CLASSIQUE`, 'view_catalog'),
