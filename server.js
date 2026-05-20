@@ -1366,7 +1366,7 @@ function createServer(port = 8080) {
                 first_name: user?.first_name || 'Inconnu'
             };
 
-            const { order, error } = await createOrder(orderData);
+            let { order, error } = await createOrder(orderData);
             if (error) {
                 // Fallback si 'cart' manque aussi (vieille DB)
                 if (error.message && error.message.includes("'cart'")) {
