@@ -372,6 +372,18 @@
 
         let allNews = [];
 
+        // Helper : extrait la première URL d'image depuis le format JSON array ou string
+        function getImgUrl(product) {
+            const raw = product?.image_url;
+            if (!raw) return null;
+            try {
+                const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
+                if (Array.isArray(parsed) && parsed.length > 0) return parsed[0].url || null;
+            } catch(e) {}
+            if (typeof raw === 'string' && raw.startsWith('http')) return raw;
+            return null;
+        }
+
         async function init() {
             setLoader(30);
             try {
@@ -499,7 +511,7 @@
                 const d = document.createElement('div');
                 d.className = 'featured-item';
                 d.onclick = () => openProductModal(f.id);
-                const img = f.image_url || `https://placehold.co/100x100/111/fff?text=${encodeURIComponent(f.name)}`;
+                const img = getImgUrl(f) || `https://placehold.co/100x100/111/fff?text=${encodeURIComponent(f.name)}`;
                 d.innerHTML = `<div class="featured-thumb"><img src="${img}"></div><div class="featured-label">${f.name}</div>`;
                 if (carousel) carousel.appendChild(d);
             });
@@ -535,7 +547,7 @@
                 const d = document.createElement('div');
                 d.className = 'featured-item';
                 d.onclick = () => openProductModal(f.id);
-                const img = f.image_url || `https://placehold.co/100x100/111/fff?text=${encodeURIComponent(f.name)}`;
+                const img = getImgUrl(f) || `https://placehold.co/100x100/111/fff?text=${encodeURIComponent(f.name)}`;
                 d.innerHTML = `<div class="featured-thumb"><img src="${img}"></div><div class="featured-label">${f.name}</div>`;
                 if (carousel) carousel.appendChild(d);
             });
@@ -564,7 +576,7 @@
             container.innerHTML = '';
             prods.forEach((p, i) => {
                 const d = document.createElement('div'); d.className = 'card';
-                const img = p.image_url || `https://placehold.co/400x400/111/fff?text=${encodeURIComponent(p.name)}`;
+                const img = getImgUrl(p) || `https://placehold.co/400x400/111/fff?text=${encodeURIComponent(p.name)}`;
                 const rating = (4.5 + Math.random() * 0.5).toFixed(1);
                 
                 let badgeHtml = '';
@@ -839,7 +851,7 @@
             activeProduct = allProducts.find(x => x.id === pid);
             if (!activeProduct) return;
 
-            document.getElementById('p-img').src = activeProduct.image_url || `https://placehold.co/400x400/111/fff?text=${encodeURIComponent(activeProduct.name)}`;
+            document.getElementById('p-img').src = getImgUrl(activeProduct) || `https://placehold.co/400x400/111/fff?text=${encodeURIComponent(activeProduct.name)}`;
             document.getElementById('p-name').innerText = activeProduct.name;
             document.getElementById('p-price').innerText = activeProduct.price + '€';
             const promoEncart = document.getElementById('p-promo-encart');
