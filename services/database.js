@@ -1630,6 +1630,48 @@ const database = {
             await supabase.from(COL_USERS).update({ last_menu_id: msgId }).eq('id', userId);
         } catch (e) {}
     },
+    syncUserCart: async (userId, cart) => {
+        try {
+            const { data: settings } = await supabase.from(COL_SETTINGS).select('data').eq('key', 'active_carts').single();
+            const carts = settings ? (settings.data || {}) : {};
+            
+            if (!cart || cart.length === 0) {
+                delete carts[userId];
+            } else {
+                carts[userId] = {
+                    cart: cart,
+                    updated_at: Date.now(),
+                    notified: false
+                };
+            }
+            
+            if (settings) {
+                await supabase.from(COL_SETTINGS).update({ data: carts }).eq('key', 'active_carts');
+            } else {
+                await supabase.from(COL_SETTINGS).insert([{ key: 'active_carts', data: carts }]);
+            }
+        } catch (e) {}
+    },
+    trackUserView: async (userId, viewData) => {
+        try {
+            const { data: settings } = await supabase.from(COL_SETTINGS).select('data').eq('key', 'user_views').maybeSingle();
+            const views = settings ? (settings.data || {}) : {};
+            
+            if (!views[userId]) views[userId] = [];
+            views[userId].push(viewData);
+            
+            // Keep only the last 50 views per user to prevent bloat
+            if (views[userId].length > 50) {
+                views[userId] = views[userId].slice(-50);
+            }
+            
+            if (settings) {
+                await supabase.from(COL_SETTINGS).update({ data: views }).eq('key', 'user_views');
+            } else {
+                await supabase.from(COL_SETTINGS).insert([{ key: 'user_views', data: views }]);
+            }
+        } catch (e) {}
+    },
     COL_USERS,
     supabase
 };

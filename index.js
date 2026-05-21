@@ -140,6 +140,29 @@ async function bootstrap() {
             } catch (e) {
                 console.warn('[System] Reservation Cleanup Worker failed to start:', e.message);
             }
+            
+            // Start Twitter-Style Recommendation Engine
+            try {
+                const { runRecommendationEngine } = require('./services/recommendation_engine');
+                const { checkAbandonedCarts } = require('./services/smart_reminders');
+                
+                // Run ranker every hour
+                setInterval(runRecommendationEngine, 60 * 60 * 1000);
+                
+                // Run abandoned carts every 15 minutes
+                setInterval(checkAbandonedCarts, 15 * 60 * 1000);
+                
+                console.log('🚀 Recommendation Engine & Carts Workers active (Replica 0)');
+                
+                // Trigger once on startup after 10 seconds
+                setTimeout(() => {
+                    runRecommendationEngine();
+                    checkAbandonedCarts();
+                }, 10000);
+                
+            } catch (e) {
+                console.warn('[System] Recommendation Engine failed to start:', e.message);
+            }
         }
 
     } catch (error) {
