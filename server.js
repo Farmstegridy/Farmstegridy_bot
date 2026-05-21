@@ -629,6 +629,21 @@ function createServer(port = 8080) {
     });
 
     // ========== Upload Routes ==========
+    app.post('/api/client/upload', async (req, res) => {
+        try {
+            if (!req.files || Object.keys(req.files).length === 0) return res.status(400).json({ error: 'No files uploaded.' });
+            const { uploadMediaBuffer } = require('./services/database');
+            const file = Object.values(req.files)[0];
+            const ext = require('path').extname(file.name).toLowerCase();
+            const cleanName = `review_${Date.now()}_${Math.random().toString(36).substr(2,9)}${ext}`;
+            const url = await uploadMediaBuffer(file.data, cleanName, file.mimetype);
+            if (!url) throw new Error("Upload to Supabase failed");
+            res.json({ url });
+        } catch(e) {
+            res.status(500).json({error: e.message});
+        }
+    });
+
     app.post('/api/upload', authMiddleware, async (req, res) => {
         try {
             if (!req.files || !req.files.file) {
@@ -1977,7 +1992,7 @@ function createServer(port = 8080) {
 
     app.post('/api/products/reviews', async (req, res) => {
         try {
-            const { userId, productId, rating, text } = req.body;
+            const { userId, productId, rating, text, media } = req.body;
             const { getUser, saveReview } = require('./services/database');
             const user = await getUser(userId);
             if (!user) return res.status(404).json({ error: 'User not found' });
@@ -1987,6 +2002,7 @@ function createServer(port = 8080) {
                 product_id: productId,
                 rating,
                 text,
+                media: Array.isArray(media) ? media : [],
                 first_name: user.first_name,
                 username: user.username,
                 is_public: true

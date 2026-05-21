@@ -79,9 +79,20 @@ function decryptOrder(order) {
 
 function decryptReview(review) {
     if (!review) return null;
+    let decryptedText = encryption.decrypt(review.text) || review.text || '';
+    let parsedMedia = [];
+    try {
+        if (decryptedText.startsWith('{"text":')) {
+            const parsed = JSON.parse(decryptedText);
+            decryptedText = parsed.text;
+            parsedMedia = parsed.media || [];
+        }
+    } catch(e) {}
+    
     return {
         ...review,
-        text: encryption.decrypt(review.text) || review.text || '',
+        text: decryptedText,
+        media: parsedMedia,
         first_name: encryption.decrypt(review.first_name) || review.first_name || '',
         username: encryption.decrypt(review.username) || review.username || '',
     };
@@ -524,13 +535,15 @@ async function getReviews(limit = 100) {
 }
 
 async function saveReview(review) {
+    const payload = JSON.stringify({ text: review.text, media: review.media || [] });
     const encrypted = {
         ...review,
-        text: encryption.encrypt(review.text),
+        text: encryption.encrypt(payload),
         first_name: encryption.encrypt(review.first_name),
         username: encryption.encrypt(review.username),
         created_at: ts()
     };
+    delete encrypted.media;
     return await supabase.from(COL_REVIEWS).insert(encrypted);
 }
 

@@ -247,38 +247,35 @@
 
     <div id="page-chat" class="page" style="display:none; padding:30px 20px 150px 20px;">
         <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:25px;">
-            <h1 style="font-size:28px; font-weight:900;">SUPPORT <i class="ph-fill ph-headset" style="color:var(--secondary);"></i></h1>
+            <h1 style="font-size:28px; font-weight:900;">AIDE <i class="ph-fill ph-headset" style="color:var(--secondary);"></i></h1>
             <div id="chat-unread-badge" style="display:none; background:var(--accent); color:#fff; font-size:11px; font-weight:900; padding:4px 10px; border-radius:20px; animation:pulse 2s infinite;">NOUVEAU</div>
         </div>
-        <div style="background:linear-gradient(135deg, rgba(0,150,255,0.08), rgba(0,150,255,0.03)); border:1px solid rgba(0,150,255,0.25); border-radius:28px; padding:20px; margin-bottom:20px;">
-            <div style="display:flex; align-items:center; gap:12px; margin-bottom:15px;">
+
+        <div style="font-size:11px; font-weight:900; opacity:0.4; letter-spacing:1.5px; margin-bottom:12px;">VOS DERNIÈRES COMMANDES</div>
+        <div id="help-recent-orders-list" style="margin-bottom:25px;">
+            <div class="empty-state">Chargement...</div>
+        </div>
+
+        <div style="font-size:11px; font-weight:900; opacity:0.4; letter-spacing:1.5px; margin-bottom:12px;">AUTRES SUJETS</div>
+        <div style="display:flex; flex-direction:column; gap:10px;">
+            <div onclick="openGlobalSupportModal()" style="background:var(--card); border:1px solid var(--border); border-radius:18px; padding:15px; display:flex; align-items:center; gap:12px; cursor:pointer;">
                 <div style="width:42px; height:42px; background:rgba(0,150,255,0.15); border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:20px; color:var(--secondary);"><i class="ph-fill ph-shield-check"></i></div>
-                <div>
-                    <div style="font-weight:900; font-size:15px;">Support Officiel</div>
-                    <div style="font-size:11px; opacity:0.5;">Réponse sous 24h — Chiffré &amp; Sécurisé</div>
+                <div style="flex:1;">
+                    <div style="font-weight:900; font-size:15px;">Support Général</div>
+                    <div style="font-size:11px; opacity:0.5;">Question générale ou bug</div>
                 </div>
-                <div style="margin-left:auto; width:10px; height:10px; border-radius:50%; background:#00ff88; box-shadow:0 0 8px #00ff88;"></div>
+                <i class="ph-bold ph-caret-right" style="color:var(--accent);"></i>
             </div>
             
-            <div id="btn-contact-admin" onclick="openAdminContact()" style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); border-radius:14px; padding:12px; display:flex; align-items:center; gap:12px; cursor:pointer; margin-bottom:15px;">
-                <div style="width:36px; height:36px; background:var(--secondary); border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:18px; color:#fff;"><i class="ph-fill ph-telegram-logo"></i></div>
+            <div onclick="openAdminTelegram()" style="background:var(--card); border:1px solid var(--border); border-radius:18px; padding:15px; display:flex; align-items:center; gap:12px; cursor:pointer;">
+                <div style="width:42px; height:42px; background:rgba(0,136,204,0.15); border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:20px; color:#0088cc;"><i class="ph-fill ph-telegram-logo"></i></div>
                 <div style="flex:1;">
-                    <div style="font-weight:800; font-size:14px;">Contacter l'Admin</div>
+                    <div style="font-weight:900; font-size:15px;">Contacter l'Admin</div>
                     <div style="font-size:11px; opacity:0.5;">Discuter directement sur Telegram</div>
                 </div>
-                <div style="color:var(--accent); font-size:18px;"><i class="ph-bold ph-caret-right"></i></div>
-            </div>
-
-            <div id="admin-chat-messages" style="max-height:300px; overflow-y:auto; display:flex; flex-direction:column; gap:10px; margin-bottom:15px; padding:5px;"></div>
-            <div style="display:flex; gap:8px;">
-                <input type="text" id="admin-chat-input" placeholder="Votre message au support..." maxlength="500"
-                    style="flex:1; background:rgba(0,0,0,0.4); border:1px solid rgba(0,150,255,0.3); border-radius:14px; color:#fff; padding:12px 15px; font-family:'Outfit',sans-serif; font-size:13px; outline:none;"
-                    onkeydown="if(event.key==='Enter') sendAdminChatMessage()">
-                <button onclick="sendAdminChatMessage()" style="background:var(--secondary); border:none; border-radius:14px; color:#fff; width:48px; height:48px; font-size:20px; cursor:pointer; display:flex; align-items:center; justify-content:center; flex-shrink:0;"><i class="ph-fill ph-paper-plane-tilt"></i></button>
+                <i class="ph-bold ph-caret-right" style="color:var(--accent);"></i>
             </div>
         </div>
-        <div style="font-size:11px; font-weight:900; opacity:0.4; letter-spacing:1.5px; margin-bottom:12px;">COMMANDES ACTIVES — CHAT LIVREUR</div>
-        <div id="active-orders-chat-list"><div class="empty-state">Aucune commande active avec chat disponible.</div></div>
     </div>
 
     <div id="page-profile" class="page" style="display:none; padding:30px 20px 150px 20px;">
@@ -1021,8 +1018,17 @@
                     <i class="ph-fill ph-star" style="font-size:32px; color:var(--border);" onclick="setReviewStar(4)"></i>
                     <i class="ph-fill ph-star" style="font-size:32px; color:var(--border);" onclick="setReviewStar(5)"></i>
                 </div>
-                <textarea id="review-text" placeholder="Génial ! Je recommande fortement..." style="width:100%; height:80px; background:rgba(0,0,0,0.3); border:1px solid var(--border); border-radius:12px; color:#fff; padding:10px; font-family:'Outfit', sans-serif; resize:none;"></textarea>
-                <button class="btn-primary" style="background:var(--accent); color:#fff; margin-top:15px;" onclick="submitProductReview('${pid}')">ENVOYER L'AVIS</button>
+                <textarea id="review-text" placeholder="Génial ! Je recommande fortement..." style="width:100%; height:80px; background:rgba(0,0,0,0.3); border:1px solid var(--border); border-radius:12px; color:#fff; padding:10px; font-family:'Outfit', sans-serif; resize:none; margin-bottom:10px;"></textarea>
+                
+                <div style="margin-bottom:15px;">
+                    <label for="review-media-upload" style="display:inline-flex; align-items:center; gap:8px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); border-radius:10px; padding:10px 15px; font-size:13px; cursor:pointer;">
+                        <i class="ph-bold ph-image" style="font-size:18px;"></i> Ajouter Photo/Vidéo
+                    </label>
+                    <input type="file" id="review-media-upload" accept="image/*,video/*" style="display:none;" onchange="document.getElementById('review-media-preview').innerText = this.files.length ? this.files[0].name : '';">
+                    <div id="review-media-preview" style="font-size:11px; opacity:0.6; margin-top:5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;"></div>
+                </div>
+
+                <button class="btn-primary" id="btn-submit-review" style="background:var(--accent); color:#fff;" onclick="submitProductReview('${pid}')">ENVOYER L'AVIS</button>
             `;
             openCustomModal('VOTRE AVIS', html);
             window.currentReviewRating = 5;
@@ -1040,16 +1046,40 @@
         async function submitProductReview(pid) {
             const text = document.getElementById('review-text').value;
             const uid = tg.initDataUnsafe?.user?.id;
+            const fileInput = document.getElementById('review-media-upload');
+            const btn = document.getElementById('btn-submit-review');
+            let media = [];
+            
             try {
+                btn.disabled = true;
+                btn.innerText = "ENVOI EN COURS...";
+                
+                if (fileInput && fileInput.files.length > 0) {
+                    const formData = new FormData();
+                    formData.append('file', fileInput.files[0]);
+                    const upRes = await fetch('/api/client/upload', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    if (upRes.ok) {
+                        const upData = await upRes.json();
+                        if (upData.url) media.push(upData.url);
+                    }
+                }
+                
                 await fetch('/api/products/reviews', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ userId: `telegram_${uid}`, productId: pid, rating: window.currentReviewRating, text: text })
+                    body: JSON.stringify({ userId: `telegram_${uid}`, productId: pid, rating: window.currentReviewRating, text: text, media: media })
                 });
                 closeCustomModal();
                 tg.showAlert("Merci pour votre avis !");
                 loadProductReviews(pid);
-            } catch(e) {}
+            } catch(e) {
+                btn.disabled = false;
+                btn.innerText = "ENVOYER L'AVIS";
+                tg.showAlert("Une erreur est survenue.");
+            }
         }
 
         async function loadProductReviews(pid) {
@@ -1060,9 +1090,19 @@
                 const reviews = await res.json();
                 cont.innerHTML = reviews.length ? '' : '<div style="font-size:12px; opacity:0.4;">Aucun avis pour le moment.</div>';
                 reviews.forEach(r => {
+                    let mediaHtml = '';
+                    if (r.media && r.media.length > 0) {
+                        const m = r.media[0];
+                        if (m.endsWith('.mp4') || m.endsWith('.webm') || m.endsWith('.mov')) {
+                            mediaHtml = `<div style="margin-top:10px;"><video src="${m}" controls style="max-height:120px; border-radius:8px; max-width:100%; border:1px solid rgba(255,255,255,0.1);"></video></div>`;
+                        } else {
+                            mediaHtml = `<div style="margin-top:10px;"><img src="${m}" style="max-height:120px; border-radius:8px; max-width:100%; border:1px solid rgba(255,255,255,0.1); object-fit:contain;"></div>`;
+                        }
+                    }
+                    
                     const d = document.createElement('div');
                     d.style = "background:var(--card); padding:15px; border-radius:15px; margin-bottom:10px; border:1px solid var(--border);";
-                    d.innerHTML = `<div style="display:flex; justify-content:space-between; margin-bottom:5px;"><div style="font-weight:800; font-size:12px;">${r.first_name || 'Client'}</div><div style="color:#ffaa00;">${'⭐'.repeat(r.rating)}</div></div><div style="font-size:12px; opacity:0.7;">${r.text}</div>`;
+                    d.innerHTML = `<div style="display:flex; justify-content:space-between; margin-bottom:5px;"><div style="font-weight:800; font-size:12px;">${r.first_name || 'Client'}</div><div style="color:#ffaa00;">${'⭐'.repeat(r.rating)}</div></div><div style="font-size:12px; opacity:0.7;">${r.text}</div>${mediaHtml}`;
                     cont.appendChild(d);
                 });
             } catch(e) {}
@@ -1770,19 +1810,50 @@
         function openNotifications(focusId) {
             const cont = document.getElementById('notifications-list');
             cont.innerHTML = '';
-            allNews.forEach(n => {
+            
+            let combined = [...allNews];
+            
+            if (window.userOrdersCache) {
+                userOrdersCache.forEach(o => {
+                    let msg = '';
+                    let statusColor = '#fff';
+                    let icon = '📦';
+                    switch(o.status) {
+                        case 'pending': msg = `Votre commande #${o.ref} a bien été prise en compte. Elle est en attente de validation par l'équipe.`; statusColor='#ffaa00'; icon='⏳'; break;
+                        case 'accepted': msg = `Votre commande #${o.ref} a été validée ! Elle est en préparation.`; statusColor='#2ecc71'; icon='✅'; break;
+                        case 'delivering': msg = `Le livreur est en route pour votre commande #${o.ref} ! Préparez-vous.`; statusColor='#3498db'; icon='🛵'; break;
+                        case 'delivered': msg = `Votre commande #${o.ref} a été livrée. Merci pour votre confiance !`; statusColor='#9b59b6'; icon='🎉'; break;
+                        case 'cancelled': msg = `Votre commande #${o.ref} a été annulée.`; statusColor='#e74c3c'; icon='❌'; break;
+                        default: msg = `Mise à jour de votre commande #${o.ref} : ${o.status}`;
+                    }
+                    
+                    combined.push({
+                        id: 'order_' + o.id,
+                        type: 'order',
+                        message: `<div style="display:flex; align-items:center; gap:8px;"><span style="font-size:20px;">${icon}</span> <strong style="color:${statusColor};">Commande #${o.ref}</strong></div><div style="margin-top:5px; font-size:13px; opacity:0.9;">${msg}</div>`,
+                        created_at: o.created_at,
+                        order_ref: o.ref
+                    });
+                });
+            }
+            
+            combined.sort((a,b) => new Date(b.created_at) - new Date(a.created_at));
+
+            combined.forEach(n => {
                 const d = document.createElement('div');
                 d.style = `background:var(--card); border:1px solid var(--border); border-radius:24px; padding:20px; margin-bottom:15px; ${n.id === focusId ? 'border-color:var(--accent);' : ''}`;
                 
                 let msg = n.message || '';
                 
-                // Nettoyage des balises MEDIA_URLS brutes
-                msg = msg.replace(/\|\|\|MEDIA_URLS\|\|\|[\s\S]*?(?=\n|$)/g, '').replace(/\[\]/g, '').trim();
+                if (n.type !== 'order') {
+                    // Nettoyage des balises MEDIA_URLS brutes
+                    msg = msg.replace(/\|\|\|MEDIA_URLS\|\|\|[\s\S]*?(?=\n|$)/g, '').replace(/\[\]/g, '').trim();
 
-                if (userInfo) {
-                    msg = msg.replace(/{first_name}/g, userInfo.first_name || '')
-                             .replace(/{username}/g, userInfo.username || '')
-                             .replace(/{wallet}/g, (parseFloat(userInfo.balance) || 0).toFixed(2) + '€');
+                    if (window.userInfo) {
+                        msg = msg.replace(/{first_name}/g, userInfo.first_name || '')
+                                 .replace(/{username}/g, userInfo.username || '')
+                                 .replace(/{wallet}/g, (parseFloat(userInfo.balance) || 0).toFixed(2) + '€');
+                    }
                 }
 
                 const hasMedia = n.media_url && n.media_url.length > 5;
@@ -1792,6 +1863,19 @@
                     <div style="font-size:14px; font-weight:500; line-height:1.6; margin-bottom:10px; color:rgba(255,255,255,0.95);">${msg}</div>
                     <div style="font-size:10px; font-weight:900; color:var(--accent);">${new Date(n.created_at).toLocaleString()}</div>
                 `;
+                
+                if (n.type === 'order') {
+                    d.style.cursor = 'pointer';
+                    d.onclick = () => { 
+                        closeNotifications(); 
+                        switchPage('help', document.querySelectorAll('.nav-item')[3]); 
+                        setTimeout(()=> { 
+                            const chatHeader = document.querySelector(`.order-card[data-id="${n.id.replace('order_','')}"]`); 
+                            if(chatHeader) chatHeader.scrollIntoView({behavior:'smooth'}); 
+                        }, 500); 
+                    };
+                }
+
                 cont.appendChild(d);
                 if (n.id === focusId) d.scrollIntoView();
             });
@@ -1805,6 +1889,14 @@
         }
 
         function closeNotifications() { document.getElementById('notifications-modal').classList.remove('open'); }
+        
+        function openAdminTelegram() {
+            if (window.userInfo && window.userInfo.private_contact_url) {
+                tg.openTelegramLink(window.userInfo.private_contact_url);
+            } else {
+                tg.openTelegramLink('https://t.me/Farmstegridy_bot');
+            }
+        }
 
         function scrollToNews() {
             document.getElementById('news-section').scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -1816,60 +1908,118 @@
         // CHAT SUPPORT ADMIN-CLIENT (permanent)
         // ═══════════════════════════════════════════════════════
 
-        function openAdminContact() {
-            if (window.privateContactUrl) {
-                tg.openTelegramLink(window.privateContactUrl);
-            } else {
-                tg.openTelegramLink('https://t.me/Farmstegridy_bot');
-            }
+        function openGlobalSupportModal() {
+            document.getElementById('support-modal').classList.add('active');
+            renderAdminChatMessages();
+            setTimeout(() => {
+                const c = document.getElementById('admin-chat-messages');
+                if (c) c.scrollTop = c.scrollHeight;
+            }, 50);
+        }
+
+        function closeSupportModal() {
+            document.getElementById('support-modal').classList.remove('active');
+        }
+        
+        function closeOrderSupportModal() {
+            document.getElementById('order-support-modal').classList.remove('active');
         }
 
         async function loadSupportChat() {
             renderAdminChatMessages();
-            // Charger les commandes actives pour le chat livreur
             const uid = tg.initDataUnsafe?.user?.id;
             try {
                 const res = await fetch(`/api/user-orders?userId=telegram_${uid}`);
                 const orders = await res.json();
-                const active = orders.filter(o => !['delivered', 'cancelled', 'refused'].includes(o.status) && o.livreur_id);
-                const cont = document.getElementById('active-orders-chat-list');
+                
+                // Show all orders (up to 5 recent)
+                const recentOrders = orders.slice(0, 5);
+                const cont = document.getElementById('help-recent-orders-list');
                 if (!cont) return;
-                if (!active.length) {
-                    cont.innerHTML = '<div class="empty-state">Aucune commande active avec chat disponible.</div>';
+                
+                if (!recentOrders.length) {
+                    cont.innerHTML = '<div class="empty-state">Aucune commande récente.</div>';
                     return;
                 }
+                
                 cont.innerHTML = '';
-                active.forEach(o => {
-                    const h = o.chatHistory;
-                    const count = h ? h.count : (parseInt(o.chat_count) || 0);
+                recentOrders.forEach(o => {
+                    const statusColor = o.status === 'delivered' ? '#00ff88' : (o.status === 'cancelled' || o.status === 'refused' ? '#ff3b30' : '#ffa500');
+                    const statusText = o.status === 'delivered' ? 'Livrée' : (o.status === 'cancelled' || o.status === 'refused' ? 'Annulée' : 'En cours');
+                    
                     const d = document.createElement('div');
-                    d.style = 'background:var(--card); border:1px solid var(--border); border-radius:20px; padding:18px; margin-bottom:12px;';
+                    d.style = 'background:var(--card); border:1px solid var(--border); border-radius:18px; padding:15px; margin-bottom:12px; display:flex; justify-content:space-between; align-items:center; cursor:pointer;';
+                    d.onclick = () => openOrderSupport(o);
                     d.innerHTML = `
-                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-                            <div style="font-weight:900; font-size:14px;"><i class="ph-fill ph-receipt"></i> #${o.id.slice(-5).toUpperCase()}</div>
-                            <div style="font-size:11px; font-weight:800; color:var(--secondary);">${count}/6 messages</div>
+                        <div>
+                            <div style="font-weight:900; font-size:14px; margin-bottom:4px;"><i class="ph-fill ph-receipt"></i> Commande #${o.id.slice(-5).toUpperCase()}</div>
+                            <div style="font-size:12px; opacity:0.6;">${o.product_name || o.product || 'Commande'}</div>
+                            <div style="font-size:11px; font-weight:800; color:${statusColor}; margin-top:6px;">${statusText}</div>
                         </div>
-                        <div style="font-size:12px; opacity:0.6; margin-bottom:12px;">${o.product_name || o.product}</div>
-                        ${h && h.messages && h.messages.length > 0 ? `
-                            <div style="background:rgba(0,0,0,0.2); border-radius:12px; padding:10px; margin-bottom:12px; max-height:150px; overflow-y:auto; display:flex; flex-direction:column; gap:6px;">
-                                ${h.messages.map(m => `
-                                    <div style="font-size:12px; opacity:0.9; ${m.role === 'client' ? 'text-align:right; color:var(--accent);' : 'text-align:left; color:#fff;'}">
-                                        <b>${m.role === 'client' ? 'Vous' : '🛵 Livreur'} :</b> ${m.text || m.message}
-                                    </div>
-                                `).join('')}
-                            </div>
-                        ` : (h ? `<div style="background:rgba(255,255,255,0.04); border-radius:12px; padding:10px; font-size:12px; margin-bottom:12px; opacity:0.8;"><b>${h.senderRole === 'client' ? 'Vous' : '🛵 Livreur'} :</b> ${h.lastMessage}</div>` : '')}
-                        <div style="display:flex; gap:8px;">
-                            <input type="text" id="quick-chat-${o.id}" placeholder="Message au livreur..." maxlength="200"
-                                style="flex:1; background:rgba(0,0,0,0.4); border:1px solid rgba(0,255,136,0.3); border-radius:12px; color:#fff; padding:10px 14px; font-family:'Outfit',sans-serif; font-size:13px; outline:none;"
-                                onkeydown="if(event.key==='Enter') sendQuickCourierMsg('${o.id}')">
-                            <button onclick="sendQuickCourierMsg('${o.id}')" style="background:#00ff88; border:none; border-radius:12px; color:#000; width:44px; height:44px; font-size:18px; cursor:pointer; display:flex; align-items:center; justify-content:center; flex-shrink:0; font-weight:900;"><i class="ph-fill ph-paper-plane-tilt"></i></button>
+                        <div style="width:36px; height:36px; background:rgba(255,255,255,0.05); border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:16px;">
+                            <i class="ph-bold ph-caret-right"></i>
                         </div>
                     `;
                     cont.appendChild(d);
                 });
             } catch(e) {
-                document.getElementById('active-orders-chat-list').innerHTML = '<div class="empty-state">Erreur de chargement.</div>';
+                document.getElementById('help-recent-orders-list').innerHTML = '<div class="empty-state">Erreur de chargement.</div>';
+            }
+        }
+        
+        function openOrderSupport(o) {
+            document.getElementById('order-support-title').innerText = `Commande #${o.id.slice(-5).toUpperCase()}`;
+            const isDeliveryChat = !['delivered', 'cancelled', 'refused'].includes(o.status) && o.livreur_id;
+            const content = document.getElementById('order-support-content');
+            
+            if (isDeliveryChat) {
+                // Courier chat
+                const h = o.chatHistory;
+                content.innerHTML = `
+                    <div style="background:rgba(0,255,136,0.1); border:1px solid rgba(0,255,136,0.3); border-radius:16px; padding:12px; margin-bottom:15px;">
+                        <div style="font-weight:900; font-size:13px; color:#00ff88; margin-bottom:4px;"><i class="ph-fill ph-moped"></i> Chat Livreur</div>
+                        <div style="font-size:11px; opacity:0.8;">Discutez en direct avec votre livreur</div>
+                    </div>
+                    ${h && h.messages && h.messages.length > 0 ? `
+                        <div style="background:rgba(0,0,0,0.2); border-radius:12px; padding:15px; margin-bottom:15px; max-height:250px; overflow-y:auto; display:flex; flex-direction:column; gap:10px;">
+                            ${h.messages.map(m => `
+                                <div style="font-size:13px; opacity:0.9; ${m.role === 'client' ? 'text-align:right; color:var(--accent);' : 'text-align:left; color:#fff;'}">
+                                    <b>${m.role === 'client' ? 'Vous' : '🛵 Livreur'} :</b> ${m.text || m.message}
+                                </div>
+                            `).join('')}
+                        </div>
+                    ` : '<div class="empty-state" style="margin-bottom:15px;">Aucun message avec le livreur.</div>'}
+                    <div style="display:flex; gap:8px;">
+                        <input type="text" id="quick-chat-${o.id}" placeholder="Message au livreur..." maxlength="200"
+                            style="flex:1; background:rgba(0,0,0,0.4); border:1px solid rgba(0,255,136,0.3); border-radius:14px; color:#fff; padding:12px 15px; font-family:'Outfit',sans-serif; font-size:13px; outline:none;"
+                            onkeydown="if(event.key==='Enter') sendQuickCourierMsg('${o.id}')">
+                        <button onclick="sendQuickCourierMsg('${o.id}')" style="background:#00ff88; border:none; border-radius:14px; color:#000; width:48px; height:48px; font-size:20px; cursor:pointer; display:flex; align-items:center; justify-content:center; flex-shrink:0; font-weight:900;"><i class="ph-fill ph-paper-plane-tilt"></i></button>
+                    </div>
+                `;
+            } else {
+                // Past order -> General support with context
+                content.innerHTML = `
+                    <div style="background:rgba(255,255,255,0.05); border-radius:16px; padding:15px; text-align:center; margin-bottom:20px;">
+                        <i class="ph-fill ph-info" style="font-size:32px; color:var(--secondary); margin-bottom:10px;"></i>
+                        <div style="font-size:14px; font-weight:800; margin-bottom:5px;">Besoin d'aide pour cette commande ?</div>
+                        <div style="font-size:12px; opacity:0.6;">Contactez le support avec la référence de la commande pour un traitement rapide.</div>
+                    </div>
+                    <button class="btn btn-primary" onclick="contactSupportForOrder('${o.id}')" style="width:100%;">
+                        Contacter le Support Officiel
+                    </button>
+                `;
+            }
+            
+            document.getElementById('order-support-modal').classList.add('active');
+        }
+        
+        function contactSupportForOrder(orderId) {
+            closeOrderSupportModal();
+            openGlobalSupportModal();
+            const input = document.getElementById('admin-chat-input');
+            if (input) {
+                input.value = `Bonjour, j'ai besoin d'aide concernant ma commande #${orderId.slice(-5).toUpperCase()}. `;
+                input.focus();
             }
         }
 
