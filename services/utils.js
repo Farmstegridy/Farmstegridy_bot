@@ -170,10 +170,8 @@ async function safeEdit(ctx, text, opts = {}) {
                                 parse_mode: 'HTML'
                             };
                             await ctx.telegram.editMessageMedia(chatId, currentMsgId, null, mediaObj, { reply_markup });
-                        } catch (mediaErr) {
-                            const desc = String(mediaErr.description || '').toLowerCase();
-                            if (desc.includes('wrong type of the web page content') || desc.includes('file too large')) {
-                                console.log('[SAFE-EDIT] Retry media edit with buffer (size detected or URL failure)...');
+                            } catch (mediaErr) {
+                                console.log('[SAFE-EDIT] Retry media edit with buffer (url failure)...');
                                 const buf = await downloadToBuffer(photo || video);
                                 if (buf) {
                                     await ctx.telegram.editMessageMedia(chatId, currentMsgId, null, {
@@ -183,8 +181,7 @@ async function safeEdit(ctx, text, opts = {}) {
                                         parse_mode: 'HTML'
                                     }, { reply_markup });
                                 } else throw mediaErr;
-                            } else throw mediaErr;
-                        }
+                            }
                     } else {
                         await ctx.telegram.editMessageText(chatId, currentMsgId, null, text, { parse_mode: 'HTML', ...extra });
                     }
@@ -207,9 +204,7 @@ async function safeEdit(ctx, text, opts = {}) {
                         
                         if (newMsg && newMsg.success === false) throw new Error('Media reply failed: ' + newMsg.error);
                     } catch (replyErr) {
-                        const desc = String(replyErr.description || replyErr.message || '').toLowerCase();
-                        if (desc.includes('wrong type of the web page content') || desc.includes('file too large')) {
-                            console.log('[SAFE-EDIT] Retry media reply with buffer...');
+                            console.log('[SAFE-EDIT] Retry media reply with buffer...', replyErr.message);
                             const buf = await downloadToBuffer(photo || video);
                             if (buf) {
                                 if (photo) newMsg = await ctx.replyWithPhoto({ source: buf }, { caption: text, ...extra });
@@ -217,7 +212,6 @@ async function safeEdit(ctx, text, opts = {}) {
                                 
                                 if (newMsg && newMsg.success === false) throw new Error('Media reply with buffer failed');
                             } else throw replyErr;
-                        } else throw replyErr;
                     }
                 } else {
                     newMsg = await ctx.replyWithHTML(text, extra);
@@ -244,8 +238,7 @@ async function safeEdit(ctx, text, opts = {}) {
                     
                     if (newMsg && newMsg.success === false) throw new Error('Media reply failed: ' + newMsg.error);
                 } catch (err) {
-                    const desc = String(err.description || err.message || '').toLowerCase();
-                    if (desc.includes('wrong type of the web page content') || desc.includes('file too large')) {
+                        console.log('[SAFE-EDIT] Retry media reply with buffer (no msg match)...', err.message);
                         const buf = await downloadToBuffer(photo || video);
                         if (buf) {
                             if (photo) newMsg = await ctx.replyWithPhoto({ source: buf }, { caption: text, ...extra });
@@ -253,7 +246,6 @@ async function safeEdit(ctx, text, opts = {}) {
                             
                             if (newMsg && newMsg.success === false) throw new Error('Media reply with buffer failed');
                         } else throw err;
-                    } else throw err;
                 }
             } catch (err) {
                 newMsg = await ctx.replyWithHTML(text, extra);

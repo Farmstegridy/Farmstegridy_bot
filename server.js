@@ -83,6 +83,10 @@ const loginLimiter = rateLimit({
 function createServer(port = 8080) {
     const app = express();
 
+    let _analyticsCache = null;
+    let _lastAnalyticsUpdate = 0;
+    const ANALYTICS_CACHE_TTL = 120000; // 2 minutes
+
     // Log all requests for debugging
     app.use((req, res, next) => {
         console.log(`[HTTP] ${req.method} ${req.url} (from ${req.ip})`);
@@ -598,8 +602,20 @@ function createServer(port = 8080) {
     });
 
     app.get('/api/analytics', authMiddleware, async (req, res) => {
-        try { res.json(await getOrderAnalytics()); }
-        catch (e) { res.status(500).json({ error: 'Erreur serveur' }); }
+        try {
+            const now = Date.now();
+            if (_analyticsCache && (now - _lastAnalyticsUpdate < ANALYTICS_CACHE_TTL) && !req.query.force) {
+                return res.json(_analyticsCache);
+            }
+            const data = await getOrderAnalytics();
+            _analyticsCache = data;
+            _lastAnalyticsUpdate = now;
+            res.json(data);
+        }
+        catch (e) {
+            console.error("[API-ANALYTICS-ERROR]", e);
+            res.status(500).json({ error: 'Erreur serveur' });
+        }
     });
 
     app.post('/api/analytics/backfill-cities', authMiddleware, async (req, res) => {

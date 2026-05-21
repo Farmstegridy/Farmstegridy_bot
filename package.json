@@ -31,6 +31,7 @@
     "express-handlebars": "^8.0.1",
     "express-rate-limit": "^8.3.1",
     "jimp": "^1.6.0",
+    "jsdom": "^22.1.0",
     "jsonwebtoken": "^9.0.3",
     "link-preview-js": "^4.0.0",
     "p-limit": "^4.0.0",

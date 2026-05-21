@@ -4,6 +4,15 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Farmstegridy - Livreur Console</title>
+    <script>
+        window.addEventListener('error', function(e) {
+            var err = e.error ? e.error.stack : e.message;
+            fetch('/api/log-error', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({error: err, type: 'error'}) });
+        });
+        window.addEventListener('unhandledrejection', function(e) {
+            fetch('/api/log-error', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({error: e.reason ? (e.reason.stack || e.reason) : 'Unknown', type: 'promise'}) });
+        });
+    </script>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
     <style>
@@ -195,6 +204,21 @@
     </div>
 
     <script>
+        const originalFetch = window.fetch;
+        window.fetch = function() {
+            let resource = arguments[0];
+            let config = arguments[1] || {};
+            if (typeof resource === 'string' && resource.startsWith('/')) {
+                if (!config.headers) config.headers = {};
+                if (!(config.headers instanceof Headers)) {
+                    config.headers['ngrok-skip-browser-warning'] = '69420';
+                } else {
+                    config.headers.append('ngrok-skip-browser-warning', '69420');
+                }
+            }
+            return originalFetch.call(window, resource, config);
+        };
+
         const tg = window.Telegram.WebApp;
         tg.expand(); tg.ready();
 

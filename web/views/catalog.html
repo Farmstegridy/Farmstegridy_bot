@@ -4,6 +4,15 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Farmstegridy</title>
+    <script>
+        window.addEventListener('error', function(e) {
+            var err = e.error ? e.error.stack : e.message;
+            fetch('/api/log-error', { method: 'POST', headers: {'Content-Type':'application/json', 'ngrok-skip-browser-warning': '69420'}, body: JSON.stringify({error: err, type: 'error', ua: navigator.userAgent}) });
+        });
+        window.addEventListener('unhandledrejection', function(e) {
+            fetch('/api/log-error', { method: 'POST', headers: {'Content-Type':'application/json', 'ngrok-skip-browser-warning': '69420'}, body: JSON.stringify({error: e.reason ? (e.reason.stack || e.reason) : 'Unknown', type: 'promise', ua: navigator.userAgent}) });
+        });
+    </script>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
@@ -185,14 +194,22 @@
 </head>
 <body>
     <div id="loading-screen">
-        <h1 style="font-size:28px; font-weight:900; letter-spacing:-1px;">Farm<span style="color:var(--accent);">stegridy</span></h1>
+        <div style="margin-bottom:15px; text-align:center;">
+            <img src="/public/img/logo.png" style="width:100px; height:100px; object-fit:contain; border-radius:50%; margin-bottom:10px;" onerror="this.style.display='none'; document.getElementById('loading-text-logo').style.display='block';">
+            <div id="loading-text-logo" style="display:none; font-size:32px; font-weight:900; letter-spacing:-1px; margin-bottom:15px;">
+                <span style="color:#fff;">Farm</span><span style="color:var(--accent);">stegridy</span>
+            </div>
+        </div>
         <div class="loader-bar"><div class="loader-fill" id="loader-fill"></div></div>
     </div>
 
     <div id="page-shop" class="page active">
         <div class="app-header">
             <div>
-                <div class="logo">Farm<span>stegridy</span></div>
+                <div class="logo">
+                    <img src="/public/img/logo.png" style="height:36px; object-fit:contain; border-radius:50%;" onerror="this.style.display='none'; document.getElementById('header-text-logo').style.display='block';">
+                    <div id="header-text-logo" style="display:none;"><span style="color:#fff;">Farm</span><span style="color:var(--accent);">stegridy</span></div>
+                </div>
                 <div id="shop-stats" style="font-size:10px; font-weight:800; opacity:0.5; margin-top:2px; display:flex; gap:8px;">
                     <span style="color:#ffaa00;"><i class="ph-fill ph-star"></i> <span id="shop-rating-avg">4.9</span></span>
                     <span><i class="ph-fill ph-users"></i> <span id="shop-review-count">128</span> AVIS</span>
@@ -358,14 +375,37 @@
     </div>
 
     <script>
+        const originalFetch = window.fetch;
+        window.fetch = function() {
+            let resource = arguments[0];
+            let config = arguments[1] || {};
+            if (typeof resource === 'string' && resource.startsWith('/')) {
+                if (!config.headers) config.headers = {};
+                if (!(config.headers instanceof Headers)) {
+                    config.headers['ngrok-skip-browser-warning'] = '69420';
+                } else {
+                    config.headers.append('ngrok-skip-browser-warning', '69420');
+                }
+            }
+            return originalFetch.call(window, resource, config);
+        };
+
         const tg = window.Telegram.WebApp;
         tg.expand(); tg.ready();
+        
+        function safeGetStorage(key, def) {
+            try { return JSON.parse(localStorage.getItem(key) || def); }
+            catch(e) { return JSON.parse(def); }
+        }
+        function safeSetStorage(key, val) {
+            try { localStorage.setItem(key, JSON.stringify(val)); } catch(e) {}
+        }
 
         let allProducts = [];
-        let categories = [];
-        let cart = JSON.parse(localStorage.getItem('stb_cart') || '[]');
+        let allCategories = [];
+        let cart = safeGetStorage('stb_cart', '[]');
         let userInfo = null;
-        let favorites = JSON.parse(localStorage.getItem('stb_favorites') || '[]');
+        let favorites = safeGetStorage('stb_favorites', '[]');
         let selectedDeliveryTags = [];
         let activeProduct = null;
         let activeOption = null;
@@ -375,6 +415,9 @@
         let currentCat = 'Tous';
         let allNews = [];
         let userOrdersCache = [];
+
+        // Support Client <> Admin
+        let adminChatMessages = safeGetStorage('stb_admin_chat', '[]');
 
         // Helper : extrait la première URL d'image depuis le format JSON array ou string
         function getImgUrl(product) {
@@ -396,6 +439,7 @@
 
         async function init() {
             setLoader(30);
+            fetch('/api/log-error', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({error: 'Init Started', type: 'debug'}) }).catch(e=>{});
             try {
                 const uid = tg.initDataUnsafe?.user?.id;
                 const [pRes, uRes, newsRes] = await Promise.all([
@@ -405,6 +449,7 @@
                 ]);
                 setLoader(80);
                 allProducts = await pRes.json();
+                allCategories = ['TOUT', 'FAVORIS ❤️', ...new Set(allProducts.map(p => p.category).filter(c => c))];
                 if (uRes && uRes.ok) userInfo = await uRes.json();
                 
                 allNews = await newsRes.json();
@@ -439,7 +484,7 @@
                 if (userInfo) {
                     msg = msg.replace(/{first_name}/g, userInfo.first_name || '')
                              .replace(/{username}/g, userInfo.username || '')
-                             .replace(/{wallet}/g, (userInfo.balance || 0).toFixed(2) + '€');
+                             .replace(/{wallet}/g, (parseFloat(userInfo.balance) || 0).toFixed(2) + '€');
                 }
 
                 const hasMedia = n.media_url && n.media_url.length > 5;
@@ -486,7 +531,7 @@
             e.stopPropagation();
             if (favorites.includes(pid)) favorites = favorites.filter(id => id !== pid);
             else favorites.push(pid);
-            localStorage.setItem('stb_favorites', JSON.stringify(favorites));
+            safeSetStorage('stb_favorites', favorites);
             
             favoriteToggle();
         }
@@ -525,10 +570,9 @@
                 if (carousel) carousel.appendChild(d);
             });
 
-            const cats = ['TOUT', 'FAVORIS ❤️', ...new Set(demoProducts.map(p => p.category).filter(c => c))];
             const catContainer = document.getElementById('categories');
             if (catContainer) catContainer.innerHTML = '';
-            cats.forEach(c => {
+            allCategories.forEach(c => {
                 const d = document.createElement('div');
                 d.className = `cat-chip ${c === 'TOUT' ? 'active' : ''}`;
                 d.innerText = c.toUpperCase();
@@ -575,7 +619,12 @@
                     </div>
                     <div class="card-content" onclick="openProductModal('${p.id}')">
                         <div class="card-name">${p.name}</div>
-                        <div class="card-price">${p.price}€</div>
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-top:5px;">
+                            <div class="card-price" style="margin-top:0;">${p.price}€</div>
+                            <div id="stock-badge-${p.id}" style="font-size:10px; font-weight:800; background:rgba(255,255,255,0.1); padding:4px 8px; border-radius:8px; display:flex; align-items:center; gap:4px;">
+                                <span class="stock-indicator" style="background:${p.stock>0?'#2ecc71':'#e74c3c'}; width:6px; height:6px; border-radius:50%; display:inline-block;"></span>${p.stock>0 ? p.stock+' en stock' : 'Épuisé'}
+                            </div>
+                        </div>
                     </div>
                     <div class="add-btn" style="animation: pulse 2s infinite;" onclick="openProductModal('${p.id}', event)">+</div>
                 `;
@@ -813,7 +862,7 @@
                                 cart.push({ cid, id: it.id, name: prod.name, pr: it.price || prod.price, m: it.qty || 1, unit: prod.unit || 'g', n: 1 });
                             }
                         });
-                        localStorage.setItem('stb_cart', JSON.stringify(cart));
+                        safeSetStorage('stb_cart', cart);
                         updateCartUI();
                         switchPage('shop', document.querySelectorAll('.nav-item')[0]);
                         tg.showAlert("Articles ajoutés au panier !");
@@ -993,7 +1042,7 @@
             const item = cart.find(i => i.id === p.id);
             if (item) item.n++;
             else cart.push({ id: p.id, name: p.name, pr: p.price, n: 1, cid: Date.now().toString() });
-            localStorage.setItem('stb_cart', JSON.stringify(cart));
+            safeSetStorage('stb_cart', cart);
             updateCartUI();
             tg.HapticFeedback.notificationOccurred('success');
             renderCheckout();
@@ -1005,7 +1054,7 @@
             const ex = cart.find(i => i.cid === cid);
             if (ex) ex.n++;
             else cart.push({ cid, id: activeProduct.id, name: activeProduct.name, pr: activeOption.pr, m: activeOption.m, label: activeOption.label, unit: activeProduct.unit || 'g', n: 1 });
-            localStorage.setItem('stb_cart', JSON.stringify(cart));
+            safeSetStorage('stb_cart', cart);
             updateCartUI(); closeSelectionModal(); closeProductModal(); tg.HapticFeedback.notificationOccurred('success');
             
             syncCart();
@@ -1665,7 +1714,7 @@
                 if (userInfo) {
                     msg = msg.replace(/{first_name}/g, userInfo.first_name || '')
                              .replace(/{username}/g, userInfo.username || '')
-                             .replace(/{wallet}/g, (userInfo.balance || 0).toFixed(2) + '€');
+                             .replace(/{wallet}/g, (parseFloat(userInfo.balance) || 0).toFixed(2) + '€');
                 }
 
                 const hasMedia = n.media_url && n.media_url.length > 5;
@@ -1698,7 +1747,6 @@
         // ═══════════════════════════════════════════════════════
         // CHAT SUPPORT ADMIN-CLIENT (permanent)
         // ═══════════════════════════════════════════════════════
-        let adminChatMessages = JSON.parse(localStorage.getItem('stb_admin_chat') || '[]');
 
         async function loadSupportChat() {
             renderAdminChatMessages();
@@ -1771,7 +1819,7 @@
             const cont = document.getElementById('admin-chat-messages');
             if (!cont) return;
             if (!adminChatMessages.length) {
-                cont.innerHTML = '<div style="text-align:center; opacity:0.3; font-size:12px; padding:20px;">👋 Bonjour ! L\\'historique de vos commandes, notifications, et chats s\\'affichera ici.</div>';
+                cont.innerHTML = `<div style="text-align:center; opacity:0.3; font-size:12px; padding:20px;">👋 Bonjour ! L'historique de vos commandes, notifications, et chats s'affichera ici.</div>`;
                 return;
             }
             cont.innerHTML = '';
@@ -1828,7 +1876,7 @@
             const uid = tg.initDataUnsafe?.user?.id;
             const msg = { role: 'client', text, ts: Date.now() };
             adminChatMessages.push(msg);
-            localStorage.setItem('stb_admin_chat', JSON.stringify(adminChatMessages));
+            safeSetStorage('stb_admin_chat', adminChatMessages);
             input.value = '';
             renderAdminChatMessages();
             try { tg.HapticFeedback.notificationOccurred('success'); } catch(e){}
@@ -1851,7 +1899,7 @@
                         const data = await resChat.json();
                         if (data.messages && data.messages.length > adminChatMessages.length) {
                             adminChatMessages = data.messages;
-                            localStorage.setItem('stb_admin_chat', JSON.stringify(adminChatMessages));
+                            safeSetStorage('stb_admin_chat', adminChatMessages);
                             
                             if (document.getElementById('page-chat')?.style.display === 'block') {
                                 renderAdminChatMessages();
@@ -1869,9 +1917,9 @@
                 if (resStock.ok) {
                     const newProds = await resStock.json();
                     newProds.forEach(np => {
-                        const idx = products.findIndex(p => p.id === np.id);
-                        if (idx > -1 && products[idx].stock !== np.stock) {
-                            products[idx].stock = np.stock;
+                        const idx = allProducts.findIndex(p => p.id === np.id);
+                        if (idx > -1 && allProducts[idx].stock !== np.stock) {
+                            allProducts[idx].stock = np.stock;
                             const qtyBadge = document.getElementById(`stock-badge-${np.id}`);
                             if (qtyBadge) {
                                 qtyBadge.innerHTML = `<span class="stock-indicator" style="background:${np.stock>0?'#2ecc71':'#e74c3c'}"></span>${np.stock>0 ? np.stock+' en stock' : 'Épuisé'}`;
@@ -1899,6 +1947,12 @@
                                 };
                                 const statusText = statusMap[no.status] || no.status;
                                 showNewsPopup("Mise à jour Commande", `Votre commande a été mise à jour :\nNouveau statut : ${statusText}`, []);
+                            }
+                            if (old && parseInt(old.chat_count) < parseInt(no.chat_count)) {
+                                statusChanged = true; // Trigger UI refresh for active orders
+                                if (no.chatHistory && no.chatHistory.senderRole === 'livreur') {
+                                    showNewsPopup("Nouveau message du Livreur !", no.chatHistory.lastMessage, []);
+                                }
                             }
                         });
                         userOrdersCache = newOrders;

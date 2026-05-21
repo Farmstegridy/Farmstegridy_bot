@@ -1773,7 +1773,7 @@ function setupOrderSystem(bot) {
             text += t(user, 'label_livreur', `👤 Livreur :`) + ` <b>${order.livreur_name}</b>\n`;
         }
         
-        const feedbackBtn = order.status === 'delivered' ? [Markup.button.callback(t(user, 'btn_leave_review', '⭐ Laisser un avis'), `rate_order_${orderId}`)] : [];
+        const feedbackBtn = order.status === 'delivered' ? [Markup.button.callback(t(user, 'btn_leave_review', '⭐ Laisser un avis'), `feedback_start_${orderId}`)] : [];
         const cancelBtn = (order.status === 'pending' || order.status === 'taken' || order.status === 'supplier_pending') ? [Markup.button.callback(t(user, 'btn_cancel_order_label', '❌ Annuler la commande'), `cancel_order_client_${orderId}`)] : [];
         const chatBtn = (order.status === 'taken') ? [Markup.button.callback(t(user, 'btn_chat_livreur', '💬 Parler au livreur'), `chat_livreur_${orderId}`)] : [];
 

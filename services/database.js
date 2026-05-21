@@ -1235,7 +1235,7 @@ async function incrementChatCount(orderId) {
 
 async function appendChatHistory(userId, msgObj) {
     try {
-        const idStr = String(userId).replace('telegram_', '');
+        const idStr = String(userId).startsWith('telegram_') ? String(userId) : `telegram_${userId}`;
         const { data: user } = await supabase.from(COL_USERS).select('data').eq('id', idStr).maybeSingle();
         if (!user) return false;
         
@@ -1255,8 +1255,19 @@ async function appendChatHistory(userId, msgObj) {
     }
 }
 
+const pendingFeedbacks = new Map();
+
+async function setPendingFeedback(userId, orderId, rate) {
+    pendingFeedbacks.set(userId, { orderId, rate });
+}
+
 async function getAndClearPendingFeedback(userId) {
-    return null; // Placeholder — no persistent feedback queue yet
+    const pending = pendingFeedbacks.get(userId);
+    if (pending) {
+        pendingFeedbacks.delete(userId);
+        return pending;
+    }
+    return null;
 }
 
 async function saveFeedback(userId, feedback) {
@@ -1496,6 +1507,7 @@ const database = {
     appendChatHistory,
     incrementChatCount,
     getAndClearPendingFeedback,
+    setPendingFeedback,
     saveFeedback,
     getPublicReviews,
     // Marketplace

@@ -52,21 +52,45 @@ async function isRootAdmin(ctx) {
  * Admin complet (Root ou is_admin=true)
  */
 async function isAdmin(ctx) {
-    const currentUserId = String(ctx.from?.id).match(/\d+/g)?.[0];
+    const rawId = String(ctx?.from?.id || '');
+    if (!rawId) return false;
+
+    const currentUserId = rawId.match(/\d+/g)?.[0];
     if (!currentUserId) return false;
 
-    // 1. Root Admins (Config / .env)
-    if (await isRootAdmin(ctx)) return true;
+    if (authenticatedAdmins.has(currentUserId)) {
+        return true;
+    }
 
-    // 2. Database Check (Promoted Admins)
-    const user = await getUser(`telegram_${currentUserId}`);
-    const status = !!(user && user.is_admin === true);
+    const settings = ctx.state?.settings || (await getAppSettings()) || {};
+    
+    // Extraire les IDs des paramètres
+    const adminIds = String(settings.admin_telegram_id || '').match(/\d+/g) || [];
+    const extraAdmins = (Array.isArray(settings.list_admins) ? settings.list_admins : [])
+        .map(id => String(id).match(/\d+/g)?.[0])
+        .filter(Boolean);
 
-    // Sync convenience cache
-    if (status) authenticatedAdmins.set(currentUserId, true);
-    else authenticatedAdmins.delete(currentUserId);
+    const envAdmin = String(process.env.ADMIN_TELEGRAM_ID || '').match(/\d+/g)?.[0];
+    const allAdmins = [...adminIds, ...extraAdmins];
+    if (envAdmin) allAdmins.push(envAdmin);
 
-    return status;
+    if (allAdmins.includes(currentUserId)) {
+        authenticatedAdmins.set(currentUserId, true);
+        return true;
+    }
+
+    // Check by DB status
+    const user = ctx.state?.user || ctx.user || await getUser(`telegram_${currentUserId}`);
+    if (user && user.is_admin) {
+        authenticatedAdmins.set(currentUserId, true);
+        return true;
+    }
+
+    if (authenticatedAdmins.has(currentUserId)) {
+        authenticatedAdmins.delete(currentUserId);
+    }
+
+    return false;
 }
 
 /**
