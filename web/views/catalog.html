@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>ShopTonBot</title>
+    <title>Farmstegridy</title>
     <script>
         window.addEventListener('error', function(e) {
             var err = e.error ? e.error.stack : e.message;
@@ -227,7 +227,7 @@
             <div>
                 <div class="logo" style="display:flex; align-items:center; gap:10px;">
                     <img id="main-logo-2" class="app-dynamic-logo" src="/public/img/logo.png" style="height:32px; width:32px; object-fit:cover; border-radius:50%;" onerror="this.onerror=null; this.style.display='none';">
-                    <div id="header-text-logo" style="font-size:18px; font-weight:900; letter-spacing:-0.5px; display:block;"><span style="color:#fff;" data-i18n="nav_shop">Shop</span><span style="color:var(--accent);">TonBot</span></div>
+                    <div id="header-text-logo" style="font-size:18px; font-weight:900; letter-spacing:-0.5px; display:block;"><span style="color:#fff;">Farm</span><span style="color:var(--accent);">stegridy</span></div>
                 </div>
                 <div onclick="openAddressModal()" style="display:flex; align-items:center; gap:6px; margin-top:6px; font-size:12px; font-weight:900; opacity:1; cursor:pointer; background:rgba(255,255,255,0.05); padding:6px 12px; border-radius:12px;">
                     <i class="notranslate ph-fill ph-map-pin" style="color:var(--accent); font-size:14px;"></i>
@@ -306,7 +306,7 @@
             <div style="width:60px; height:60px; background:var(--accent); border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:24px; color:#fff; font-weight:900;" id="profile-initial">👤</div>
             <div style="flex:1;">
                 <h1 style="font-size:24px; font-weight:900; margin:0; line-height:1;" id="profile-name">Client</h1>
-                <div style="font-size:13px; opacity:0.6; margin-top:5px;" id="profile-phone">Membre ShopTonBot</div>
+                <div style="font-size:13px; opacity:0.6; margin-top:5px;" id="profile-phone">Membre Farmstegridy</div>
             </div>
         </div>
 
@@ -383,7 +383,6 @@
 
     <div class="bottom-nav">
         <div class="nav-item active" onclick="switchPage('shop', this)"><div class="nav-icon"><i class="ph-fill ph-diamond"></i></div><div class="nav-label" data-i18n="nav_shop">Shop</div></div>
-        <div class="nav-item" onclick="switchPage('bots', this)"><div class="nav-icon" style="color:var(--secondary);"><i class="ph-fill ph-rocket"></i></div><div class="nav-label" data-i18n="nav_baas">BaaS</div></div>
         <div class="nav-item" onclick="switchPage('orders', this)"><div class="nav-icon"><i class="ph-fill ph-package"></i></div><div class="nav-label" data-i18n="nav_tracking">Suivi</div></div>
         <div class="nav-item" onclick="switchPage('profile', this)"><div class="nav-icon"><i class="ph-fill ph-user"></i></div><div class="nav-label" data-i18n="nav_profile">Profil</div></div>
     </div>
@@ -600,7 +599,7 @@
                 const uid = tg.initDataUnsafe?.user?.id;
                 const [pRes, uRes, newsRes, ordersRes] = await Promise.all([
                     fetch('/api/products'),
-                    uid ? fetch(`/api/user-info?userId=telegram_${uid}`) : Promise.resolve(null),
+                    uid ? fetch(`/api/user-info?userId=telegram_${uid}&t=${Date.now()}`) : Promise.resolve(null),
                     fetch('/api/news'),
                     uid ? fetch(`/api/user-orders?userId=telegram_${uid}`) : Promise.resolve(null)
                 ]);
@@ -1270,7 +1269,7 @@
                     
                     const d = document.createElement('div');
                     d.style = 'background:var(--card); border:1px solid var(--border); border-radius:18px; padding:15px; margin-bottom:12px;';
-                    d.innerHTML = `<div style="display:flex; justify-content:space-between; margin-bottom:5px;"><div style="font-weight:800; font-size:12px;">Client ShopTonBot</div><div style="color:#ffaa00;">${'⭐'.repeat(r.rating)}</div></div><div style="font-size:12px; opacity:0.7;">${r.text}</div>${mediaHtml}`;
+                    d.innerHTML = `<div style="display:flex; justify-content:space-between; margin-bottom:5px;"><div style="font-weight:800; font-size:12px;">Client Farmstegridy</div><div style="color:#ffaa00;">${'⭐'.repeat(r.rating)}</div></div><div style="font-size:12px; opacity:0.7;">${r.text}</div>${mediaHtml}`;
                     cont.appendChild(d);
                 });
             } catch(e) {}
@@ -2153,7 +2152,7 @@
             openCustomModal("DEMANDE DE LIVREUR", 
                 `<div style="text-align:center; padding:20px 0;">
                     <div style="font-size:40px; margin-bottom:15px;">🚴</div>
-                    <div style="font-size:16px; font-weight:800; margin-bottom:10px;">Votre demande d'admission a bien été reçue par ShopTonBot !</div>
+                    <div style="font-size:16px; font-weight:800; margin-bottom:10px;">Votre demande d'admission a bien été reçue par Farmstegridy !</div>
                     <div style="font-size:13px; opacity:0.7;">Nous reviendrons vers vous très prochainement pour vous donner notre décision.</div>
                 </div>`
             );

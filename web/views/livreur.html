@@ -233,7 +233,7 @@
             }
 
             try {
-                const res = await fetch(`/api/user-info?userId=telegram_${uid}`);
+                const res = await fetch(`/api/user-info?userId=telegram_${uid}&t=${Date.now()}`);
                 userInfo = await res.json();
                 
                 if (!userInfo.isLivreur && !userInfo.isAdmin) {
