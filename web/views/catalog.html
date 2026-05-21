@@ -850,7 +850,7 @@
                         <div style="display:flex; justify-content:space-between; align-items:center; margin-top:5px;">
                             <div class="card-price" style="margin-top:0;">${p.price}€</div>
                             <div id="stock-badge-${p.id}" style="font-size:10px; font-weight:800; background:rgba(255,255,255,0.1); padding:4px 8px; border-radius:8px; display:flex; align-items:center; gap:4px;">
-                                <span class="stock-indicator" style="background:${getAvailableQuantity(p)>0?'#2ecc71':'#e74c3c'}; width:6px; height:6px; border-radius:50%; display:inline-block;"></span>${getAvailableQuantity(p)>0 ? getAvailableQuantity(p)+' en stock' : 'Épuisé'}
+                                ${getBadgeHtml(p)}
                             </div>
                         </div>
                     </div>
@@ -1166,7 +1166,18 @@
                 });
             }
 
-            document.getElementById('p-add-cart-btn').onclick = addSelectionToCart;
+            const avail = getAvailableQuantity(activeProduct);
+            const addBtn = document.getElementById('p-add-cart-btn');
+            if (avail > 0) {
+                addBtn.innerText = "AJOUTER AU PANIER";
+                addBtn.style.background = "var(--primary)";
+                addBtn.onclick = addSelectionToCart;
+            } else {
+                addBtn.innerText = "M'AVERTIR DU RETOUR 🔔";
+                addBtn.style.background = "#555";
+                addBtn.onclick = () => requestRestockAlert(pid);
+            }
+
             document.getElementById('btn-add-review').onclick = () => openReviewPrompt(pid);
             document.getElementById('product-detail-modal').classList.add('open');
             
@@ -1409,6 +1420,18 @@
             syncCart();
         }
 
+        function getBadgeHtml(p) {
+            const avail = getAvailableQuantity(p);
+            const inCart = cart.filter(i => i.id === p.id).reduce((s, i) => s + i.n, 0);
+            if (avail > 0) {
+                return `<span class="stock-indicator" style="background:#2ecc71; width:6px; height:6px; border-radius:50%; display:inline-block;"></span>${avail} en stock`;
+            } else if (inCart > 0 && p.stock > 0) {
+                return `<span class="stock-indicator" style="background:#f39c12; width:6px; height:6px; border-radius:50%; display:inline-block;"></span>Max atteint`;
+            } else {
+                return `<span class="stock-indicator" style="background:#e74c3c; width:6px; height:6px; border-radius:50%; display:inline-block;"></span>Rupture, bientôt de retour`;
+            }
+        }
+
         function getAvailableQuantity(p) {
             if (!p) return 0;
             const inCart = cart.filter(i => i.id === p.id).reduce((s, i) => s + i.n, 0);
@@ -1418,10 +1441,9 @@
         function updateStockBadges() {
             if (typeof allProducts === 'undefined') return;
             allProducts.forEach(p => {
-                const avail = getAvailableQuantity(p);
                 const qtyBadge = document.getElementById(`stock-badge-${p.id}`);
                 if (qtyBadge) {
-                    qtyBadge.innerHTML = `<span class="stock-indicator" style="background:${avail>0?'#2ecc71':'#e74c3c'}; width:6px; height:6px; border-radius:50%; display:inline-block;"></span>${avail>0 ? avail+' en stock' : 'Épuisé'}`;
+                    qtyBadge.innerHTML = getBadgeHtml(p);
                 }
             });
         }
@@ -2513,6 +2535,28 @@
     <script type="text/javascript">
         function googleTranslateElementInit() {
             new google.translate.TranslateElement({pageLanguage: 'fr', autoDisplay: false}, 'google_translate_element');
+        }
+
+        async function requestRestockAlert(pid) {
+            const uid = tg.initDataUnsafe?.user?.id;
+            if (!uid) return;
+            try {
+                tg.HapticFeedback.notificationOccurred('success');
+                tg.showPopup({
+                    title: "Alerte de Réapprovisionnement",
+                    message: "Vous recevrez une notification Telegram dès que ce produit sera de nouveau en stock !",
+                    buttons: [{ type: "ok" }]
+                });
+                
+                await fetch(`/api/products/${pid}/alert`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ userId: uid })
+                });
+                closeProductModal();
+            } catch (e) {
+                console.error('Error requesting alert:', e);
+            }
         }
     </script>
     <script type="text/javascript" src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
