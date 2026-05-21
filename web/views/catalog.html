@@ -832,8 +832,8 @@
                     badgeHtml = `<div style="position:absolute; top:10px; left:10px; background:var(--accent); color:#fff; font-size:10px; font-weight:900; padding:4px 8px; border-radius:8px; box-shadow:0 4px 10px rgba(255,0,80,0.5); animation: pulse 2s infinite;">NOUVEAU 🔥</div>`;
                 } else if (Math.random() > 0.8) {
                     badgeHtml = `<div style="position:absolute; top:10px; left:10px; background:#00ff88; color:#000; font-size:10px; font-weight:900; padding:4px 8px; border-radius:8px; box-shadow:0 4px 10px rgba(0,255,136,0.3);">BESTSELLER ⭐</div>`;
-                } else if (p.stock > 0 && p.stock < 10) {
-                    badgeHtml = `<div style="position:absolute; top:10px; left:10px; background:#ffaa00; color:#000; font-size:10px; font-weight:900; padding:4px 8px; border-radius:8px; box-shadow:0 4px 10px rgba(255,170,0,0.5); animation: pulse 2s infinite;">VITE! PLUS QUE ${p.stock}</div>`;
+                } else if (getAvailableQuantity(p) > 0 && getAvailableQuantity(p) < 10) {
+                    badgeHtml = `<div style="position:absolute; top:10px; left:10px; background:#ffaa00; color:#000; font-size:10px; font-weight:900; padding:4px 8px; border-radius:8px; box-shadow:0 4px 10px rgba(255,170,0,0.5); animation: pulse 2s infinite;">VITE! PLUS QUE ${getAvailableQuantity(p)}</div>`;
                 }
 
                 d.innerHTML = `
@@ -850,7 +850,7 @@
                         <div style="display:flex; justify-content:space-between; align-items:center; margin-top:5px;">
                             <div class="card-price" style="margin-top:0;">${p.price}€</div>
                             <div id="stock-badge-${p.id}" style="font-size:10px; font-weight:800; background:rgba(255,255,255,0.1); padding:4px 8px; border-radius:8px; display:flex; align-items:center; gap:4px;">
-                                <span class="stock-indicator" style="background:${p.stock>0?'#2ecc71':'#e74c3c'}; width:6px; height:6px; border-radius:50%; display:inline-block;"></span>${p.stock>0 ? p.stock+' en stock' : 'Épuisé'}
+                                <span class="stock-indicator" style="background:${getAvailableQuantity(p)>0?'#2ecc71':'#e74c3c'}; width:6px; height:6px; border-radius:50%; display:inline-block;"></span>${getAvailableQuantity(p)>0 ? getAvailableQuantity(p)+' en stock' : 'Épuisé'}
                             </div>
                         </div>
                     </div>
@@ -1409,6 +1409,23 @@
             syncCart();
         }
 
+        function getAvailableQuantity(p) {
+            if (!p) return 0;
+            const inCart = cart.filter(i => i.id === p.id).reduce((s, i) => s + i.n, 0);
+            return Math.max(0, p.stock - inCart);
+        }
+
+        function updateStockBadges() {
+            if (typeof allProducts === 'undefined') return;
+            allProducts.forEach(p => {
+                const avail = getAvailableQuantity(p);
+                const qtyBadge = document.getElementById(`stock-badge-${p.id}`);
+                if (qtyBadge) {
+                    qtyBadge.innerHTML = `<span class="stock-indicator" style="background:${avail>0?'#2ecc71':'#e74c3c'}; width:6px; height:6px; border-radius:50%; display:inline-block;"></span>${avail>0 ? avail+' en stock' : 'Épuisé'}`;
+                }
+            });
+        }
+
         function updateCartUI() {
             const tot = cart.reduce((s, i) => s + (i.pr * i.n), 0);
             const count = cart.reduce((s, i) => s + i.n, 0);
@@ -1420,6 +1437,7 @@
             const isShop = document.getElementById('page-shop').style.display !== 'none';
             if (count > 0 && isShop) bar.classList.add('visible');
             else bar.classList.remove('visible');
+            updateStockBadges();
         }
 
         async function syncCart() {
@@ -2419,10 +2437,7 @@
                         const idx = allProducts.findIndex(p => p.id === np.id);
                         if (idx > -1 && allProducts[idx].stock !== np.stock) {
                             allProducts[idx].stock = np.stock;
-                            const qtyBadge = document.getElementById(`stock-badge-${np.id}`);
-                            if (qtyBadge) {
-                                qtyBadge.innerHTML = `<span class="stock-indicator" style="background:${np.stock>0?'#2ecc71':'#e74c3c'}"></span>${np.stock>0 ? np.stock+' en stock' : 'Épuisé'}`;
-                            }
+                            updateStockBadges();
                         }
                     });
                 }
