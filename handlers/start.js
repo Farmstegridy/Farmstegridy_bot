@@ -542,7 +542,8 @@ async function getMainMenuKeyboard(ctx, settings, user, isFournisseur = false, i
 async function getLivreurMenuKeyboard(ctx, settings, user, hasActiveOrders = false, isAdminUser = false) {
     const isAvail = user?.is_available || user?.data?.is_available;
     const baseDomain = process.env.RENDER_EXTERNAL_URL || (process.env.RAILWAY_PUBLIC_DOMAIN ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}` : 'https://farmstegridy-bot.onrender.com');
-    const livreurUrl = settings.mini_app_url ? `${settings.mini_app_url}/livreur` : `${baseDomain}/livreur`;
+    const langCode = user?.language_code || 'fr';
+    const livreurUrl = (settings.mini_app_url ? `${settings.mini_app_url}/livreur` : `${baseDomain}/livreur`) + `?lang=${langCode}` + `&v=${Date.now()}`;
 
     const buttons = [
         [Markup.button.webApp(t(user, 'btn_livreur_miniapp', '✨ ESPACE LIVREUR (MINI APP) ✨'), livreurUrl)],

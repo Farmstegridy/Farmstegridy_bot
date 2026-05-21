@@ -98,7 +98,7 @@
         .card-content { padding: 10px; }
         .card-name { font-size: 12px; font-weight: 700; opacity: 0.9; height: 30px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
         .card-price { font-size: 14px; font-weight: 900; color: var(--accent); margin-top: 4px; }
-        .add-btn { position: absolute; bottom: 10px; right: 10px; width: 28px; height: 28px; background: #fff; color: #000; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: 900; }
+        .add-btn { position: absolute; bottom: 65px; right: 10px; width: 32px; height: 32px; background: #fff; color: #000; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 900; box-shadow: 0 4px 10px rgba(0,0,0,0.3); z-index: 5; }
 
         /* ORDERS */
         .order-card { background: var(--card); border: 1px solid var(--border); border-radius: 24px; padding: 20px; margin-bottom: 15px; position: relative; border-left: 4px solid transparent; }
@@ -162,13 +162,14 @@
 
         /* FLOAT CART */
         .cart-float {
-            position: fixed; bottom: calc(105px + var(--safe-area-bottom)); left: 20px; right: 20px;
-            background: var(--accent); height: 60px; border-radius: 20px;
+            position: fixed; bottom: calc(85px + var(--safe-area-bottom)); left: 20px; right: 20px;
+            background: var(--accent); height: 50px; border-radius: 16px;
             display: flex; align-items: center; justify-content: space-between;
-            padding: 0 22px; font-weight: 900; box-shadow: 0 15px 30px var(--accent-glow);
+            padding: 0 20px; font-weight: 900; font-size: 14px; box-shadow: 0 15px 30px var(--accent-glow);
             transform: translateY(200px); transition: 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            z-index: 8000; cursor: pointer;
+            z-index: 8000; cursor: pointer; white-space: nowrap; overflow: hidden;
         }
+        .cart-float * { pointer-events: none; }
         .cart-float.visible { transform: translateY(0); }
 
         /* MODALS */
@@ -230,16 +231,16 @@
                     <div id="header-text-logo" style="font-size:18px; font-weight:900; letter-spacing:-0.5px; display:block;"><span style="color:#fff;">Farm</span><span style="color:var(--accent);">estegridy</span></div>
                 </div>
                 <div onclick="openAddressModal()" style="display:flex; align-items:center; gap:6px; margin-top:6px; font-size:12px; font-weight:900; opacity:1; cursor:pointer; background:rgba(255,255,255,0.05); padding:6px 12px; border-radius:12px;">
-                    <i class="ph-fill ph-map-pin" style="color:var(--accent); font-size:14px;"></i>
+                    <i class="notranslate ph-fill ph-map-pin" style="color:var(--accent); font-size:14px;"></i>
                     <div style="max-width:180px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">Livraison à : <span id="shop-default-address" style="color:var(--text); opacity:0.9;">Chargement...</span></div>
-                    <i class="ph-bold ph-caret-down" style="font-size:10px; opacity:0.5;"></i>
+                    <i class="notranslate ph-bold ph-caret-down" style="font-size:10px; opacity:0.5;"></i>
                 </div>
             </div>
             <div class="header-actions">
                 <div id="news-badge" class="nav-icon" style="font-size:22px; position:relative;" onclick="openNotifications()">
-                    <i class="ph-fill ph-bell"></i><div class="cart-badge-dot" id="news-dot" style="display:none; width:16px; height:16px; top:-5px; right:-5px; font-size:9px; font-weight:900; align-items:center; justify-content:center; border:1.5px solid #000;">0</div>
+                    <i class="notranslate ph-fill ph-bell"></i><div class="cart-badge-dot" id="news-dot" style="display:none; width:16px; height:16px; top:-5px; right:-5px; font-size:9px; font-weight:900; align-items:center; justify-content:center; border:1.5px solid #000;">0</div>
                 </div>
-                <div class="cart-icon-btn" onclick="openCheckout()"><i class="ph-fill ph-shopping-cart"></i><div class="cart-badge-dot" id="cart-dot"></div></div>
+                <div class="cart-icon-btn" onclick="openCheckout()"><i class="notranslate ph-fill ph-shopping-cart"></i><div class="cart-badge-dot" id="cart-dot"></div></div>
             </div>
         </div>
         
@@ -255,7 +256,7 @@
             <div class="carousel" id="featured-carousel"></div>
         </div>
 
-        <div class="search-area"><div class="search-bar"><i class="ph-bold ph-magnifying-glass"></i><input type="text" placeholder="Rechercher..." data-i18n="search" id="search-input" oninput="handleSearch()"></div></div>
+        <div class="search-area"><div class="search-bar"><i class="notranslate ph-bold ph-magnifying-glass"></i><input type="text" placeholder="Rechercher..." data-i18n="search" id="search-input" oninput="handleSearch()"></div></div>
 
         <div class="categories-scroll" id="categories"></div>
 
@@ -266,11 +267,11 @@
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
             <h1 style="font-size:28px; font-weight:900; margin:0;">SUIVI & AIDE</h1>
             <div onclick="openGlobalSupportModal()" style="width:40px; height:40px; background:var(--card); border:1px solid var(--border); border-radius:12px; display:flex; align-items:center; justify-content:center; cursor:pointer;">
-                <i class="ph-fill ph-headset" style="font-size:20px; color:var(--text);"></i>
+                <i class="notranslate ph-fill ph-headset" style="font-size:20px; color:var(--text);"></i>
             </div>
         </div>
         <div style="background:var(--accent); color:#fff; padding:12px 15px; border-radius:12px; font-weight:800; font-size:12px; display:flex; align-items:center; gap:10px; margin-bottom:20px; cursor:pointer;" onclick="openGlobalSupportModal()">
-            <i class="ph-fill ph-chat-circle-dots" style="font-size:18px;"></i>
+            <i class="notranslate ph-fill ph-chat-circle-dots" style="font-size:18px;"></i>
             Besoin d'aide avec une commande ? Discutez avec nous !
         </div>
         <div id="orders-list"></div>
@@ -287,11 +288,11 @@
 
         <div style="display:flex; gap:10px; margin-bottom:30px;">
             <div onclick="switchPage('orders')" style="flex:1; background:var(--card); padding:15px; border-radius:18px; text-align:center; border:1px solid var(--border); cursor:pointer;">
-                <i class="ph-fill ph-receipt" style="font-size:24px; color:var(--text); margin-bottom:5px;"></i>
+                <i class="notranslate ph-fill ph-receipt" style="font-size:24px; color:var(--text); margin-bottom:5px;"></i>
                 <div style="font-size:12px; font-weight:800;" data-i18n="orders">Commandes</div>
             </div>
             <div onclick="openAddressModal()" style="flex:1; background:var(--card); padding:15px; border-radius:18px; text-align:center; border:1px solid var(--border); cursor:pointer;">
-                <i class="ph-fill ph-map-pin" style="font-size:24px; color:var(--text); margin-bottom:5px;"></i>
+                <i class="notranslate ph-fill ph-map-pin" style="font-size:24px; color:var(--text); margin-bottom:5px;"></i>
                 <div style="font-size:12px; font-weight:800;">Adresses</div>
             </div>
         </div>
@@ -300,38 +301,38 @@
         <div style="background:var(--card); border-radius:24px; overflow:hidden; border:1px solid var(--border); margin-bottom:25px;">
             <div style="padding:18px 20px; display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border);">
                 <div style="display:flex; align-items:center; gap:12px;">
-                    <i class="ph-fill ph-wallet" style="font-size:20px; opacity:0.7;"></i>
+                    <i class="notranslate ph-fill ph-wallet" style="font-size:20px; opacity:0.7;"></i>
                     <div><div style="font-weight:800; font-size:15px;">Portefeuille</div><div style="font-size:11px; opacity:0.5;">Solde disponible</div></div>
                 </div>
                 <div style="font-weight:900; font-size:16px; color:var(--accent);" id="user-balance">0.00€</div>
             </div>
             <div onclick="copyReferral()" style="padding:18px 20px; display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border); cursor:pointer;">
                 <div style="display:flex; align-items:center; gap:12px;">
-                    <i class="ph-fill ph-gift" style="font-size:20px; opacity:0.7;"></i>
+                    <i class="notranslate ph-fill ph-gift" style="font-size:20px; opacity:0.7;"></i>
                     <div><div style="font-weight:800; font-size:15px;">Parrainage</div><div style="font-size:11px; opacity:0.5;">Gagnez des crédits</div></div>
                 </div>
-                <i class="ph-bold ph-caret-right" style="color:var(--accent);"></i>
+                <i class="notranslate ph-bold ph-caret-right" style="color:var(--accent);"></i>
             </div>
             <div onclick="switchPage('shop'); setTimeout(()=> { const search = document.getElementById('search-input'); search.focus(); }, 100);" style="padding:18px 20px; display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border); cursor:pointer;">
                 <div style="display:flex; align-items:center; gap:12px;">
-                    <i class="ph-fill ph-heart" style="font-size:20px; opacity:0.7; color:var(--accent);"></i>
+                    <i class="notranslate ph-fill ph-heart" style="font-size:20px; opacity:0.7; color:var(--accent);"></i>
                     <div><div style="font-weight:800; font-size:15px;">Mes Favoris</div><div style="font-size:11px; opacity:0.5;">Retrouver mes produits préférés</div></div>
                 </div>
-                <i class="ph-bold ph-caret-right" style="color:var(--accent);"></i>
+                <i class="notranslate ph-bold ph-caret-right" style="color:var(--accent);"></i>
             </div>
             <div onclick="openUserReviewsModal()" style="padding:18px 20px; display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border); cursor:pointer;">
                 <div style="display:flex; align-items:center; gap:12px;">
-                    <i class="ph-fill ph-star" style="font-size:20px; opacity:0.7;"></i>
+                    <i class="notranslate ph-fill ph-star" style="font-size:20px; opacity:0.7;"></i>
                     <div><div style="font-weight:800; font-size:15px;">Mes Avis</div><div style="font-size:11px; opacity:0.5;">Voir et gérer mes avis</div></div>
                 </div>
-                <i class="ph-bold ph-caret-right" style="color:var(--accent);"></i>
+                <i class="notranslate ph-bold ph-caret-right" style="color:var(--accent);"></i>
             </div>
             <div onclick="openAdminTelegram()" style="padding:18px 20px; display:flex; justify-content:space-between; align-items:center; cursor:pointer;">
                 <div style="display:flex; align-items:center; gap:12px;">
-                    <i class="ph-fill ph-telegram-logo" style="font-size:20px; opacity:0.7;"></i>
+                    <i class="notranslate ph-fill ph-telegram-logo" style="font-size:20px; opacity:0.7;"></i>
                     <div><div style="font-weight:800; font-size:15px;" id="hotline-btn">Contacter l'Admin</div><div style="font-size:11px; opacity:0.5;">Lien direct Telegram</div></div>
                 </div>
-                <i class="ph-bold ph-caret-right" style="color:var(--accent);"></i>
+                <i class="notranslate ph-bold ph-caret-right" style="color:var(--accent);"></i>
             </div>
         </div>
 
@@ -340,26 +341,26 @@
             <div onclick="requestCourierRole()" style="padding:18px 20px; display:flex; justify-content:space-between; align-items:center; cursor:pointer;">
                 <div style="display:flex; align-items:center; gap:12px;">
                     <div style="width:36px; height:36px; background:var(--secondary); border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:18px; color:#000;">
-                        <i class="ph-fill ph-moped"></i>
+                        <i class="notranslate ph-fill ph-moped"></i>
                     </div>
                     <div><div style="font-weight:800; font-size:15px;">Devenir Livreur</div><div style="font-size:11px; opacity:0.5;">Rejoignez l'équipe</div></div>
                 </div>
-                <i class="ph-bold ph-caret-right" style="color:var(--accent);"></i>
+                <i class="notranslate ph-bold ph-caret-right" style="color:var(--accent);"></i>
             </div>
         </div>
 
-        <button onclick="confirmDeleteAccount()" style="width:100%; background:none; border:1px solid rgba(255,0,80,0.3); height:50px; border-radius:18px; color:var(--accent); font-size:12px; font-weight:800; letter-spacing:1px;"><i class="ph-fill ph-trash"></i> SUPPRIMER MON COMPTE</button>
+        <button onclick="confirmDeleteAccount()" style="width:100%; background:none; border:1px solid rgba(255,0,80,0.3); height:50px; border-radius:18px; color:var(--accent); font-size:12px; font-weight:800; letter-spacing:1px;"><i class="notranslate ph-fill ph-trash"></i> SUPPRIMER MON COMPTE</button>
     </div>
 
     <div class="cart-float" id="cart-bar" onclick="openCheckout()">
-        <div style="display:flex; align-items:center; gap:10px;"><span style="background:rgba(255,255,255,0.2); padding:5px 12px; border-radius:10px;" id="cart-count">0</span><span>FINALISER LA COMMANDE</span></div>
+        <div style="display:flex; align-items:center; gap:10px;"><span style="background:rgba(255,255,255,0.2); padding:5px 12px; border-radius:10px;" id="cart-count">0</span><span>VOIR LE PANIER</span></div>
         <div id="cart-total" style="font-size:16px;">0.00€</div>
     </div>
 
     <div class="bottom-nav">
-        <div class="nav-item active" onclick="switchPage('shop', this)"><div class="nav-icon"><i class="ph-fill ph-diamond"></i></div><div class="nav-label">Shop</div></div>
-        <div class="nav-item" onclick="switchPage('orders', this)"><div class="nav-icon"><i class="ph-fill ph-package"></i></div><div class="nav-label" data-i18n="orders">Commandes</div></div>
-        <div class="nav-item" onclick="switchPage('profile', this)"><div class="nav-icon"><i class="ph-fill ph-user"></i></div><div class="nav-label" data-i18n="profile">Profil</div></div>
+        <div class="nav-item active" onclick="switchPage('shop', this)"><div class="nav-icon"><i class="notranslate ph-fill ph-diamond"></i></div><div class="nav-label">Shop</div></div>
+        <div class="nav-item" onclick="switchPage('orders', this)"><div class="nav-icon"><i class="notranslate ph-fill ph-package"></i></div><div class="nav-label" data-i18n="orders">Commandes</div></div>
+        <div class="nav-item" onclick="switchPage('profile', this)"><div class="nav-icon"><i class="notranslate ph-fill ph-user"></i></div><div class="nav-label" data-i18n="profile">Profil</div></div>
     </div>
 
     <div class="sheet" id="selection-modal">
@@ -372,7 +373,7 @@
 
     <div class="modal" id="product-detail-modal" style="z-index: 10005;">
         <div class="modal-header">
-            <div style="font-size:24px" onclick="closeProductModal()"><i class="ph-bold ph-x"></i></div>
+            <div style="font-size:24px" onclick="closeProductModal()"><i class="notranslate ph-bold ph-x"></i></div>
             <div style="font-weight:900; font-size:18px; color:var(--accent)">DÉTAILS DU PRODUIT</div>
             <div></div>
         </div>
@@ -401,7 +402,7 @@
 
     <div class="modal" id="support-modal">
         <div class="modal-header">
-            <div style="font-size:24px" onclick="closeSupportModal()"><i class="ph-bold ph-x"></i></div>
+            <div style="font-size:24px" onclick="closeSupportModal()"><i class="notranslate ph-bold ph-x"></i></div>
             <div style="font-weight:900; font-size:18px; color:var(--accent)">SUPPORT GÉNÉRAL</div>
             <div></div>
         </div>
@@ -412,14 +413,14 @@
             <div id="admin-chat-messages" style="flex:1; overflow-y:auto; background:var(--card); border:1px solid var(--border); border-radius:16px; padding:15px; margin-bottom:15px;"></div>
             <div style="display:flex; gap:10px;">
                 <input type="text" id="admin-chat-input" placeholder="Votre message..." style="flex:1; background:rgba(255,255,255,0.05); border:1px solid var(--border); border-radius:12px; padding:0 15px; color:#fff; font-size:14px; outline:none;">
-                <button class="btn-primary" id="admin-chat-send-btn" onclick="sendAdminChatMessage()" style="width:50px; height:50px; border-radius:12px; display:flex; align-items:center; justify-content:center;"><i class="ph-fill ph-paper-plane-right" style="font-size:20px;"></i></button>
+                <button class="btn-primary" id="admin-chat-send-btn" onclick="sendAdminChatMessage()" style="width:50px; height:50px; border-radius:12px; display:flex; align-items:center; justify-content:center;"><i class="notranslate ph-fill ph-paper-plane-right" style="font-size:20px;"></i></button>
             </div>
         </div>
     </div>
 
     <div class="modal" id="order-support-modal">
         <div class="modal-header">
-            <div style="font-size:24px" onclick="closeOrderSupportModal()"><i class="ph-bold ph-x"></i></div>
+            <div style="font-size:24px" onclick="closeOrderSupportModal()"><i class="notranslate ph-bold ph-x"></i></div>
             <div style="font-weight:900; font-size:18px; color:var(--accent)" id="order-support-title">Commande</div>
             <div></div>
         </div>
@@ -429,7 +430,7 @@
 
     <div class="modal" id="notifications-modal">
         <div class="modal-header">
-            <div style="font-size:24px" onclick="closeNotifications()"><i class="ph-bold ph-x"></i></div>
+            <div style="font-size:24px" onclick="closeNotifications()"><i class="notranslate ph-bold ph-x"></i></div>
             <div style="font-weight:900; font-size:18px; color:var(--accent)">NOTIFICATIONS</div>
             <div></div>
         </div>
@@ -439,7 +440,7 @@
     <div class="modal" id="checkout-overlay">
         <div class="modal-header">
             <h2 style="font-weight:900; font-size:24px;">RECAPITULATIF</h2>
-            <div style="font-size:28px" onclick="closeCheckout()"><i class="ph-bold ph-x"></i></div>
+            <div style="font-size:28px" onclick="closeCheckout()"><i class="notranslate ph-bold ph-x"></i></div>
         </div>
         <div style="padding:20px; flex:1; overflow-y:auto;" id="checkout-content"></div>
         <div id="checkout-footer" style="padding:20px; border-top:1px solid var(--border); display:none">
@@ -452,7 +453,7 @@
     <div class="modal" id="custom-modal-overlay" style="z-index: 10010;">
         <div class="modal-header">
             <h2 style="font-weight:900; font-size:24px;" id="cmodal-title">TITRE</h2>
-            <div style="font-size:28px" onclick="closeCustomModal()"><i class="ph-bold ph-x"></i></div>
+            <div style="font-size:28px" onclick="closeCustomModal()"><i class="notranslate ph-bold ph-x"></i></div>
         </div>
         <div style="padding:20px;" id="cmodal-content"></div>
     </div>
@@ -665,7 +666,7 @@
                 } else {
                     d.innerHTML = `
                         <div style="width:${boxWidth}; max-width:400px; height:70px; background:var(--card); border:1px solid var(--border); border-radius:16px; padding:15px; display:flex; align-items:center; gap:15px; flex-shrink:0; cursor:pointer;">
-                            <div style="font-size:26px; color:var(--accent);"><i class="ph-fill ph-bell-ringing"></i></div>
+                            <div style="font-size:26px; color:var(--accent);"><i class="notranslate ph-fill ph-bell-ringing"></i></div>
                             <div style="font-size:12px; font-weight:800; line-height:1.3; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; flex:1; opacity:0.95;">${msg}</div>
                         </div>
                     `;
@@ -775,9 +776,9 @@
                 d.innerHTML = `
                     <div class="card-img-wrapper">
                         <img src="${img}" class="card-img" onclick="openProductModal('${p.id}')">
-                        <div style="position:absolute; bottom:10px; left:10px; background:rgba(0,0,0,0.6); backdrop-filter:blur(5px); padding:4px 8px; border-radius:8px; font-size:10px; font-weight:900; color:#ffaa00;"><i class="ph-fill ph-star"></i> ${rating}</div>
+                        <div style="position:absolute; bottom:10px; left:10px; background:rgba(0,0,0,0.6); backdrop-filter:blur(5px); padding:4px 8px; border-radius:8px; font-size:10px; font-weight:900; color:#ffaa00;"><i class="notranslate ph-fill ph-star"></i> ${rating}</div>
                         <div style="position:absolute; top:10px; right:10px; background:rgba(0,0,0,0.6); backdrop-filter:blur(5px); padding:6px; border-radius:50%; font-size:16px; display:flex; align-items:center; justify-content:center; cursor:pointer;" onclick="toggleFavorite('${p.id}', event)">
-                            <i class="${favorites.includes(p.id) ? 'ph-fill ph-heart' : 'ph-bold ph-heart'}" style="${favorites.includes(p.id) ? 'color:#ff0050;' : 'color:#fff;'}"></i>
+                            <i class="notranslate ${favorites.includes(p.id) ? 'ph-fill ph-heart' : 'ph-bold ph-heart'}" style="${favorites.includes(p.id) ? 'color:#ff0050;' : 'color:#fff;'}"></i>
                         </div>
                         ${badgeHtml}
                     </div>
@@ -857,11 +858,11 @@
                 cont.innerHTML = orders.length ? statsHtml : '<div class="empty-state">Vous n\'avez pas encore de commandes.</div>';
                 
                 orders.forEach(o => {
-                    let color = '#ffaa00', icon = '<i class="ph-fill ph-clock"></i>', text = 'EN ATTENTE';
+                    let color = '#ffaa00', icon = '<i class="notranslate ph-fill ph-clock"></i>', text = 'EN ATTENTE';
                     let progressPct = 33;
-                    if (o.status === 'delivered') { color = '#00ff88'; icon = '<i class="ph-fill ph-check-circle"></i>'; text = 'LIVRÉ'; progressPct = 100; }
-                    else if (o.status === 'taken') { color = 'var(--secondary)'; icon = '<i class="ph-fill ph-truck"></i>'; text = 'EN COURS'; progressPct = 66; }
-                    else if (o.status === 'cancelled') { color = '#ff0050'; icon = '<i class="ph-fill ph-x-circle"></i>'; text = 'ANNULÉE'; progressPct = 0; }
+                    if (o.status === 'delivered') { color = '#00ff88'; icon = '<i class="notranslate ph-fill ph-check-circle"></i>'; text = 'LIVRÉ'; progressPct = 100; }
+                    else if (o.status === 'taken') { color = 'var(--secondary)'; icon = '<i class="notranslate ph-fill ph-truck"></i>'; text = 'EN COURS'; progressPct = 66; }
+                    else if (o.status === 'cancelled') { color = '#ff0050'; icon = '<i class="notranslate ph-fill ph-x-circle"></i>'; text = 'ANNULÉE'; progressPct = 0; }
 
                     const progressBar = o.status !== 'cancelled' ? `
                         <div style="margin:15px 0;">
@@ -900,16 +901,16 @@
                         `;
                     }
 
-                    const btnContact = (!['delivered', 'cancelled', 'refused'].includes(o.status) && o.livreur_id) ? `<button class="btn-primary" style="margin-top:10px; background:rgba(0,255,255,0.1); border:1px solid var(--secondary); color:var(--secondary); height:40px;" onclick="toggleChatModule('${o.id}')"><i class="ph-fill ph-chat-circle-dots"></i> CHAT LIVREUR (${count}/6)</button>` : '';
-                    const btnNoter = ['delivered'].includes(o.status) && !o.feedback_rating ? `<button class="btn-primary" style="margin-top:10px; background:var(--card); border:1px solid var(--accent); color:var(--accent); height:40px;" onclick="openRating('${o.id}')"><i class="ph-fill ph-star"></i> NOTER</button>` : '';
-                    const btnReorder = `<button class="btn-primary" style="margin-top:10px; background:none; border:1px solid var(--border); color:#fff; height:40px;" onclick="reorder('${o.id}')"><i class="ph-fill ph-arrows-clockwise"></i> RECOMMANDER</button>`;
-                    const btnCancel = (o.status === 'pending') ? `<button class="btn-primary" style="margin-top:10px; background:rgba(255,0,80,0.1); border:1px solid rgba(255,0,80,0.5); color:#ff0050; height:40px;" onclick="cancelOrder('${o.id}')"><i class="ph-bold ph-x"></i> ANNULER</button>` : '';
+                    const btnContact = (!['delivered', 'cancelled', 'refused'].includes(o.status) && o.livreur_id) ? `<button class="btn-primary" style="margin-top:10px; background:rgba(0,255,255,0.1); border:1px solid var(--secondary); color:var(--secondary); height:40px;" onclick="toggleChatModule('${o.id}')"><i class="notranslate ph-fill ph-chat-circle-dots"></i> CHAT LIVREUR (${count}/6)</button>` : '';
+                    const btnNoter = ['delivered'].includes(o.status) && !o.feedback_rating ? `<button class="btn-primary" style="margin-top:10px; background:var(--card); border:1px solid var(--accent); color:var(--accent); height:40px;" onclick="openRating('${o.id}')"><i class="notranslate ph-fill ph-star"></i> NOTER</button>` : '';
+                    const btnReorder = `<button class="btn-primary" style="margin-top:10px; background:none; border:1px solid var(--border); color:#fff; height:40px;" onclick="reorder('${o.id}')"><i class="notranslate ph-fill ph-arrows-clockwise"></i> RECOMMANDER</button>`;
+                    const btnCancel = (o.status === 'pending') ? `<button class="btn-primary" style="margin-top:10px; background:rgba(255,0,80,0.1); border:1px solid rgba(255,0,80,0.5); color:#ff0050; height:40px;" onclick="cancelOrder('${o.id}')"><i class="notranslate ph-bold ph-x"></i> ANNULER</button>` : '';
 
                     const d = document.createElement('div'); d.className = 'order-card';
                     d.setAttribute('data-id', o.id);
                     d.innerHTML = `
                         <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
-                            <div style="font-weight:900; font-size:14px;"><i class="ph-fill ph-receipt"></i> #${o.id.slice(-5).toUpperCase()}</div>
+                            <div style="font-weight:900; font-size:14px;"><i class="notranslate ph-fill ph-receipt"></i> #${o.id.slice(-5).toUpperCase()}</div>
                             <div style="font-size:12px; font-weight:800; color:${color};">${icon} ${text}</div>
                         </div>
                         <div style="font-size:11px; opacity:0.5; margin-bottom:15px;">Le ${new Date(o.created_at).toLocaleDateString()}</div>
@@ -923,7 +924,7 @@
                         ${btnNoter}
                         <div style="display:flex; gap:10px; margin-top:10px;">
                             ${btnReorder}
-                            <button class="btn-primary" style="flex:1; background:rgba(255,170,0,0.1); border:1px solid rgba(255,170,0,0.5); color:#ffaa00; height:40px;" onclick="contactSupportForOrder('${o.id}')"><i class="ph-fill ph-headset"></i> AIDE</button>
+                            <button class="btn-primary" style="flex:1; background:rgba(255,170,0,0.1); border:1px solid rgba(255,170,0,0.5); color:#ffaa00; height:40px;" onclick="contactSupportForOrder('${o.id}')"><i class="notranslate ph-fill ph-headset"></i> AIDE</button>
                         </div>
 
                         <div class="chat-module" id="chat-module-${o.id}" style="display:${prevState.isOpen ? 'block' : 'none'};">
@@ -1115,17 +1116,17 @@
             const html = `
                 <div style="text-align:center; font-size:14px; margin-bottom:15px; opacity:0.8;">Notez ce produit et partagez votre expérience :</div>
                 <div style="display:flex; justify-content:center; gap:10px; margin-bottom:20px;" id="review-stars">
-                    <i class="ph-fill ph-star" style="font-size:32px; color:var(--border);" onclick="setReviewStar(1)"></i>
-                    <i class="ph-fill ph-star" style="font-size:32px; color:var(--border);" onclick="setReviewStar(2)"></i>
-                    <i class="ph-fill ph-star" style="font-size:32px; color:var(--border);" onclick="setReviewStar(3)"></i>
-                    <i class="ph-fill ph-star" style="font-size:32px; color:var(--border);" onclick="setReviewStar(4)"></i>
-                    <i class="ph-fill ph-star" style="font-size:32px; color:var(--border);" onclick="setReviewStar(5)"></i>
+                    <i class="notranslate ph-fill ph-star" style="font-size:32px; color:var(--border);" onclick="setReviewStar(1)"></i>
+                    <i class="notranslate ph-fill ph-star" style="font-size:32px; color:var(--border);" onclick="setReviewStar(2)"></i>
+                    <i class="notranslate ph-fill ph-star" style="font-size:32px; color:var(--border);" onclick="setReviewStar(3)"></i>
+                    <i class="notranslate ph-fill ph-star" style="font-size:32px; color:var(--border);" onclick="setReviewStar(4)"></i>
+                    <i class="notranslate ph-fill ph-star" style="font-size:32px; color:var(--border);" onclick="setReviewStar(5)"></i>
                 </div>
                 <textarea id="review-text" placeholder="Génial ! Je recommande fortement..." style="width:100%; height:80px; background:rgba(0,0,0,0.3); border:1px solid var(--border); border-radius:12px; color:#fff; padding:10px; font-family:'Outfit', sans-serif; resize:none; margin-bottom:10px;"></textarea>
                 
                 <div style="margin-bottom:15px;">
                     <label for="review-media-upload" style="display:inline-flex; align-items:center; gap:8px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); border-radius:10px; padding:10px 15px; font-size:13px; cursor:pointer;">
-                        <i class="ph-bold ph-image" style="font-size:18px;"></i> Ajouter Photo/Vidéo
+                        <i class="notranslate ph-bold ph-image" style="font-size:18px;"></i> Ajouter Photo/Vidéo
                     </label>
                     <input type="file" id="review-media-upload" accept="image/*,video/*" style="display:none;" onchange="document.getElementById('review-media-preview').innerText = this.files.length ? this.files[0].name : '';">
                     <div id="review-media-preview" style="font-size:11px; opacity:0.6; margin-top:5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;"></div>
@@ -1244,7 +1245,7 @@
                             <div style="font-size:12px; opacity:0.8;">${r.text}</div>
                             ${mediaHtml}
                             <div style="margin-top:10px; text-align:right;">
-                                <button class="btn-primary" style="background:rgba(255,0,80,0.1); border:1px solid rgba(255,0,80,0.5); color:#ff0050; padding:5px 10px; height:auto; font-size:11px; display:inline-block; width:auto;" onclick="deleteUserReview('${r.id}')"><i class="ph-bold ph-trash"></i> SUPPRIMER</button>
+                                <button class="btn-primary" style="background:rgba(255,0,80,0.1); border:1px solid rgba(255,0,80,0.5); color:#ff0050; padding:5px 10px; height:auto; font-size:11px; display:inline-block; width:auto;" onclick="deleteUserReview('${r.id}')"><i class="notranslate ph-bold ph-trash"></i> SUPPRIMER</button>
                             </div>
                         </div>
                     `;
@@ -1298,9 +1299,9 @@
             const html = `
                 <div style="text-align:center; font-size:14px; margin-bottom:20px; opacity:0.8;">Veuillez attribuer une note à cette livraison :</div>
                 <div style="display:flex; flex-direction:column; gap:10px;">
-                    <button class="btn-primary" style="background:var(--card); border:1px solid var(--border)" onclick="submitRating('${orderId}', 5)"><i class="ph-fill ph-star" style="color:#ffaa00"></i><i class="ph-fill ph-star" style="color:#ffaa00"></i><i class="ph-fill ph-star" style="color:#ffaa00"></i><i class="ph-fill ph-star" style="color:#ffaa00"></i><i class="ph-fill ph-star" style="color:#ffaa00"></i> (Parfait)</button>
-                    <button class="btn-primary" style="background:var(--card); border:1px solid var(--border)" onclick="submitRating('${orderId}', 4)"><i class="ph-fill ph-star" style="color:#ffaa00"></i><i class="ph-fill ph-star" style="color:#ffaa00"></i><i class="ph-fill ph-star" style="color:#ffaa00"></i><i class="ph-fill ph-star" style="color:#ffaa00"></i> (Très Bien)</button>
-                    <button class="btn-primary" style="background:var(--card); border:1px solid var(--border)" onclick="submitRating('${orderId}', 3)"><i class="ph-fill ph-star" style="color:#ffaa00"></i><i class="ph-fill ph-star" style="color:#ffaa00"></i><i class="ph-fill ph-star" style="color:#ffaa00"></i> (Moyen)</button>
+                    <button class="btn-primary" style="background:var(--card); border:1px solid var(--border)" onclick="submitRating('${orderId}', 5)"><i class="notranslate ph-fill ph-star" style="color:#ffaa00"></i><i class="notranslate ph-fill ph-star" style="color:#ffaa00"></i><i class="notranslate ph-fill ph-star" style="color:#ffaa00"></i><i class="notranslate ph-fill ph-star" style="color:#ffaa00"></i><i class="notranslate ph-fill ph-star" style="color:#ffaa00"></i> (Parfait)</button>
+                    <button class="btn-primary" style="background:var(--card); border:1px solid var(--border)" onclick="submitRating('${orderId}', 4)"><i class="notranslate ph-fill ph-star" style="color:#ffaa00"></i><i class="notranslate ph-fill ph-star" style="color:#ffaa00"></i><i class="notranslate ph-fill ph-star" style="color:#ffaa00"></i><i class="notranslate ph-fill ph-star" style="color:#ffaa00"></i> (Très Bien)</button>
+                    <button class="btn-primary" style="background:var(--card); border:1px solid var(--border)" onclick="submitRating('${orderId}', 3)"><i class="notranslate ph-fill ph-star" style="color:#ffaa00"></i><i class="notranslate ph-fill ph-star" style="color:#ffaa00"></i><i class="notranslate ph-fill ph-star" style="color:#ffaa00"></i> (Moyen)</button>
                 </div>
             `;
             openCustomModal('NOTER', html);
@@ -1355,6 +1356,18 @@
             const isShop = document.getElementById('page-shop').style.display !== 'none';
             if (count > 0 && isShop) bar.classList.add('visible');
             else bar.classList.remove('visible');
+
+            // Mettre à jour l'affichage des stocks dans le catalogue
+            if (typeof allProducts !== 'undefined' && allProducts) {
+                allProducts.forEach(p => {
+                    const badge = document.getElementById(`stock-badge-${p.id}`);
+                    if (badge) {
+                        const inCart = cart.filter(item => String(item.id) === String(p.id)).reduce((s, item) => s + item.n, 0);
+                        const displayStock = Math.max(0, p.stock - inCart);
+                        badge.innerHTML = `<span class="stock-indicator" style="background:${displayStock>0?'#2ecc71':'#e74c3c'}; width:6px; height:6px; border-radius:50%; display:inline-block;"></span>${displayStock>0 ? displayStock+' en stock' : 'Épuisé'}`;
+                    }
+                });
+            }
         }
 
         async function syncCart() {
@@ -1495,7 +1508,7 @@
                 if (upsells.length > 0) {
                     let upsellHtml = `
                         <div style="margin-top:20px; margin-bottom:10px; padding:15px; background:rgba(255,170,0,0.05); border:1px solid rgba(255,170,0,0.3); border-radius:20px;">
-                            <div style="font-size:11px; font-weight:900; opacity:0.8; margin-bottom:15px; letter-spacing:1px; display:flex; align-items:center; gap:5px; color:#ffaa00;"><i class="ph-fill ph-fire" style="font-size:14px;"></i> SOUVENT ACHETÉ AVEC</div>
+                            <div style="font-size:11px; font-weight:900; opacity:0.8; margin-bottom:15px; letter-spacing:1px; display:flex; align-items:center; gap:5px; color:#ffaa00;"><i class="notranslate ph-fill ph-fire" style="font-size:14px;"></i> SOUVENT ACHETÉ AVEC</div>
                             <div style="display:flex; gap:10px; overflow-x:auto; padding-bottom:5px; scroll-snap-type: x mandatory;">
                     `;
                     upsells.forEach(p => {
@@ -1509,7 +1522,7 @@
                                     <div style="font-size: 11px; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 4px;">${p.name}</div>
                                     <div style="display: flex; justify-content: space-between; align-items: center;">
                                         <div style="font-size: 12px; font-weight: 900; color: var(--accent);">${p.price}€</div>
-                                        <div style="background: var(--accent); color: #fff; border: none; width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer;" onclick="quickAdd('${p.id}'); event.stopPropagation();"><i class="ph-bold ph-plus" style="font-size:12px;"></i></div>
+                                        <div style="background: var(--accent); color: #fff; border: none; width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer;" onclick="quickAdd('${p.id}'); event.stopPropagation();"><i class="notranslate ph-bold ph-plus" style="font-size:12px;"></i></div>
                                     </div>
                                 </div>
                             </div>
@@ -1623,7 +1636,7 @@
                         <label style="display:block; font-size:11px; font-weight:900; opacity:0.5; margin-bottom:8px; letter-spacing:1px;">PROGRAMMER LA LIVRAISON</label>
                         <div style="position:relative;">
                             <input type="datetime-local" id="order-schedule-date" style="width:100%; background:var(--card); border:1px solid var(--border); border-radius:15px; color:#fff; padding:15px; font-family:inherit; font-size:14px; outline:none; color-scheme:dark;">
-                            <div style="position:absolute; top:15px; right:15px; pointer-events:none; opacity:0.5;"><i class="ph-bold ph-calendar"></i></div>
+                            <div style="position:absolute; top:15px; right:15px; pointer-events:none; opacity:0.5;"><i class="notranslate ph-bold ph-calendar"></i></div>
                         </div>
                         <div style="font-size:11px; opacity:0.5; margin-top:8px;">Laissez vide pour une livraison "Dès que possible"</div>
                     </div>
@@ -1780,7 +1793,7 @@
                         <div style="font-size:12px; opacity:0.7;">${a.address}</div>
                         ${a.digicode ? `<div style="font-size:11px; opacity:0.5; margin-top:2px;">Infos: ${a.digicode}</div>` : ''}
                     </div>
-                    <div style="color:var(--accent); font-size:20px; padding:10px; cursor:pointer;" onclick="removeAddress('${a.id}')"><i class="ph-bold ph-trash"></i></div>
+                    <div style="color:var(--accent); font-size:20px; padding:10px; cursor:pointer;" onclick="removeAddress('${a.id}')"><i class="notranslate ph-bold ph-trash"></i></div>
                 </div>
             `).join('');
 
@@ -1791,7 +1804,7 @@
                     <div style="font-size:11px; font-weight:800; opacity:0.5; margin-bottom:10px; text-align:center;">💡 Cliquez sur une adresse pour l'éditer ou la définir par défaut</div>
                     ${listHtml}
                 </div>
-                <button class="btn-primary" style="background:none; border:1px solid var(--border); color:#fff; margin-bottom:10px;" onclick="showAddAddressForm()"><i class="ph-bold ph-plus"></i> AJOUTER UNE ADRESSE</button>
+                <button class="btn-primary" style="background:none; border:1px solid var(--border); color:#fff; margin-bottom:10px;" onclick="showAddAddressForm()"><i class="notranslate ph-bold ph-plus"></i> AJOUTER UNE ADRESSE</button>
             `;
             openCustomModal('MES ADRESSES', html);
         }
@@ -1801,9 +1814,9 @@
             if (!addr) return;
             const html = `
                 <div style="font-size:14px; font-weight:800; margin-bottom:15px; color:var(--accent); text-align:center;">${addr.name}</div>
-                <button class="btn-primary" style="background:var(--card); border:1px solid var(--border); color:#fff; margin-bottom:10px; font-weight:800;" onclick="editAddress('${addr.id}')"><i class="ph-bold ph-pencil"></i> ÉDITER L'ADRESSE</button>
-                <button class="btn-primary" style="background:var(--card); border:1px solid var(--accent); color:var(--accent); margin-bottom:10px; font-weight:800;" onclick="setAddressDefault('${addr.id}')"><i class="ph-bold ph-star"></i> DÉFINIR PAR DÉFAUT</button>
-                <button class="btn-primary" style="background:rgba(255,0,80,0.1); border:1px solid rgba(255,0,80,0.3); color:#ff0050; margin-bottom:10px; font-weight:800;" onclick="removeAddress('${addr.id}')"><i class="ph-bold ph-trash"></i> SUPPRIMER</button>
+                <button class="btn-primary" style="background:var(--card); border:1px solid var(--border); color:#fff; margin-bottom:10px; font-weight:800;" onclick="editAddress('${addr.id}')"><i class="notranslate ph-bold ph-pencil"></i> ÉDITER L'ADRESSE</button>
+                <button class="btn-primary" style="background:var(--card); border:1px solid var(--accent); color:var(--accent); margin-bottom:10px; font-weight:800;" onclick="setAddressDefault('${addr.id}')"><i class="notranslate ph-bold ph-star"></i> DÉFINIR PAR DÉFAUT</button>
+                <button class="btn-primary" style="background:rgba(255,0,80,0.1); border:1px solid rgba(255,0,80,0.3); color:#ff0050; margin-bottom:10px; font-weight:800;" onclick="removeAddress('${addr.id}')"><i class="notranslate ph-bold ph-trash"></i> SUPPRIMER</button>
                 <button class="btn-primary" style="background:none; border:none; color:#fff; opacity:0.5; margin-top:5px;" onclick="renderAddressModal()">ANNULER</button>
             `;
             openCustomModal('OPTIONS ADRESSE', html);
@@ -1829,7 +1842,7 @@
                 <div id="address-suggestions-edit-addr-val" style="display:none; background:var(--card); border:1px solid var(--accent); border-radius:12px; margin-bottom:10px; max-height:150px; overflow-y:auto; box-shadow:0 5px 15px rgba(0,0,0,0.5); text-align:left;"></div>
                 <input type="text" id="edit-addr-digicode" placeholder="Digicode / Instructions" value="${(addr.digicode || '').replace(/"/g, '&quot;')}" style="width:100%; padding:15px; background:rgba(0,0,0,0.3); border:1px solid var(--border); border-radius:12px; color:#fff; font-family:'Outfit', sans-serif; font-size:14px; margin-bottom:20px; box-sizing:border-box;">
                 
-                <button class="btn-primary" style="background:var(--accent); color:#fff;" onclick="saveEditedAddress('${addr.id}')"><i class="ph-fill ph-floppy-disk"></i> METTRE À JOUR</button>
+                <button class="btn-primary" style="background:var(--accent); color:#fff;" onclick="saveEditedAddress('${addr.id}')"><i class="notranslate ph-fill ph-floppy-disk"></i> METTRE À JOUR</button>
                 <button class="btn-primary" style="background:none; border:none; color:#fff; opacity:0.5; margin-top:10px;" onclick="showAddressActions('${addr.id}')">RETOUR</button>
             `;
             openCustomModal('ÉDITER ADRESSE', html);
@@ -1918,7 +1931,7 @@
                 <div id="address-suggestions-new-addr-val" style="display:none; background:var(--card); border:1px solid var(--accent); border-radius:12px; margin-bottom:10px; max-height:150px; overflow-y:auto; box-shadow:0 5px 15px rgba(0,0,0,0.5); text-align:left;"></div>
                 <input type="text" id="new-addr-digicode" placeholder="Digicode / Instructions (optionnel)" style="width:100%; padding:15px; background:rgba(0,0,0,0.3); border:1px solid var(--border); border-radius:12px; color:#fff; font-family:'Outfit', sans-serif; font-size:14px; margin-bottom:20px; box-sizing:border-box;">
                 
-                <button class="btn-primary" style="background:var(--accent); color:#fff;" onclick="saveNewAddress()"><i class="ph-fill ph-floppy-disk"></i> ENREGISTRER</button>
+                <button class="btn-primary" style="background:var(--accent); color:#fff;" onclick="saveNewAddress()"><i class="notranslate ph-fill ph-floppy-disk"></i> ENREGISTRER</button>
                 <button class="btn-primary" style="background:none; border:none; color:#fff; opacity:0.5; margin-top:10px;" onclick="renderAddressModal()">ANNULER</button>
             `;
             openCustomModal('NOUVELLE ADRESSE', html);
@@ -2159,12 +2172,12 @@
                     d.onclick = () => openOrderSupport(o);
                     d.innerHTML = `
                         <div>
-                            <div style="font-weight:900; font-size:14px; margin-bottom:4px;"><i class="ph-fill ph-receipt"></i> Commande #${o.id.slice(-5).toUpperCase()}</div>
+                            <div style="font-weight:900; font-size:14px; margin-bottom:4px;"><i class="notranslate ph-fill ph-receipt"></i> Commande #${o.id.slice(-5).toUpperCase()}</div>
                             <div style="font-size:12px; opacity:0.6;">${o.product_name || o.product || 'Commande'}</div>
                             <div style="font-size:11px; font-weight:800; color:${statusColor}; margin-top:6px;">${statusText}</div>
                         </div>
                         <div style="width:36px; height:36px; background:rgba(255,255,255,0.05); border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:16px;">
-                            <i class="ph-bold ph-caret-right"></i>
+                            <i class="notranslate ph-bold ph-caret-right"></i>
                         </div>
                     `;
                     cont.appendChild(d);
@@ -2185,7 +2198,7 @@
                 const h = o.chatHistory;
                 content.innerHTML = `
                     <div style="background:rgba(0,255,136,0.1); border:1px solid rgba(0,255,136,0.3); border-radius:16px; padding:12px; margin-bottom:15px;">
-                        <div style="font-weight:900; font-size:13px; color:#00ff88; margin-bottom:4px;"><i class="ph-fill ph-moped"></i> Chat Livreur</div>
+                        <div style="font-weight:900; font-size:13px; color:#00ff88; margin-bottom:4px;"><i class="notranslate ph-fill ph-moped"></i> Chat Livreur</div>
                         <div style="font-size:11px; opacity:0.8;">Discutez en direct avec votre livreur</div>
                     </div>
                     ${h && h.messages && h.messages.length > 0 ? `
@@ -2201,14 +2214,14 @@
                         <input type="text" id="quick-chat-${o.id}" placeholder="Message au livreur..." maxlength="200"
                             style="flex:1; background:rgba(0,0,0,0.4); border:1px solid rgba(0,255,136,0.3); border-radius:14px; color:#fff; padding:12px 15px; font-family:'Outfit',sans-serif; font-size:13px; outline:none;"
                             onkeydown="if(event.key==='Enter') sendQuickCourierMsg('${o.id}')">
-                        <button onclick="sendQuickCourierMsg('${o.id}')" style="background:#00ff88; border:none; border-radius:14px; color:#000; width:48px; height:48px; font-size:20px; cursor:pointer; display:flex; align-items:center; justify-content:center; flex-shrink:0; font-weight:900;"><i class="ph-fill ph-paper-plane-tilt"></i></button>
+                        <button onclick="sendQuickCourierMsg('${o.id}')" style="background:#00ff88; border:none; border-radius:14px; color:#000; width:48px; height:48px; font-size:20px; cursor:pointer; display:flex; align-items:center; justify-content:center; flex-shrink:0; font-weight:900;"><i class="notranslate ph-fill ph-paper-plane-tilt"></i></button>
                     </div>
                 `;
             } else {
                 // Past order -> General support with context
                 content.innerHTML = `
                     <div style="background:rgba(255,255,255,0.05); border-radius:16px; padding:15px; text-align:center; margin-bottom:20px;">
-                        <i class="ph-fill ph-info" style="font-size:32px; color:var(--secondary); margin-bottom:10px;"></i>
+                        <i class="notranslate ph-fill ph-info" style="font-size:32px; color:var(--secondary); margin-bottom:10px;"></i>
                         <div style="font-size:14px; font-weight:800; margin-bottom:5px;">Besoin d'aide pour cette commande ?</div>
                         <div style="font-size:12px; opacity:0.6;">Contactez le support avec la référence de la commande pour un traitement rapide.</div>
                     </div>
@@ -2350,16 +2363,15 @@
                 const resStock = await fetch('/api/products');
                 if (resStock.ok) {
                     const newProds = await resStock.json();
+                    let stockChanged = false;
                     newProds.forEach(np => {
                         const idx = allProducts.findIndex(p => p.id === np.id);
                         if (idx > -1 && allProducts[idx].stock !== np.stock) {
                             allProducts[idx].stock = np.stock;
-                            const qtyBadge = document.getElementById(`stock-badge-${np.id}`);
-                            if (qtyBadge) {
-                                qtyBadge.innerHTML = `<span class="stock-indicator" style="background:${np.stock>0?'#2ecc71':'#e74c3c'}"></span>${np.stock>0 ? np.stock+' en stock' : 'Épuisé'}`;
-                            }
+                            stockChanged = true;
                         }
                     });
+                    if (stockChanged && typeof updateCartUI === 'function') updateCartUI();
                 }
                 
                 // Poll Orders

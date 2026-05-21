@@ -2121,6 +2121,7 @@
             .m-nav-item span { font-size: 9px; }
         }
     </style>
+    <script src="/js/translations.js"></script>
 </head>
 
 <body>
@@ -2136,8 +2137,8 @@
                 <p id="modalMessage">Êtes-vous sûr ?</p>
             </div>
             <div class="modal-actions" id="modalActions">
-                <button class="btn btn-outline" onclick="closeModal(false)">Annuler</button>
-                <button class="btn btn-accent" id="modalConfirmBtn" onclick="closeModal(true)">Confirmer</button>
+                <button class="btn btn-outline" onclick="closeModal(false)" data-i18n="cancel"> data-i18n="cancel">>Annuler</button>
+                <button class="btn btn-accent" id="modalConfirmBtn" onclick="closeModal(true)" data-i18n="confirm"> data-i18n="confirm">>Confirmer</button>
             </div>
         </div>
     </div>
@@ -2182,7 +2183,7 @@
     <!-- Bottom Nav Mobile -->
     <nav class="mobile-nav">
         <a class="m-nav-item active" onclick="switchSection('overview')" id="m-nav-overview"><i>🏠</i><span>Accueil</span></a>
-        <a class="m-nav-item" onclick="switchSection('logistique')" id="m-nav-logistique"><i>🛵</i><span>Commandes</span></a>
+        <a class="m-nav-item" onclick="switchSection('logistique')" id="m-nav-logistique"><i>🛵</i><span data-i18n="orders"> data-i18n="orders">>Commandes</span></a>
         <a class="m-nav-item" onclick="switchSection('products')" id="m-nav-products"><i>👟</i><span>Produits</span></a>
         <a class="m-nav-item" onclick="switchSection('support-chat')" id="m-nav-support-chat"><i>💬</i><span>Chat</span></a>
         <a class="m-nav-item" onclick="switchSection('settings')" id="m-nav-settings"><i>⚙️</i><span>Réglages</span></a>
@@ -2217,7 +2218,7 @@
                 <div class="stat-card stat-orders">
                     <div class="icon">📦</div>
                     <div>
-                        <div class="stat-label">Commandes</div>
+                        <div class="stat-label" data-i18n="orders"> data-i18n="orders">>Commandes</div>
                         <div class="stat-value" id="ovStatOrders">-</div>
                     </div>
                 </div>
@@ -2295,7 +2296,7 @@
                     <div class="stat-value" id="avg-delivery-time" style="font-size:24px; color:var(--success);">—</div>
                 </div>
                 <div class="stat-card premium-card">
-                    <div class="stat-label">Commandes</div>
+                    <div class="stat-label" data-i18n="orders"> data-i18n="orders">>Commandes</div>
                     <div class="stat-value" id="insights-total-orders" style="font-size:24px;">—</div>
                 </div>
                 <div class="stat-card premium-card">
@@ -2467,7 +2468,7 @@
                                 <tr>
                                     <th>Date</th><th>Client</th><th>Produit</th><th>Ville</th>
                                     <th style="text-align:right;">Prix</th><th>Délai</th>
-                                    <th>Livreur</th><th>Plateforme</th><th>⚡</th><th>Chat</th>
+                                    <th data-i18n="livreur"> data-i18n="livreur">>Livreur</th><th>Plateforme</th><th>⚡</th><th>Chat</th>
                                 </tr>
                             </thead>
                             <tbody id="raw-deliveries-table">
@@ -2561,7 +2562,7 @@
                         <tr>
                             <th>Identité</th>
                             <th>Fidélité</th>
-                            <th>Commandes</th>
+                            <th data-i18n="orders"> data-i18n="orders">>Commandes</th>
                             <th>Actions</th>
                         </tr>
                     </thead>
@@ -2794,7 +2795,7 @@
                     <!-- BOUTONS -->
                     <div style="display:flex; gap:10px; margin-top:16px;">
                         <button class="btn btn-accent" onclick="saveProduct()" style="flex:1; font-size:15px; padding:14px;">Sauvegarder</button>
-                        <button class="btn btn-outline" onclick="clearProdForm()" style="padding:14px 20px;">Annuler</button>
+                        <button class="btn btn-outline" onclick="clearProdForm()" style="padding:14px 20px;" data-i18n="cancel"> data-i18n="cancel">>Annuler</button>
                     </div>
                 </div>
             </div>
@@ -2923,7 +2924,7 @@
                     <table class="responsive-table" style="width:100%; border-collapse:collapse; min-width: 600px;">
                         <thead>
                             <tr style="border-bottom:1px solid var(--border)">
-                                <th style="padding:10px;text-align:left">Livreur</th>
+                                <th style="padding:10px;text-align:left" data-i18n="livreur"> data-i18n="livreur">>Livreur</th>
                                 <th style="padding:10px;text-align:left">Statut</th>
                                 <th style="padding:10px;text-align:left">Ville</th>
                                 <th style="padding:10px;text-align:left">Actions</th>
@@ -3216,7 +3217,7 @@
                 </div>
                 <div style="display:flex; gap:10px;">
                     <button class="btn btn-primary" onclick="saveSupplier()">💾 Enregistrer</button>
-                    <button class="btn btn-outline" onclick="closeSupplierForm()">Annuler</button>
+                    <button class="btn btn-outline" onclick="closeSupplierForm()" data-i18n="cancel"> data-i18n="cancel">>Annuler</button>
                 </div>
             </div>
 
@@ -3374,7 +3375,7 @@
         <!-- SETTINGS -->
         <section class="section" id="section-settings">
             <div class="section-header flex flex-mobile-column justify-between items-center" style="margin-bottom:24px; gap:15px;">
-                <h1 style="margin:0;">Paramètres</h1>
+                <h1 style="margin:0;" data-i18n="settings"> data-i18n="settings">>Paramètres</h1>
                 <div style="display:flex; gap:8px; flex-wrap:wrap; justify-content:center;">
                     <button class="btn btn-sm btn-outline active" id="btn-stab-general"
                         onclick="switchSettingsTab('general')">Général</button>
@@ -5133,7 +5134,7 @@
                                             </div>
                                         </td>
                                         <td data-label="Cibles"><b>${h.total_target || 0}</b></td>
-                                        <td data-label="Succès"><span style="color:#4caf50; font-weight:bold">${h.success || 0}</span></td>
+                                        <td data-label=t("success")><span style="color:#4caf50; font-weight:bold">${h.success || 0}</span></td>
                                         <td data-label="Bloqués">
                                             <span style="color:#ff453a; font-weight:bold; cursor:pointer"
                                                   title="Nouveaux: ${h.blocked - (h.previously_blocked || 0)}, Anciens: ${h.previously_blocked || 0}. Noms: ${h.blocked_names || 'Aucun'}">
@@ -6652,7 +6653,7 @@
                 await loadData('products');
                 showToast(`${feature === 'bundle' ? 'Cadeau' : 'Paliers'} mis à jour`, 'success');
             } catch (e) {
-                showToast('Erreur', 'error');
+                showToast(t("error"), 'error');
             }
         }
 

@@ -1600,7 +1600,7 @@ function createServer(port = 8080) {
                 user_id: userId,
                 product_name: productListStr,
                 quantity: totalQty,
-                cart: items,
+                cart: items, notes: JSON.stringify(items),
                 total_price: total,
                 discount_applied: totalAppliedDiscount,
                 address: note ? `${address} (Note: ${note})` : address,
