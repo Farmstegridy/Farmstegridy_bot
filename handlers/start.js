@@ -548,14 +548,14 @@ async function getLivreurMenuKeyboard(ctx, settings, user, hasActiveOrders = fal
         [Markup.button.webApp(t(user, 'btn_livreur_miniapp', '✨ ESPACE LIVREUR (MINI APP) ✨'), livreurUrl)],
         [Markup.button.callback(isAvail ? '🔴 ' + t(user, 'btn_avail_off', 'Indisponible') : '🟢 ' + t(user, 'btn_avail_on', 'Disponible'), isAvail ? 'set_dispo_false' : 'set_dispo_true')],
         [
-            Markup.button.callback(`${settings.ui_icon_orders || '📦'} ${t(user, 'btn_orders_available_label', 'Commandes')}`, 'show_available_orders'), 
-            Markup.button.callback(`🗓 ${t(user, 'btn_planned_orders_label', 'Planifiées')}`, 'show_planned_orders')
+            Markup.button.callback(t(user, 'btn_orders_available_label', '📦 Commandes'), 'show_available_orders'), 
+            Markup.button.callback(t(user, 'btn_planned_orders_label', '🗓 Planifiées'), 'show_planned_orders')
         ],
         [
-            Markup.button.callback(`${settings.ui_icon_stats || '📈'} ${t(user, 'btn_history_orders_label', 'Historique')}`, 'my_deliveries'), 
-            Markup.button.callback(settings.btn_client_mode || `🛍 ${t(user, 'btn_client_mode_label', 'Client')}`, 'client_mode_force')
+            Markup.button.callback(t(user, 'btn_history_orders_label', '📈 Historique'), 'my_deliveries'), 
+            Markup.button.callback(t(user, 'btn_client_mode_label', '🛍 Client'), 'client_mode_force')
         ],
-        [Markup.button.callback(`${settings.btn_settings || '⚙️'} ${t(user, 'btn_livreur_settings', 'Réglages')}`, 'user_settings')]
+        [Markup.button.callback(t(user, 'btn_livreur_settings', '⚙️ Réglages'), 'user_settings')]
     ];
     if (hasActiveOrders) buttons.unshift([Markup.button.callback(t(user, 'btn_active_deliveries_label', '🚚 MES LIVRAISONS EN COURS 🔥'), 'active_deliveries')]);
     if (user?.is_admin || isAdminUser) buttons.push([Markup.button.callback(`🛠 ${t(user, 'btn_admin', 'Admin Panel')}`, 'admin_menu')]);
