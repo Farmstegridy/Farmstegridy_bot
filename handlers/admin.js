@@ -175,13 +175,6 @@ function setupAdminHandlers(bot) {
         const userKey = `telegram_${userId}`;
         const isAdm = await isAdmin(ctx);
         
-        // 0. Ignore commands
-        if (ctx.message?.text?.startsWith('/')) {
-            if (ctx.message.text === '/admin' && isAdm) return next();
-            if (ctx.message.text === '/end' || ctx.message.text === '/stopchat') return next();
-            return next();
-        }
-
         console.log(`[Consolidated-Admin] Incoming type:${ctx.updateType} from:${userId} (isAdm:${isAdm})`);
 
         // A. ADMIN -> USER RELAY (Highest Priority)
@@ -706,13 +699,6 @@ function setupAdminHandlers(bot) {
     bot.action('user_chat_reply_admin', async (ctx) => {
         const userId = String(ctx.from.id);
         const userKey = `telegram_${userId}`;
-        
-        // Prevent conflict with Livreur Chat
-        try {
-            const { awaitingChatReply } = require('./order_system');
-            if (awaitingChatReply) awaitingChatReply.delete(userKey);
-        } catch(e) {}
-
         awaitingUserSupportReply.set(userKey, true);
         await ctx.answerCbQuery();
         return ctx.reply(`✍️ <b>RÉPONSE À L'ADMIN</b>\n\nEnvoyez votre message ci-dessous (texte, photo ou vidéo).\nChaque message sera transmis à l'administration.\n\n<i>Tapez /end pour quitter le mode discussion.</i>`, 

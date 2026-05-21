@@ -1,0 +1,48 @@
+Only in /Users/dikenson/Desktop/Projet BOT (client deja terminée) /bot presentation: .claude
+Files /Users/dikenson/Desktop/Projet BOT (client deja terminée) /bot presentation/.env and /Users/dikenson/Desktop/Farmstegridy_bot/.env differ
+Only in /Users/dikenson/Desktop/Farmstegridy_bot: FETCH_HEAD
+Only in /Users/dikenson/Desktop/Projet BOT (client deja terminée) /bot presentation: README.md
+Files /Users/dikenson/Desktop/Projet BOT (client deja terminée) /bot presentation/bot.log and /Users/dikenson/Desktop/Farmstegridy_bot/bot.log differ
+Only in /Users/dikenson/Desktop/Projet BOT (client deja terminée) /bot presentation/channels: WhatsAppChannel.js
+Only in /Users/dikenson/Desktop/Projet BOT (client deja terminée) /bot presentation/channels: WhatsAppSessionChannel.js
+Only in /Users/dikenson/Desktop/Farmstegridy_bot: database.sqlite
+Files /Users/dikenson/Desktop/Projet BOT (client deja terminée) /bot presentation/debug.log and /Users/dikenson/Desktop/Farmstegridy_bot/debug.log differ
+Files /Users/dikenson/Desktop/Projet BOT (client deja terminée) /bot presentation/debug_shop.log and /Users/dikenson/Desktop/Farmstegridy_bot/debug_shop.log differ
+Only in /Users/dikenson/Desktop/Farmstegridy_bot: diff_report.txt
+Only in /Users/dikenson/Desktop/Projet BOT (client deja terminée) /bot presentation: force_trigger.js
+Only in /Users/dikenson/Desktop/Projet BOT (client deja terminée) /bot presentation: generate_code.js
+Files /Users/dikenson/Desktop/Projet BOT (client deja terminée) /bot presentation/handlers/admin.js and /Users/dikenson/Desktop/Farmstegridy_bot/handlers/admin.js differ
+Only in /Users/dikenson/Desktop/Projet BOT (client deja terminée) /bot presentation/handlers: hotline.js
+Files /Users/dikenson/Desktop/Projet BOT (client deja terminée) /bot presentation/handlers/order_system.js and /Users/dikenson/Desktop/Farmstegridy_bot/handlers/order_system.js differ
+Files /Users/dikenson/Desktop/Projet BOT (client deja terminée) /bot presentation/index.js and /Users/dikenson/Desktop/Farmstegridy_bot/index.js differ
+Only in /Users/dikenson/Desktop/Farmstegridy_bot: inject_translate.py
+Only in /Users/dikenson/Desktop/Projet BOT (client deja terminée) /bot presentation: migration_v4.sql
+Only in /Users/dikenson/Desktop/Projet BOT (client deja terminée) /bot presentation: package-lock 2.json
+Only in /Users/dikenson/Desktop/Projet BOT (client deja terminée) /bot presentation/scripts: check_columns.js
+Only in /Users/dikenson/Desktop/Projet BOT (client deja terminée) /bot presentation/scripts: check_schema.js
+Only in /Users/dikenson/Desktop/Projet BOT (client deja terminée) /bot presentation/scripts: debug_broadcast.js
+Only in /Users/dikenson/Desktop/Projet BOT (client deja terminée) /bot presentation/scripts: ensure_storage.js
+Only in /Users/dikenson/Desktop/Projet BOT (client deja terminée) /bot presentation/scripts: inspect_data.js
+Only in /Users/dikenson/Desktop/Projet BOT (client deja terminée) /bot presentation/scripts: inspect_users.js
+Only in /Users/dikenson/Desktop/Projet BOT (client deja terminée) /bot presentation/scripts: migration.sql
+Only in /Users/dikenson/Desktop/Projet BOT (client deja terminée) /bot presentation/scripts: populate_demo_data.js
+Only in /Users/dikenson/Desktop/Projet BOT (client deja terminée) /bot presentation/scripts: reset_telegram.js
+Only in /Users/dikenson/Desktop/Projet BOT (client deja terminée) /bot presentation/scripts: test_analytics.js
+Only in /Users/dikenson/Desktop/Projet BOT (client deja terminée) /bot presentation/scripts: test_diffusion.js
+Only in /Users/dikenson/Desktop/Projet BOT (client deja terminée) /bot presentation/scripts: wipe_database.js
+Files /Users/dikenson/Desktop/Projet BOT (client deja terminée) /bot presentation/server.js and /Users/dikenson/Desktop/Farmstegridy_bot/server.js differ
+Files /Users/dikenson/Desktop/Projet BOT (client deja terminée) /bot presentation/services/database.js and /Users/dikenson/Desktop/Farmstegridy_bot/services/database.js differ
+Files /Users/dikenson/Desktop/Projet BOT (client deja terminée) /bot presentation/services/i18n.js and /Users/dikenson/Desktop/Farmstegridy_bot/services/i18n.js differ
+Files /Users/dikenson/Desktop/Projet BOT (client deja terminée) /bot presentation/services/marketing.js and /Users/dikenson/Desktop/Farmstegridy_bot/services/marketing.js differ
+Files /Users/dikenson/Desktop/Projet BOT (client deja terminée) /bot presentation/services/notifications.js and /Users/dikenson/Desktop/Farmstegridy_bot/services/notifications.js differ
+Files /Users/dikenson/Desktop/Projet BOT (client deja terminée) /bot presentation/services/smart_reminders.js and /Users/dikenson/Desktop/Farmstegridy_bot/services/smart_reminders.js differ
+Only in /Users/dikenson/Desktop/Projet BOT (client deja terminée) /bot presentation/services: wa_log_shared.js
+Only in /Users/dikenson/Desktop/Projet BOT (client deja terminée) /bot presentation: setup.sql
+Only in /Users/dikenson/Desktop/Projet BOT (client deja terminée) /bot presentation: supabase
+Only in /Users/dikenson/Desktop/Projet BOT (client deja terminée) /bot presentation: test_relay_simulation.js
+Only in /Users/dikenson/Desktop/Projet BOT (client deja terminée) /bot presentation: tmp
+Files /Users/dikenson/Desktop/Projet BOT (client deja terminée) /bot presentation/web/public/img/logo.png and /Users/dikenson/Desktop/Farmstegridy_bot/web/public/img/logo.png differ
+Only in /Users/dikenson/Desktop/Projet BOT (client deja terminée) /bot presentation/web/public/uploads: onboarding_logo.jpg
+Only in /Users/dikenson/Desktop/Projet BOT (client deja terminée) /bot presentation/web/public/uploads: onboarding_matrix.png
+Files /Users/dikenson/Desktop/Projet BOT (client deja terminée) /bot presentation/web/views/catalog.html and /Users/dikenson/Desktop/Farmstegridy_bot/web/views/catalog.html differ
+Files /Users/dikenson/Desktop/Projet BOT (client deja terminée) /bot presentation/web/views/dashboard.html and /Users/dikenson/Desktop/Farmstegridy_bot/web/views/dashboard.html differ

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Farmstegridy</title>
+    <title>ShopTonBot</title>
     <script>
         window.addEventListener('error', function(e) {
             var err = e.error ? e.error.stack : e.message;
@@ -167,9 +167,8 @@
             display: flex; align-items: center; justify-content: space-between;
             padding: 0 20px; font-weight: 900; font-size: 14px; box-shadow: 0 15px 30px var(--accent-glow);
             transform: translateY(200px); transition: 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            z-index: 8000; cursor: pointer; white-space: nowrap; overflow: hidden;
+            z-index: 8000; cursor: pointer;
         }
-        .cart-float * { pointer-events: none; }
         .cart-float.visible { transform: translateY(0); }
 
         /* MODALS */
@@ -228,7 +227,7 @@
             <div>
                 <div class="logo" style="display:flex; align-items:center; gap:10px;">
                     <img id="main-logo-2" class="app-dynamic-logo" src="/public/img/logo.png" style="height:32px; width:32px; object-fit:cover; border-radius:50%;" onerror="this.onerror=null; this.style.display='none';">
-                    <div id="header-text-logo" style="font-size:18px; font-weight:900; letter-spacing:-0.5px; display:block;"><span style="color:#fff;">Farm</span><span style="color:var(--accent);">estegridy</span></div>
+                    <div id="header-text-logo" style="font-size:18px; font-weight:900; letter-spacing:-0.5px; display:block;"><span style="color:#fff;" data-i18n="nav_shop">Shop</span><span style="color:var(--accent);">TonBot</span></div>
                 </div>
                 <div onclick="openAddressModal()" style="display:flex; align-items:center; gap:6px; margin-top:6px; font-size:12px; font-weight:900; opacity:1; cursor:pointer; background:rgba(255,255,255,0.05); padding:6px 12px; border-radius:12px;">
                     <i class="notranslate ph-fill ph-map-pin" style="color:var(--accent); font-size:14px;"></i>
@@ -256,12 +255,37 @@
             <div class="carousel" id="featured-carousel"></div>
         </div>
 
-        <div class="search-area"><div class="search-bar"><i class="notranslate ph-bold ph-magnifying-glass"></i><input type="text" placeholder="Rechercher..." data-i18n="search" id="search-input" oninput="handleSearch()"></div></div>
+        <div class="search-area"><div class="search-bar"><i class="notranslate ph-bold ph-magnifying-glass"></i><input type="text" placeholder="Rechercher..." data-i18n-placeholder="search_placeholder" data-i18n="search" id="search-input" oninput="handleSearch()"></div></div>
 
         <div class="categories-scroll" id="categories"></div>
 
         <div class="main-grid" id="products"></div>
     </div>
+
+    <div id="page-bots" class="page" style="display:none;">
+        <div class="app-header">
+            <div>
+                <div class="logo">Offres<span>BaaS</span></div>
+                <div style="font-size:10px; font-weight:800; opacity:0.5; margin-top:2px;">
+                    <span>✨ SOLUTIONS CLÉS EN MAIN & SUR MESURE</span>
+                </div>
+            </div>
+            <div class="header-actions">
+                <div class="cart-icon-btn" onclick="openCheckout()"><i class="ph-fill ph-shopping-cart"></i><div class="cart-badge-dot" id="cart-dot-bots"></div></div>
+            </div>
+        </div>
+
+        <div class="featured-section" style="margin-top:15px;">
+            <div style="font-size:11px; font-weight:900; opacity:0.3; margin-bottom:12px; letter-spacing:1px;">LES FORMULES RECOMMANDÉES</div>
+            <div class="carousel" id="bots-featured-carousel"></div>
+        </div>
+
+        <div class="categories-scroll" id="bots-categories" style="margin-top:10px;"></div>
+
+        <div class="main-grid" id="bots-products"></div>
+    </div>
+
+
 
     <div id="page-orders" class="page" style="display:none; padding:30px 20px 150px 20px;">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
@@ -282,7 +306,7 @@
             <div style="width:60px; height:60px; background:var(--accent); border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:24px; color:#fff; font-weight:900;" id="profile-initial">👤</div>
             <div style="flex:1;">
                 <h1 style="font-size:24px; font-weight:900; margin:0; line-height:1;" id="profile-name">Client</h1>
-                <div style="font-size:13px; opacity:0.6; margin-top:5px;" id="profile-phone">Membre Farmstegridy</div>
+                <div style="font-size:13px; opacity:0.6; margin-top:5px;" id="profile-phone">Membre ShopTonBot</div>
             </div>
         </div>
 
@@ -353,14 +377,15 @@
     </div>
 
     <div class="cart-float" id="cart-bar" onclick="openCheckout()">
-        <div style="display:flex; align-items:center; gap:10px;"><span style="background:rgba(255,255,255,0.2); padding:5px 12px; border-radius:10px;" id="cart-count">0</span><span>VOIR LE PANIER</span></div>
+        <div style="display:flex; align-items:center; gap:10px;"><span style="background:rgba(255,255,255,0.2); padding:5px 12px; border-radius:10px;" id="cart-count">0</span><span data-i18n="checkout">FINALISER LA COMMANDE</span></div>
         <div id="cart-total" style="font-size:16px;">0.00€</div>
     </div>
 
     <div class="bottom-nav">
-        <div class="nav-item active" onclick="switchPage('shop', this)"><div class="nav-icon"><i class="notranslate ph-fill ph-diamond"></i></div><div class="nav-label">Shop</div></div>
-        <div class="nav-item" onclick="switchPage('orders', this)"><div class="nav-icon"><i class="notranslate ph-fill ph-package"></i></div><div class="nav-label" data-i18n="orders">Commandes</div></div>
-        <div class="nav-item" onclick="switchPage('profile', this)"><div class="nav-icon"><i class="notranslate ph-fill ph-user"></i></div><div class="nav-label" data-i18n="profile">Profil</div></div>
+        <div class="nav-item active" onclick="switchPage('shop', this)"><div class="nav-icon"><i class="ph-fill ph-diamond"></i></div><div class="nav-label" data-i18n="nav_shop">Shop</div></div>
+        <div class="nav-item" onclick="switchPage('bots', this)"><div class="nav-icon" style="color:var(--secondary);"><i class="ph-fill ph-rocket"></i></div><div class="nav-label" data-i18n="nav_baas">BaaS</div></div>
+        <div class="nav-item" onclick="switchPage('orders', this)"><div class="nav-icon"><i class="ph-fill ph-package"></i></div><div class="nav-label" data-i18n="nav_tracking">Suivi</div></div>
+        <div class="nav-item" onclick="switchPage('profile', this)"><div class="nav-icon"><i class="ph-fill ph-user"></i></div><div class="nav-label" data-i18n="nav_profile">Profil</div></div>
     </div>
 
     <div class="sheet" id="selection-modal">
@@ -568,6 +593,7 @@
         }
 
         async function init() {
+            if(typeof initTranslations==="function") initTranslations();
             setLoader(30);
             fetch('/api/log-error', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({error: 'Init Started', type: 'debug'}) }).catch(e=>{});
             try {
@@ -621,6 +647,7 @@
                 renderNews(allNews);
 
                 renderShop();
+            if(typeof renderBots==="function") renderBots();
                 updateProfileUI();
                 setLoader(100);
                 setTimeout(() => { document.getElementById('loading-screen').style.opacity = '0'; setTimeout(() => document.getElementById('loading-screen').style.display='none', 500); }, 300);
@@ -688,30 +715,10 @@
             if (el) el.classList.add('active');
             if (p === 'orders') loadOrders();
             else if (p === 'shop') renderShop();
+            if(typeof renderBots==="function") renderBots();
+            else if (p === 'bots') renderBots();
             tg.HapticFeedback.impactOccurred('medium');
             updateCartUI();
-        }
-
-        async function subscribeToRestockAlert(pid, e) {
-            if (e) e.stopPropagation();
-            const uid = tg.initDataUnsafe?.user?.id;
-            if (!uid) return tg.showAlert("Erreur : Utilisateur non reconnu.");
-            
-            tg.HapticFeedback.impactOccurred('medium');
-            try {
-                const res = await fetch(`/api/products/${pid}/alert`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ telegramId: uid })
-                });
-                if (res.ok) {
-                    tg.showAlert("✅ Vous serez notifié par message privé dès que ce produit sera de nouveau en stock !");
-                } else {
-                    tg.showAlert("Une erreur est survenue.");
-                }
-            } catch (err) {
-                tg.showAlert("Impossible de s'abonner à l'alerte.");
-            }
         }
 
         function toggleFavorite(pid, e) {
@@ -738,6 +745,41 @@
             if (selectedDeliveryTags.includes(tagId)) selectedDeliveryTags = selectedDeliveryTags.filter(t => t !== tagId);
             else selectedDeliveryTags.push(tagId);
             tg.HapticFeedback.impactOccurred('light');
+        }
+
+                function renderBots() {
+            const botProducts = allProducts.filter(p => p.category && (p.category.includes('PACK') || p.category.includes('MODULE')));
+            const carousel = document.getElementById('bots-featured-carousel');
+            const featured = botProducts.filter(p => p.is_featured);
+            if (carousel) carousel.innerHTML = '';
+            
+            const displayFeatured = featured.length ? featured : botProducts.slice(0, 5);
+
+            displayFeatured.forEach(f => {
+                const d = document.createElement('div');
+                d.className = 'featured-item';
+                d.onclick = () => openProductModal(f.id);
+                const img = f.image_url || `https://placehold.co/100x100/111/fff?text=${encodeURIComponent(f.name)}`;
+                d.innerHTML = `<div class="featured-thumb"><img src="${img}"></div><div class="featured-label">${f.name}</div>`;
+                if (carousel) carousel.appendChild(d);
+            });
+
+            const cats = ['TOUT', ...new Set(botProducts.map(p => p.category).filter(c => c))];
+            const catContainer = document.getElementById('bots-categories');
+            if (catContainer) catContainer.innerHTML = '';
+            cats.forEach(c => {
+                const d = document.createElement('div');
+                d.className = `cat-chip ${c === 'TOUT' ? 'active' : ''}`;
+                d.innerText = c.toUpperCase();
+                d.onclick = () => { 
+                    document.querySelectorAll('#bots-categories .cat-chip').forEach(t => t.classList.remove('active')); 
+                    d.classList.add('active'); 
+                    if (c === 'TOUT') renderGrid(botProducts, 'bots-products');
+                    else renderGrid(botProducts.filter(p => p.category === c), 'bots-products'); 
+                };
+                if (catContainer) catContainer.appendChild(d);
+            });
+            renderGrid(botProducts, 'bots-products');
         }
 
         function renderShop() {
@@ -809,14 +851,11 @@
                         <div style="display:flex; justify-content:space-between; align-items:center; margin-top:5px;">
                             <div class="card-price" style="margin-top:0;">${p.price}€</div>
                             <div id="stock-badge-${p.id}" style="font-size:10px; font-weight:800; background:rgba(255,255,255,0.1); padding:4px 8px; border-radius:8px; display:flex; align-items:center; gap:4px;">
-                                <span class="stock-indicator" style="background:${p.stock>0?'#2ecc71':'#e74c3c'}; width:6px; height:6px; border-radius:50%; display:inline-block;"></span>${p.stock>0 ? p.stock+' en stock' : 'Rupture, de retour bientôt'}
+                                <span class="stock-indicator" style="background:${p.stock>0?'#2ecc71':'#e74c3c'}; width:6px; height:6px; border-radius:50%; display:inline-block;"></span>${p.stock>0 ? p.stock+' en stock' : 'Épuisé'}
                             </div>
                         </div>
                     </div>
-                    ${p.stock > 0 
-                        ? `<div class="add-btn" style="animation: pulse 2s infinite;" onclick="openProductModal('${p.id}', event)">+</div>`
-                        : `<div class="add-btn" style="background:#e74c3c; font-size:16px; padding:0 8px; border-radius:10px; display:flex; align-items:center; gap:5px;" onclick="subscribeToRestockAlert('${p.id}', event)"><i class="notranslate ph-bold ph-bell"></i> Me prévenir</div>`
-                    }
+                    <div class="add-btn" style="animation: pulse 2s infinite;" onclick="openProductModal('${p.id}', event)">+</div>
                 `;
                 container.appendChild(d);
             });
@@ -1128,17 +1167,7 @@
                 });
             }
 
-            const btn = document.getElementById('p-add-cart-btn');
-            if (activeProduct.stock <= 0) {
-                btn.innerHTML = '<i class="notranslate ph-bold ph-bell"></i> ME PRÉVENIR';
-                btn.style.background = '#e74c3c';
-                btn.onclick = (e) => subscribeToRestockAlert(pid, e);
-            } else {
-                btn.innerText = 'AJOUTER AU PANIER';
-                btn.style.background = 'var(--accent)';
-                btn.onclick = addSelectionToCart;
-            }
-            
+            document.getElementById('p-add-cart-btn').onclick = addSelectionToCart;
             document.getElementById('btn-add-review').onclick = () => openReviewPrompt(pid);
             document.getElementById('product-detail-modal').classList.add('open');
             
@@ -1241,7 +1270,7 @@
                     
                     const d = document.createElement('div');
                     d.style = 'background:var(--card); border:1px solid var(--border); border-radius:18px; padding:15px; margin-bottom:12px;';
-                    d.innerHTML = `<div style="display:flex; justify-content:space-between; margin-bottom:5px;"><div style="font-weight:800; font-size:12px;">Client Farmstegridy</div><div style="color:#ffaa00;">${'⭐'.repeat(r.rating)}</div></div><div style="font-size:12px; opacity:0.7;">${r.text}</div>${mediaHtml}`;
+                    d.innerHTML = `<div style="display:flex; justify-content:space-between; margin-bottom:5px;"><div style="font-weight:800; font-size:12px;">Client ShopTonBot</div><div style="color:#ffaa00;">${'⭐'.repeat(r.rating)}</div></div><div style="font-size:12px; opacity:0.7;">${r.text}</div>${mediaHtml}`;
                     cont.appendChild(d);
                 });
             } catch(e) {}
@@ -1386,23 +1415,12 @@
             const count = cart.reduce((s, i) => s + i.n, 0);
             document.getElementById('cart-count').innerText = count;
             document.getElementById('cart-total').innerText = tot.toFixed(2) + '€';
-            document.getElementById('cart-dot').style.display = count > 0 ? 'block' : 'none';
+            document.getElementById('cart-dot').style.display = count > 0 ? 'flex' : 'none';
+            const botDot = document.getElementById('cart-dot-bots'); if(botDot) botDot.style.display = count > 0 ? 'block' : 'none';
             const bar = document.getElementById('cart-bar');
             const isShop = document.getElementById('page-shop').style.display !== 'none';
             if (count > 0 && isShop) bar.classList.add('visible');
             else bar.classList.remove('visible');
-
-            // Mettre à jour l'affichage des stocks dans le catalogue
-            if (typeof allProducts !== 'undefined' && allProducts) {
-                allProducts.forEach(p => {
-                    const badge = document.getElementById(`stock-badge-${p.id}`);
-                    if (badge) {
-                        const inCart = cart.filter(item => String(item.id) === String(p.id)).reduce((s, item) => s + item.n, 0);
-                        const displayStock = Math.max(0, p.stock - inCart);
-                        badge.innerHTML = `<span class="stock-indicator" style="background:${displayStock>0?'#2ecc71':'#e74c3c'}; width:6px; height:6px; border-radius:50%; display:inline-block;"></span>${displayStock>0 ? displayStock+' en stock' : 'Rupture, de retour bientôt'}`;
-                    }
-                });
-            }
         }
 
         async function syncCart() {
@@ -2135,7 +2153,7 @@
             openCustomModal("DEMANDE DE LIVREUR", 
                 `<div style="text-align:center; padding:20px 0;">
                     <div style="font-size:40px; margin-bottom:15px;">🚴</div>
-                    <div style="font-size:16px; font-weight:800; margin-bottom:10px;">Votre demande d'admission a bien été reçue par Farmestegridy !</div>
+                    <div style="font-size:16px; font-weight:800; margin-bottom:10px;">Votre demande d'admission a bien été reçue par ShopTonBot !</div>
                     <div style="font-size:13px; opacity:0.7;">Nous reviendrons vers vous très prochainement pour vous donner notre décision.</div>
                 </div>`
             );
@@ -2398,15 +2416,16 @@
                 const resStock = await fetch('/api/products');
                 if (resStock.ok) {
                     const newProds = await resStock.json();
-                    let stockChanged = false;
                     newProds.forEach(np => {
                         const idx = allProducts.findIndex(p => p.id === np.id);
                         if (idx > -1 && allProducts[idx].stock !== np.stock) {
                             allProducts[idx].stock = np.stock;
-                            stockChanged = true;
+                            const qtyBadge = document.getElementById(`stock-badge-${np.id}`);
+                            if (qtyBadge) {
+                                qtyBadge.innerHTML = `<span class="stock-indicator" style="background:${np.stock>0?'#2ecc71':'#e74c3c'}"></span>${np.stock>0 ? np.stock+' en stock' : 'Épuisé'}`;
+                            }
                         }
                     });
-                    if (stockChanged && typeof updateCartUI === 'function') updateCartUI();
                 }
                 
                 // Poll Orders

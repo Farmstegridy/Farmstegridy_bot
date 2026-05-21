@@ -1059,7 +1059,6 @@ async function adjustOrderStock(orderId, action) {
                 }
                 
                 await supabase.from(COL_PRODUCTS).update(updates).eq('id', productId);
-                await logStockMovement(productId, qty, `order_${action}`, orderId);
                 
                 if (alertMsg) {
                     try {
@@ -1069,6 +1068,7 @@ async function adjustOrderStock(orderId, action) {
                         console.error("Error sending stock alert from DB:", err.message);
                     }
                 }
+                await logStockMovement(productId, qty, `order_${action}`, orderId);
             }
         }
     } catch(e) {

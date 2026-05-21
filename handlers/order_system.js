@@ -234,24 +234,12 @@ function setupOrderSystem(bot) {
 
         const user = ctx.state?.user || await getUser(`${ctx.platform}_${ctx.from.id}`);
         const stockBadge = await getScarcityBadge(product);
-        
-        let reviewStr = "";
-        try {
-            const { getReviews } = require('../services/database');
-            const reviews = await getReviews(100);
-            const pReviews = reviews.filter(r => String(r.product_id) === String(productId));
-            if (pReviews.length > 0) {
-                reviewStr = `\n\n💬 <b>Avis Client (${pReviews.length})</b>\n"<i>${pReviews[0].text}</i>" - ${'⭐'.repeat(pReviews[0].rating)}`;
-            }
-        } catch (e) {}
-
         let text = `🌟 <b>${esc(product.name)}</b> 🌟\n` +
             `📦 Statut : <b>${stockBadge}</b>\n\n` +
             t(user, 'label_unit_price', '💰 Prix Unitaire :') + ` <b>${product.price}€</b>\n` +
             (promoText ? `${promoText}\n` : "") +
             (product.description ? `\n<i>${product.description}</i>\n` : "") +
-            reviewStr +
-            `\n\n💎 <b>Combien de sachets voulez-vous ?</b>\n\n` +
+            `\n💎 <b>Combien de sachets voulez-vous ?</b>\n\n` +
             `💡 <i>Cliquez sur le chiffre qui correspond au nombre de sachets que vous voulez.</i>\n` +
             `<i>(Exemple : si vous cliquez sur <b>1</b>, vous recevrez 1 sachet de ${multiplier}${unitLabel})</i>`;
         const multipliers = [1, 2, 3, 4, 5, 10];
@@ -1366,8 +1354,33 @@ function setupOrderSystem(bot) {
             if (createResult.error) throw createResult.error;
             const order = createResult.order;
 
-            const { adjustOrderStock } = require('../services/database');
-            await adjustOrderStock(order.id, 'decrement').catch(e => console.error("Stock decrement error:", e));
+            // DECREMENT STOCK & LOG TO LEDGER
+            const { saveProduct } = require('../services/database');
+            for (const item of cart) {
+                const p = allProducts.find(prod => String(prod.id) === String(item.productId));
+                if (p && typeof p.stock === 'number') {
+                    const newStock = Math.max(0, p.stock - item.qty);
+                    const updates = { id: p.id, stock: newStock };
+                    
+                    let alertMsg = null;
+                    if (newStock <= 0 && p.stock > 0) {
+                        updates.is_active = false;
+                        updates.is_available = false;
+                        alertMsg = `🚫 <b>Rupture de Stock</b>\nLe produit <b>${p.name}</b> est épuisé. Il a été automatiquement masqué du catalogue du bot.`;
+                    } else if (newStock <= 2 && p.stock > 2) {
+                        alertMsg = `⚠️ <b>Alerte Stock Critique (${newStock} restants)</b>\nLe produit <b>${p.name}</b> n'a plus que ${newStock} unités en stock ! Veuillez réapprovisionner au plus vite.`;
+                    } else if (newStock <= 5 && p.stock > 5) {
+                        alertMsg = `⚠️ <b>Alerte Stock Bas (${newStock} restants)</b>\nLe produit <b>${p.name}</b> n'a plus que ${newStock} unités en stock. Pensez à réapprovisionner !`;
+                    }
+                    
+                    if (alertMsg) {
+                        notifyAdmins(bot, alertMsg).catch(err => console.error("Error sending stock alert:", err.message));
+                    }
+                    
+                    await saveProduct(updates).catch(e => console.error(`[STOCK-ERR] ${p.id}:`, e.message));
+                    await logStockMovement(p.id, -item.qty, 'order', order?.id || 'unknown');
+                }
+            }
             
             // On vérifie si c'est la première commande en utilisant l'ID officiel (possiblement fusionné)
             const officialUserId = ctx.state.user?.id || userId;
@@ -1546,15 +1559,12 @@ function setupOrderSystem(bot) {
         }
 
         const { getLivreurMenuKeyboard, updateMenuButton } = require('./start');
-        const cityRaw = user?.current_city || user?.data?.current_city;
-        const city = cityRaw ? cityRaw.toUpperCase() : t(user, 'label_not_defined', 'NON DÉFINI');
-        const statusLabel = isAvailable ? t(user, 'label_available', 'DISPONIBLE') : t(user, 'label_unavailable', 'INDISPONIBLE');
-        
-        const text = t(user, 'msg_livreur_welcome', `🚴 <b>Bienvenue, {first_name} !</b>`, { first_name: user ? (user.first_name || 'Inconnu') : ctx.from.first_name }) + '\n\n' +
-            t(user, 'msg_livreur_city', `📍 Secteur : <b>{city}</b>`, { city: city }) + '\n' +
-            t(user, 'msg_livreur_status', `🔘 Statut : <b>{status}</b>`, { 
-                status: (isAvailable ? (settings.ui_icon_success || '✅') : (settings.ui_icon_error || '❌')) + ' ' + statusLabel
-            }) + '\n\n';
+        const city = user?.current_city || user?.data?.current_city || 'Non défini';
+        const text = `${settings.ui_icon_livreur} <b>${settings.label_livreur || 'Espace Livreur'}</b>\n\n` +
+            `👤 ${user ? (user.first_name || 'Inconnu') : ctx.from.first_name}\n` +
+            `📍 Secteur : <b>${city.toUpperCase()}</b>\n` +
+            `🔘 Statut : <b>${isAvailable ? (settings.ui_icon_success || '✅') + ' DISPONIBLE' : (settings.ui_icon_error || '❌') + ' INDISPONIBLE'}</b>\n\n` +
+            `Que voulez-vous faire ?`;
 
         const keyboard = await getLivreurMenuKeyboard(ctx, settings, user || { is_available: isAvailable, data: { is_available: isAvailable } });
         await safeEdit(ctx, text, keyboard);
@@ -1655,16 +1665,13 @@ function setupOrderSystem(bot) {
         const user = await getUser(`${ctx.platform}_${ctx.from.id}`);
         const { getLivreurMenuKeyboard } = require('./start');
 
-        const cityRaw = user?.current_city || user?.data?.current_city || cityName;
-        const city = cityRaw ? cityRaw.toUpperCase() : t(user, 'label_not_defined', 'NON DÉFINI');
+        const city = user?.current_city || user?.data?.current_city || cityName || 'Non défini';
         const isAvail = user?.is_available || user?.data?.is_available;
-        const statusLabel = isAvail ? t(user, 'label_available', 'DISPONIBLE') : t(user, 'label_unavailable', 'INDISPONIBLE');
-        
-        const text = t(user, 'msg_livreur_welcome', `🚴 <b>Bienvenue, {first_name} !</b>`, { first_name: user?.first_name || ctx.from.first_name }) + '\n\n' +
-            t(user, 'msg_livreur_city', `📍 Secteur : <b>{city}</b>`, { city: city }) + '\n' +
-            t(user, 'msg_livreur_status', `🔘 Statut : <b>{status}</b>`, { 
-                status: (isAvail ? (settings.ui_icon_success || '✅') : (settings.ui_icon_error || '❌')) + ' ' + statusLabel
-            }) + '\n\n';
+        const text = `${settings.ui_icon_livreur} <b>${settings.label_livreur || 'Espace Livreur'}</b>\n\n` +
+            `👤 ${user?.first_name || ctx.from.first_name}\n` +
+            `📍 Secteur : <b>${city.toUpperCase()}</b>\n` +
+            `🔘 Statut : <b>${isAvail ? (settings.ui_icon_success || '✅') + ' DISPONIBLE' : (settings.ui_icon_error || '❌') + ' INDISPONIBLE'}</b>\n\n` +
+            `Que voulez-vous faire ?`;
 
         const opts = await getLivreurMenuKeyboard(ctx, settings, user);
         return await safeEdit(ctx, text, opts);
@@ -2382,13 +2389,6 @@ function setupOrderSystem(bot) {
         const userId = `${ctx.platform}_${ctx.from.id}`;
         const settings = await getAppSettings();
 
-        // 0. Si c'est une commande (/start, /language, etc.), on l'ignore et on annule les attentes
-        if (ctx.message?.text?.startsWith('/')) {
-            awaitingDelayReason.delete(userId);
-            awaitingChatReply.delete(userId);
-            return next();
-        }
-
         // 1. Feedback (Orders)
         const pendingOrderFeedback = await getAndClearPendingFeedback(userId);
         if (pendingOrderFeedback) {
@@ -2678,19 +2678,16 @@ function setupOrderSystem(bot) {
         if (!user || !user.is_livreur) return safeEdit(ctx, settings.msg_access_denied || '❌ Accès refusé.', Markup.inlineKeyboard([[Markup.button.callback(settings.btn_back_quick_menu || '◀️ Menu', 'main_menu')]]));
 
         const { getLivreurMenuKeyboard } = require('./start');
-        const cityRaw = user.current_city || user.data?.current_city;
-        const city = cityRaw ? cityRaw.toUpperCase() : t(user, 'label_not_defined', 'NON DÉFINI');
+        const city = user.current_city || user.data?.current_city || 'Non défini';
         const isAvail = user.is_available || user.data?.is_available;
-        const statusLabel = isAvail ? t(user, 'label_available', 'DISPONIBLE') : t(user, 'label_unavailable', 'INDISPONIBLE');
 
         const { getLivreurOrders } = require('../services/database');
         const activeOrders = await getLivreurOrders(`${ctx.platform}_${ctx.from.id}`);
 
-        let text = t(user, 'msg_livreur_welcome', `🚴 <b>Bienvenue, {first_name} !</b>`, { first_name: user.first_name || ctx.from.first_name }) + '\n\n' +
-            t(user, 'msg_livreur_city', `📍 Secteur : <b>{city}</b>`, { city: city }) + '\n' +
-            t(user, 'msg_livreur_status', `🔘 Statut : <b>{status}</b>`, { 
-                status: (isAvail ? (settings.ui_icon_success || '✅') : (settings.ui_icon_error || '❌')) + ' ' + statusLabel
-            }) + '\n\n';
+        let text = `${settings.ui_icon_livreur} <b>${settings.label_livreur || 'Espace Livreur'}</b>\n\n` +
+            `👤 ${user.first_name || ctx.from.first_name}\n` +
+            `📍 Secteur : <b>${city.toUpperCase()}</b>\n` +
+            `🔘 Statut : <b>${isAvail ? (settings.ui_icon_success || '✅') + ' DISPONIBLE' : (settings.ui_icon_error || '❌') + ' INDISPONIBLE'}</b>\n\n`;
 
         if (activeOrders.length > 0) {
             text += `🚨 <b>VOUS AVEZ ${activeOrders.length} COMMANDE(S) EN COURS !</b>\n\n`;
