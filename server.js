@@ -1646,10 +1646,20 @@ function createServer(port = 8080) {
     app.post('/api/mini-app/create-order', async (req, res) => {
         try {
             const { userId, items, total, address, note, platform, discount, promoCode, promoDiscount, walletDiscount } = req.body;
-            const { createOrder, getUser, updateUserWallet, adjustOrderStock } = require('./services/database');
+            const { createOrder, getUser, updateUserWallet, adjustOrderStock, syncUserCart } = require('./services/database');
             const { notifyAdmins } = require('./services/notifications');
+            const { supabase } = require('./config/supabase');
             
             const user = await getUser(userId);
+            
+            // Validation du stock réel
+            for (const item of items) {
+                const { data: p } = await supabase.from('bot_products').select('stock, name').eq('id', item.id).maybeSingle();
+                if (!p) return res.status(400).json({ error: `Produit introuvable: ${item.name || item.id}` });
+                if (p.stock < item.qty) {
+                    return res.status(400).json({ error: `Stock insuffisant pour ${p.name || item.name} (Restant: ${p.stock})` });
+                }
+            }
             
             // Validation des réductions
             let appliedWalletDiscount = parseFloat(walletDiscount) || (!promoCode ? parseFloat(discount) || 0 : 0);
@@ -1697,6 +1707,9 @@ function createServer(port = 8080) {
             if (order && order.id) {
                 adjustOrderStock(order.id, 'decrement').catch(e => console.error("Stock deduct error:", e));
             }
+            
+            // CLEAR ACTIVE CART GLOBALLY
+            syncUserCart(userId, []).catch(e => console.error("Sync cart clear error:", e));
 
             // DEDUCT WALLET BALANCE ONLY FOR WALLET DISCOUNT
             if (appliedWalletDiscount > 0) {

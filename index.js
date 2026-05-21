@@ -146,8 +146,8 @@ async function bootstrap() {
                 const { runRecommendationEngine } = require('./services/recommendation_engine');
                 const { checkAbandonedCarts } = require('./services/smart_reminders');
                 
-                // Run ranker every hour
-                setInterval(runRecommendationEngine, 60 * 60 * 1000);
+                // Run ranker every 30 minutes to catch the target hour
+                setInterval(runRecommendationEngine, 30 * 60 * 1000);
                 
                 // Run abandoned carts every 15 minutes
                 setInterval(checkAbandonedCarts, 15 * 60 * 1000);

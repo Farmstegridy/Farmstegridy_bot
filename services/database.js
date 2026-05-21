@@ -373,10 +373,39 @@ async function getProducts(onlyActive = false) {
     if (onlyActive) {
         query = query.eq('is_active', true);
     }
-    // Priorité au custom sorting si on finit par ajouter une colonne 'display_order', 
-    // sinon created_at pour respecter l'ordre d'ajout/rangement.
     const { data } = await query.order('created_at', { ascending: true });
-    return data || [];
+    let products = data || [];
+
+    // Deduct active carts stock
+    try {
+        const { data: settingsData } = await supabase.from(COL_SETTINGS).select('data').eq('key', 'active_carts').maybeSingle();
+        if (settingsData && settingsData.data) {
+            const allCarts = settingsData.data;
+            const lockedStock = {};
+            const now = Date.now();
+            
+            for (const userId in allCarts) {
+                const c = allCarts[userId];
+                // Lock for 2 hours max
+                if (c && c.cart && (now - c.updated_at < 2 * 60 * 60 * 1000)) {
+                    c.cart.forEach(item => {
+                        lockedStock[item.id] = (lockedStock[item.id] || 0) + item.quantity;
+                    });
+                }
+            }
+
+            products = products.map(p => {
+                if (lockedStock[p.id]) {
+                    p.stock = Math.max(0, p.stock - lockedStock[p.id]);
+                }
+                return p;
+            });
+        }
+    } catch(e) {
+        console.error('[DB] Error calculating locked stock:', e.message);
+    }
+
+    return products;
 }
 
 async function getProductsByCategory(onlyActive = false) {
@@ -1671,6 +1700,24 @@ const database = {
                 await supabase.from(COL_SETTINGS).insert([{ key: 'user_views', data: views }]);
             }
         } catch (e) {}
+    },
+    getUserAnalytics: async (userId) => {
+        try {
+            // Fetch views
+            const { data: settings } = await supabase.from(COL_SETTINGS).select('data').eq('key', 'user_views').maybeSingle();
+            const views = settings ? (settings.data && settings.data[userId] ? settings.data[userId] : []) : [];
+            
+            // Fetch orders
+            const { data: orders } = await supabase.from(COL_ORDERS).select('id, created_at, product_id, product_name, status, total_price').eq('user_id', userId).order('created_at', { ascending: false });
+            
+            return {
+                views,
+                orders: orders || []
+            };
+        } catch (e) {
+            console.error('[DB] getUserAnalytics Error:', e.message);
+            return { views: [], orders: [] };
+        }
     },
     COL_USERS,
     supabase

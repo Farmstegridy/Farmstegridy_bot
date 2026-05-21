@@ -115,8 +115,13 @@ async function checkAbandonedCarts() {
                 const itemCount = c.cart.length;
                 const msg = `🛒 <b>PANIER EN ATTENTE</b>\n\nHey ! Vous avez laissé <b>${itemCount} article(s)</b> dans votre panier. 😱\n\nIls vous attendent bien sagement. On valide la commande maintenant ?`;
                 
+                const { data: settingsData } = await supabase.from('bot_settings').select('data').eq('key', 'app_settings').maybeSingle();
+                const settings = settingsData ? (settingsData.data || {}) : {};
+                const baseDomain = process.env.RENDER_EXTERNAL_URL || (process.env.RAILWAY_PUBLIC_DOMAIN ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}` : 'https://farmstegridy-bot.onrender.com');
+                const catalogUrl = (settings.mini_app_url ? `${settings.mini_app_url}/catalog` : `${baseDomain}/catalog`) + `?v=${Date.now()}`;
+
                 const keyboard = {
-                    inline_keyboard: [[{ text: '✅ Finaliser ma commande', web_app: { url: process.env.WEBAPP_URL || '' } }]]
+                    inline_keyboard: [[{ text: '✅ Finaliser ma commande', web_app: { url: catalogUrl } }]]
                 };
 
                 bot.telegram.sendMessage(userId.replace('telegram_', ''), msg, { parse_mode: 'HTML', reply_markup: keyboard }).catch(() => {});

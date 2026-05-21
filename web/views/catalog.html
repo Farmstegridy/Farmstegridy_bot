@@ -1399,7 +1399,7 @@
         function quickAdd(pid) {
             const p = allProducts.find(x => x.id === pid);
             if (!p) return;
-            const item = cart.find(i => i.id === p.id);
+            const item = cart.find(i => String(i.id) === String(p.id));
             if (item) item.n++;
             else cart.push({ id: p.id, name: p.name, pr: p.price, n: 1, cid: Date.now().toString() });
             safeSetStorage('stb_cart', cart);
@@ -1422,7 +1422,7 @@
 
         function getBadgeHtml(p) {
             const avail = getAvailableQuantity(p);
-            const inCart = cart.filter(i => i.id === p.id).reduce((s, i) => s + i.n, 0);
+            const inCart = cart.filter(i => String(i.id) === String(p.id)).reduce((s, i) => s + i.n, 0);
             if (avail > 0) {
                 return `<span class="stock-indicator" style="background:#2ecc71; width:6px; height:6px; border-radius:50%; display:inline-block;"></span>${avail} en stock`;
             } else if (inCart > 0 && p.stock > 0) {
@@ -1434,7 +1434,7 @@
 
         function getAvailableQuantity(p) {
             if (!p) return 0;
-            const inCart = cart.filter(i => i.id === p.id).reduce((s, i) => s + i.n, 0);
+            const inCart = cart.filter(i => String(i.id) === String(p.id)).reduce((s, i) => s + i.n, 0);
             return Math.max(0, p.stock - inCart);
         }
 

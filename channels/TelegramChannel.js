@@ -106,6 +106,15 @@ class TelegramChannel extends Channel {
         // --- DISTRIBUTED LOCK ---
         const { claimLock, checkLock } = require('../services/database');
         
+        const replicaCount = parseInt(process.env.RAILWAY_REPLICA_COUNT || '1', 10);
+        
+        // If we are running locally or with a single replica, bypass the lock to avoid 60s wait on Nodemon restarts
+        if (replicaCount <= 1) {
+            console.log(`[TG-LOCK] Single replica detected. Bypassing lock mechanism.`);
+            this.bot.launch().catch(err => console.error('[Telegram] Launch error:', err.message));
+            return;
+        }
+        
         // Use a stable ID for the replica (index is better than PID for reboots)
         const replicaIndex = process.env.RAILWAY_REPLICA_INDEX || 0;
         const processUniqueId = Math.random().toString(36).substring(2, 8);
