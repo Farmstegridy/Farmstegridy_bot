@@ -195,7 +195,7 @@
 <body>
     <div id="loading-screen">
         <div style="margin-bottom:15px; text-align:center;">
-            <img id="main-logo-1" class="app-dynamic-logo" src="https://todfwctsutqmlhwctgnl.supabase.co/storage/v1/object/public/bot_media/mini_app_logo.png" style="width:100px; height:100px; object-fit:contain; border-radius:50%; margin-bottom:10px;" onerror="this.onerror=null; this.src='/public/img/logo.png'; document.getElementById('loading-text-logo').style.display='block';">
+            <img id="main-logo-1" class="app-dynamic-logo" src="/public/img/logo.png" style="width:100px; height:100px; object-fit:contain; border-radius:50%; margin-bottom:10px;" onerror="this.onerror=null; document.getElementById('loading-text-logo').style.display='block';">
             <div id="loading-text-logo" style="display:none; font-size:32px; font-weight:900; letter-spacing:-1px; margin-bottom:15px;">
                 <span style="color:#fff;">Farm</span><span style="color:var(--accent);">stegridy</span>
             </div>
@@ -225,7 +225,7 @@
         <div class="app-header">
             <div>
                 <div class="logo">
-                    <img id="main-logo-2" class="app-dynamic-logo" src="https://todfwctsutqmlhwctgnl.supabase.co/storage/v1/object/public/bot_media/mini_app_logo.png" style="height:36px; object-fit:contain; border-radius:50%;" onerror="this.onerror=null; this.src='/public/img/logo.png'; document.getElementById('header-text-logo').style.display='block';">
+                    <img id="main-logo-2" class="app-dynamic-logo" src="/public/img/logo.png" style="height:36px; object-fit:contain; border-radius:50%;" onerror="this.onerror=null; document.getElementById('header-text-logo').style.display='block';">
                     <div id="header-text-logo" style="display:none;"><span style="color:#fff;">Farm</span><span style="color:var(--accent);">stegridy</span></div>
                 </div>
                 <div id="shop-stats" style="font-size:10px; font-weight:800; opacity:0.5; margin-top:2px; display:flex; gap:8px;">
@@ -2070,9 +2070,12 @@
         function closeNotifications() { document.getElementById('notifications-modal').classList.remove('open'); }
         
         function openAdminTelegram() {
-            if (userInfo && userInfo.hotline) {
-                const adminId = userInfo.hotline.split(',')[0].trim().replace('telegram_', '');
-                window.location.href = `tg://user?id=${adminId}`;
+            if (userInfo && userInfo.private_contact_url) {
+                if (tg && tg.openTelegramLink) {
+                    tg.openTelegramLink(userInfo.private_contact_url);
+                } else {
+                    window.location.href = userInfo.private_contact_url;
+                }
             } else {
                 if (tg && tg.openTelegramLink) {
                     tg.openTelegramLink(`https://t.me/Farmstegridy_bot`);
@@ -2094,7 +2097,7 @@
 
         function openGlobalSupportModal() {
             stopAllVideos();
-            document.getElementById('support-modal').classList.add('active');
+            document.getElementById('support-modal').classList.add('open');
             renderAdminChatMessages();
             setTimeout(() => {
                 const c = document.getElementById('admin-chat-messages');
@@ -2103,7 +2106,7 @@
         }
 
         function closeSupportModal() {
-            document.getElementById('support-modal').classList.remove('active');
+            document.getElementById('support-modal').classList.remove('open');
         }
         
         function closeOrderSupportModal() {

@@ -81,12 +81,14 @@ function decryptReview(review) {
     if (!review) return null;
     let decryptedText = encryption.decrypt(review.text) || review.text || '';
     let parsedMedia = [];
+    let productId = review.product_id;
     try {
         const parsed = JSON.parse(decryptedText);
         if (parsed && typeof parsed === 'object') {
             if (parsed.text !== undefined || parsed.media !== undefined) {
                 decryptedText = parsed.text || '';
                 parsedMedia = parsed.media || [];
+                if (parsed.product_id) productId = parsed.product_id;
             }
         }
     } catch(e) {}
@@ -95,6 +97,7 @@ function decryptReview(review) {
         ...review,
         text: decryptedText,
         media: parsedMedia,
+        product_id: productId,
         first_name: encryption.decrypt(review.first_name) || review.first_name || '',
         username: encryption.decrypt(review.username) || review.username || '',
     };
@@ -537,15 +540,18 @@ async function getReviews(limit = 100) {
 }
 
 async function saveReview(review) {
-    const payload = JSON.stringify({ text: review.text, media: review.media || [] });
+    const payload = JSON.stringify({ text: review.text, media: review.media || [], product_id: review.product_id });
+    const id = Date.now().toString(36) + Math.random().toString(36).substr(2, 5);
     const encrypted = {
         ...review,
+        id: id,
         text: encryption.encrypt(payload),
         first_name: encryption.encrypt(review.first_name),
         username: encryption.encrypt(review.username),
         created_at: ts()
     };
     delete encrypted.media;
+    delete encrypted.product_id;
     return await supabase.from(COL_REVIEWS).insert(encrypted);
 }
 

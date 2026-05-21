@@ -1407,7 +1407,7 @@ function createServer(port = 8080) {
                 referralLink: `https://t.me/${settings.bot_username}?start=${user.referral_code}`,
                 hotline: settings.admin_telegram_id || 'admin',
                 private_contact_url: settings.private_contact_url || 'https://t.me/Farmstegridy_bot',
-                mini_app_logo: settings.mini_app_logo || 'https://todfwctsutqmlhwctgnl.supabase.co/storage/v1/object/public/bot_media/mini_app_logo.png',
+                mini_app_logo: settings.mini_app_logo || '/public/img/logo.png',
                 chat_history: user.data?.chat_history || []
             });
         } catch (e) {
