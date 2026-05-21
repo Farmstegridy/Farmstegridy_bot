@@ -2070,19 +2070,7 @@
         function closeNotifications() { document.getElementById('notifications-modal').classList.remove('open'); }
         
         function openAdminTelegram() {
-            if (userInfo && userInfo.private_contact_url) {
-                if (tg && tg.openTelegramLink) {
-                    tg.openTelegramLink(userInfo.private_contact_url);
-                } else {
-                    window.location.href = userInfo.private_contact_url;
-                }
-            } else {
-                if (tg && tg.openTelegramLink) {
-                    tg.openTelegramLink(`https://t.me/Farmstegridy_bot`);
-                } else {
-                    window.location.href = `tg://resolve?domain=Farmstegridy_bot`;
-                }
-            }
+            openGlobalSupportModal();
         }
 
         function scrollToNews() {
@@ -2096,7 +2084,13 @@
         // ═══════════════════════════════════════════════════════
 
         function openGlobalSupportModal() {
-            openAdminTelegram();
+            const modal = document.getElementById('support-modal');
+            if (modal) modal.classList.add('open');
+            if (typeof renderAdminChatMessages === 'function') renderAdminChatMessages();
+            setTimeout(() => {
+                const c = document.getElementById('admin-chat-messages');
+                if (c) c.scrollTop = c.scrollHeight;
+            }, 50);
         }
 
         function closeSupportModal() {
@@ -2198,7 +2192,12 @@
         
         function contactSupportForOrder(orderId) {
             closeOrderSupportModal();
-            openAdminTelegram();
+            openGlobalSupportModal();
+            const input = document.getElementById('admin-chat-input');
+            if (input) {
+                input.value = `Bonjour, j'ai besoin d'aide concernant ma commande #${orderId.slice(-5).toUpperCase()}. `;
+                input.focus();
+            }
         }
 
         async function sendQuickCourierMsg(orderId) {
