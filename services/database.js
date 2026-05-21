@@ -386,8 +386,8 @@ async function getProducts(onlyActive = false) {
             
             for (const userId in allCarts) {
                 const c = allCarts[userId];
-                // Lock for 2 hours max
-                if (c && c.cart && (now - c.updated_at < 2 * 60 * 60 * 1000)) {
+                // Lock for 30 mins max
+                if (c && c.cart && (now - c.updated_at < 30 * 60 * 1000)) {
                     c.cart.forEach(item => {
                         lockedStock[item.id] = (lockedStock[item.id] || 0) + item.quantity;
                     });
