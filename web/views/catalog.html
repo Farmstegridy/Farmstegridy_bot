@@ -372,8 +372,9 @@
         let checkoutStep = 1;
         let appliedPromoCode = '';
         let appliedPromoDiscount = 0;
-
+        let currentCat = 'Tous';
         let allNews = [];
+        let userOrdersCache = [];
 
         // Helper : extrait la première URL d'image depuis le format JSON array ou string
         function getImgUrl(product) {
@@ -592,6 +593,7 @@
             try {
                 const res = await fetch(`/api/user-orders?userId=telegram_${uid}`);
                 const orders = await res.json();
+                userOrdersCache = orders;
                 
                 let statsHtml = '';
                 if(orders.length > 0) {
@@ -1724,7 +1726,15 @@
                             <div style="font-size:11px; font-weight:800; color:var(--secondary);">${count}/6 messages</div>
                         </div>
                         <div style="font-size:12px; opacity:0.6; margin-bottom:12px;">${o.product_name || o.product}</div>
-                        ${h ? `<div style="background:rgba(255,255,255,0.04); border-radius:12px; padding:10px; font-size:12px; margin-bottom:12px; opacity:0.8;"><b>${h.senderRole === 'client' ? 'Vous' : '🛵 Livreur'} :</b> ${h.lastMessage}</div>` : ''}
+                        ${h && h.messages && h.messages.length > 0 ? `
+                            <div style="background:rgba(0,0,0,0.2); border-radius:12px; padding:10px; margin-bottom:12px; max-height:150px; overflow-y:auto; display:flex; flex-direction:column; gap:6px;">
+                                ${h.messages.map(m => `
+                                    <div style="font-size:12px; opacity:0.9; ${m.role === 'client' ? 'text-align:right; color:var(--accent);' : 'text-align:left; color:#fff;'}">
+                                        <b>${m.role === 'client' ? 'Vous' : '🛵 Livreur'} :</b> ${m.text || m.message}
+                                    </div>
+                                `).join('')}
+                            </div>
+                        ` : (h ? `<div style="background:rgba(255,255,255,0.04); border-radius:12px; padding:10px; font-size:12px; margin-bottom:12px; opacity:0.8;"><b>${h.senderRole === 'client' ? 'Vous' : '🛵 Livreur'} :</b> ${h.lastMessage}</div>` : '')}
                         <div style="display:flex; gap:8px;">
                             <input type="text" id="quick-chat-${o.id}" placeholder="Message au livreur..." maxlength="200"
                                 style="flex:1; background:rgba(0,0,0,0.4); border:1px solid rgba(0,255,136,0.3); border-radius:12px; color:#fff; padding:10px 14px; font-family:'Outfit',sans-serif; font-size:13px; outline:none;"
@@ -1761,20 +1771,51 @@
             const cont = document.getElementById('admin-chat-messages');
             if (!cont) return;
             if (!adminChatMessages.length) {
-                cont.innerHTML = '<div style="text-align:center; opacity:0.3; font-size:12px; padding:20px;">👋 Bonjour ! Comment pouvons-nous vous aider ?</div>';
+                cont.innerHTML = '<div style="text-align:center; opacity:0.3; font-size:12px; padding:20px;">👋 Bonjour ! L\\'historique de vos commandes, notifications, et chats s\\'affichera ici.</div>';
                 return;
             }
             cont.innerHTML = '';
             adminChatMessages.forEach(m => {
                 const isMe = m.role === 'client';
                 const bubble = document.createElement('div');
-                bubble.style = `display:flex; justify-content:${isMe ? 'flex-end' : 'flex-start'};`;
-                bubble.innerHTML = `
-                    <div style="max-width:80%; background:${isMe ? 'var(--accent)' : 'rgba(0,150,255,0.2)'}; color:#fff; padding:10px 14px; border-radius:${isMe ? '18px 18px 4px 18px' : '18px 18px 18px 4px'}; font-size:13px; line-height:1.5;">
-                        ${m.text}
-                        <div style="font-size:9px; opacity:0.5; margin-top:4px; text-align:${isMe ? 'right' : 'left'};">${new Date(m.ts).toLocaleTimeString('fr-FR', {hour:'2-digit',minute:'2-digit'})}</div>
-                    </div>
-                `;
+                
+                if (m.role === 'system') {
+                    bubble.style = `display:flex; justify-content:center; margin: 8px 0;`;
+                    bubble.innerHTML = `
+                        <div style="background:rgba(255,255,255,0.1); color:rgba(255,255,255,0.7); padding:6px 12px; border-radius:12px; font-size:11px; text-align:center; max-width:90%;">
+                            ${m.text}
+                            <div style="font-size:9px; opacity:0.4; margin-top:2px;">${new Date(m.ts).toLocaleTimeString('fr-FR', {hour:'2-digit',minute:'2-digit'})}</div>
+                        </div>
+                    `;
+                } else if (m.role === 'livreur') {
+                    bubble.style = `display:flex; justify-content:flex-start; margin: 8px 0;`;
+                    bubble.innerHTML = `
+                        <div style="max-width:80%; background:rgba(255,165,0,0.2); border:1px solid rgba(255,165,0,0.5); color:#fff; padding:10px 14px; border-radius:18px 18px 18px 4px; font-size:13px; line-height:1.5;">
+                            <div style="font-size:10px; font-weight:900; color:orange; margin-bottom:4px;">🚴 LIVREUR</div>
+                            ${m.text}
+                            <div style="font-size:9px; opacity:0.5; margin-top:4px; text-align:left;">${new Date(m.ts).toLocaleTimeString('fr-FR', {hour:'2-digit',minute:'2-digit'})}</div>
+                        </div>
+                    `;
+                } else if (m.role === 'admin') {
+                    bubble.style = `display:flex; justify-content:flex-start; margin: 8px 0;`;
+                    bubble.innerHTML = `
+                        <div style="max-width:80%; background:rgba(0,150,255,0.2); border:1px solid rgba(0,150,255,0.5); color:#fff; padding:10px 14px; border-radius:18px 18px 18px 4px; font-size:13px; line-height:1.5;">
+                            <div style="font-size:10px; font-weight:900; color:#0096ff; margin-bottom:4px;">🎧 SUPPORT</div>
+                            ${m.text}
+                            <div style="font-size:9px; opacity:0.5; margin-top:4px; text-align:left;">${new Date(m.ts).toLocaleTimeString('fr-FR', {hour:'2-digit',minute:'2-digit'})}</div>
+                        </div>
+                    `;
+                } else {
+                    bubble.style = `display:flex; justify-content:flex-end; margin: 8px 0;`;
+                    bubble.innerHTML = `
+                        <div style="max-width:80%; background:var(--accent); color:#fff; padding:10px 14px; border-radius:18px 18px 4px 18px; font-size:13px; line-height:1.5;">
+                            ${m.target === 'livreur' ? '<div style="font-size:10px; font-weight:900; color:rgba(255,255,255,0.7); margin-bottom:4px;">Au livreur :</div>' : ''}
+                            ${m.text}
+                            <div style="font-size:9px; opacity:0.5; margin-top:4px; text-align:right;">${new Date(m.ts).toLocaleTimeString('fr-FR', {hour:'2-digit',minute:'2-digit'})}</div>
+                        </div>
+                    `;
+                }
+                
                 cont.appendChild(bubble);
             });
             cont.scrollTop = cont.scrollHeight;
@@ -1800,28 +1841,97 @@
             } catch(e) {}
         }
 
-        async function pollAdminReplies() {
-            if (document.getElementById('page-chat')?.style.display !== 'block') return;
+        async function pollUpdatesSilent() {
             const uid = tg.initDataUnsafe?.user?.id;
             try {
-                const res = await fetch(`/api/admin-chat/history?userId=telegram_${uid}`);
-                if (!res.ok) return;
-                const data = await res.json();
-                if (data.messages && data.messages.length !== adminChatMessages.length) {
-                    adminChatMessages = data.messages;
-                    localStorage.setItem('stb_admin_chat', JSON.stringify(adminChatMessages));
-                    renderAdminChatMessages();
-                    const badge = document.getElementById('chat-unread-badge');
-                    if (badge) badge.style.display = 'block';
+                // Poll Chat
+                if (uid) {
+                    const resChat = await fetch(`/api/admin-chat/history?userId=telegram_${uid}`);
+                    if (resChat.ok) {
+                        const data = await resChat.json();
+                        if (data.messages && data.messages.length > adminChatMessages.length) {
+                            adminChatMessages = data.messages;
+                            localStorage.setItem('stb_admin_chat', JSON.stringify(adminChatMessages));
+                            
+                            if (document.getElementById('page-chat')?.style.display === 'block') {
+                                renderAdminChatMessages();
+                            } else {
+                                const badge = document.getElementById('chat-unread-badge');
+                                if (badge) badge.style.display = 'block';
+                                showNewsPopup("Nouveau message du support !", data.messages[data.messages.length - 1].message || "Consultez l'onglet support pour voir le message.", []);
+                            }
+                        }
+                    }
                 }
+                
+                // Poll Stocks
+                const resStock = await fetch('/api/products');
+                if (resStock.ok) {
+                    const newProds = await resStock.json();
+                    newProds.forEach(np => {
+                        const idx = products.findIndex(p => p.id === np.id);
+                        if (idx > -1 && products[idx].stock !== np.stock) {
+                            products[idx].stock = np.stock;
+                            const qtyBadge = document.getElementById(`stock-badge-${np.id}`);
+                            if (qtyBadge) {
+                                qtyBadge.innerHTML = `<span class="stock-indicator" style="background:${np.stock>0?'#2ecc71':'#e74c3c'}"></span>${np.stock>0 ? np.stock+' en stock' : 'Épuisé'}`;
+                            }
+                        }
+                    });
+                }
+                
+                // Poll Orders
+                if (uid) {
+                    const resOrders = await fetch(`/api/user-orders?userId=telegram_${uid}`);
+                    if (resOrders.ok) {
+                        const newOrders = await resOrders.json();
+                        let statusChanged = false;
+                        newOrders.forEach(no => {
+                            const old = userOrdersCache.find(o => o.id === no.id);
+                            if (old && old.status !== no.status) {
+                                statusChanged = true;
+                                const statusMap = {
+                                    'pending': 'En attente ⏳',
+                                    'accepted': 'Acceptée ✅',
+                                    'livreur_assigned': 'Livreur en route 🛵',
+                                    'delivered': 'Livrée 📦',
+                                    'cancelled': 'Annulée ❌'
+                                };
+                                const statusText = statusMap[no.status] || no.status;
+                                showNewsPopup("Mise à jour Commande", `Votre commande a été mise à jour :\nNouveau statut : ${statusText}`, []);
+                            }
+                        });
+                        userOrdersCache = newOrders;
+                        if (statusChanged && document.getElementById('page-orders')?.style.display === 'block') {
+                            loadOrders();
+                        }
+                    }
+                }
+                
+                // Poll News
+                const resNews = await fetch('/api/news');
+                if (resNews.ok) {
+                    const data = await resNews.json();
+                    if (data.length > 0) {
+                        const latestId = data[0].id;
+                        // allNews is defined globally, we check its first element to compare
+                        const currentLatest = allNews.length > 0 ? allNews[0].id : null;
+                        if (currentLatest && latestId !== currentLatest) {
+                            allNews = data;
+                            renderNews(allNews);
+                            tg.showAlert("Nouvelle diffusion / actualité disponible !");
+                        }
+                    }
+                }
+
             } catch(e) {}
         }
 
         init();
         setInterval(() => {
             if (document.getElementById('page-orders')?.style.display === 'block') loadOrders();
-            if (document.getElementById('page-chat')?.style.display === 'block') pollAdminReplies();
-        }, 30000);
+            pollUpdatesSilent();
+        }, 15000);
 
     </script>
 </body>

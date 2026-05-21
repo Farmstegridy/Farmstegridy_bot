@@ -949,9 +949,6 @@ function createServer(port = 8080) {
                     case 'arrived':
                         text = `📍 <b>Commande #${shortId}</b>\n\n<b>Votre livreur est arrivé !</b> Il vous attend sur place. ✅`;
                         break;
-                    case 'cancelled':
-                        text = `${settings.ui_icon_error} <b>${statusLabel} de commande</b>\n\nVotre commande #${shortId} a été annulée par l'administration.`;
-                        break;
                     case 'pending':
                         text = `${settings.ui_icon_pending} <b>Mise à jour de commande</b>\n\nVotre commande #${shortId} est de nouveau ${statusLabel}.`;
                         break;
@@ -1090,8 +1087,7 @@ function createServer(port = 8080) {
                 status: 'pending',
                 start_at: req.body.start_at || new Date().toISOString(),
                 media_count: allMedia.length,
-                total_target: 0, // Sera calculé par le worker
-                badge: req.body.badge || null
+                total_target: 0 // Sera calculé par le worker
             });
 
             debugLog(`[API-BC-QUEUED] Diffusion #${broadcastId} ajoutée (${allMedia.length} médias)`);
@@ -1403,11 +1399,36 @@ function createServer(port = 8080) {
                 .eq('user_id', userId)
                 .order('created_at', { ascending: false })
                 .limit(20);
-            
-            const enriched = (data || []).map(o => ({
-                ...o,
-                chatHistory: activeChatHistory ? activeChatHistory.get(o.id) : null
-            }));
+            const idStr = String(userId).replace('telegram_', '');
+            const { data: user } = await supabase.from('bot_users').select('data').eq('id', idStr).maybeSingle();
+            const history = user?.data?.chat_history || [];
+
+            const enriched = (data || []).map(o => {
+                const orderMessages = history.filter(m => String(m.orderId) === String(o.id));
+                let chatHistory = null;
+                if (orderMessages.length > 0) {
+                    const lastMsg = orderMessages[orderMessages.length - 1];
+                    chatHistory = {
+                        count: parseInt(o.chat_count) || 0,
+                        lastMessage: lastMsg.text || lastMsg.message,
+                        senderRole: lastMsg.role,
+                        messages: orderMessages
+                    };
+                } else if (parseInt(o.chat_count) > 0) {
+                    // Fallback si pas de messages trouvés (anciens messages sans orderId)
+                    chatHistory = {
+                        count: parseInt(o.chat_count),
+                        lastMessage: 'Messages précédents non disponibles',
+                        senderRole: 'system',
+                        messages: []
+                    };
+                }
+                
+                return {
+                    ...o,
+                    chatHistory
+                };
+            });
             res.json(enriched);
         } catch (e) {
             res.status(500).json({ error: e.message });
@@ -1715,7 +1736,7 @@ function createServer(port = 8080) {
             }
 
             const targetId = order.user_id;
-            const tgId = userId.replace('telegram_', '').replace('whatsapp_', '');
+            const tgId = userId.replace('telegram_', '');
 
             if (awaitingChatReply) {
                 awaitingChatReply.set(userId, {
@@ -1755,7 +1776,7 @@ function createServer(port = 8080) {
     app.post('/api/livreur/send-chat-message', async (req, res) => {
         try {
             const { userId, orderId, text } = req.body;
-            const { getOrder, incrementChatCount, saveClientReply, getUser } = require('./services/database');
+            const { getOrder, incrementChatCount, appendChatHistory, getUser } = require('./services/database');
             const { sendTelegramMessage, notifyAdmins } = require('./services/notifications');
             const { activeChatHistory } = require('./handlers/order_system');
             const { Markup } = require('telegraf');
@@ -1797,7 +1818,12 @@ function createServer(port = 8080) {
             if (activeChatHistory) {
                 activeChatHistory.set(orderId, chatObj);
             }
-            saveClientReply(orderId, text).catch(() => {});
+            appendChatHistory(order.user_id, {
+                role: 'livreur',
+                target: 'client',
+                text: text,
+                orderId: orderId
+            }).catch(() => {});
 
             if (bot) {
                 const alertMsg = `💬 <b>CHAT LIVREUR (MINI APP)</b>\n\n🆔 Commande : <code>#${shortId}</code>\n👤 De : ${livreurName}\n📝 Message : "<i>${text}</i>"`;
@@ -1858,6 +1884,13 @@ function createServer(port = 8080) {
                 activeChatHistory.set(orderId, chatObj);
             }
             saveClientReply(orderId, text).catch(() => {});
+            
+            const { appendChatHistory } = require('./services/database');
+            appendChatHistory(userId, {
+                role: 'client',
+                target: 'livreur',
+                text: text
+            }).catch(() => {});
 
             if (bot) {
                 const alertMsg = `💬 <b>CHAT CLIENT (MINI APP)</b>\n\n🆔 Commande : <code>#${shortId}</code>\n👤 De : ${clientName}\n📝 Message : "<i>${text}</i>"`;
@@ -1920,14 +1953,45 @@ function createServer(port = 8080) {
     // In-memory store: Map<userId, Array<{role, text, ts}>>
     const _adminChats = new Map();
 
+    // Search users to initiate a new chat
+    app.get('/api/admin-chat/search', authMiddleware, async (req, res) => {
+        try {
+            const { q } = req.query;
+            if (!q || q.length < 2) return res.json([]);
+            const { searchUsers } = require('./services/database');
+            const users = await searchUsers(q, 20);
+            const results = (users || []).map(u => ({
+                userId: u.id,
+                username: u.username || '',
+                first_name: u.first_name || 'Utilisateur',
+                platform_id: u.telegram_id || u.id?.split('_')[1] || u.id,
+                hasChat: _adminChats.has(u.id),
+                messageCount: (_adminChats.get(u.id) || []).length
+            }));
+            res.json(results);
+        } catch (e) {
+            res.status(500).json({ error: e.message });
+        }
+    });
+
     app.post('/api/admin-chat/send', async (req, res) => {
         try {
             const { userId, text } = req.body;
             if (!userId || !text) return res.status(400).json({ error: 'Missing fields' });
 
+            const { getUser, updateUser } = require('./services/database');
+            const user = await getUser(userId);
+            if (!user) return res.status(404).json({ error: 'User not found' });
+
             const msg = { role: 'client', text, ts: Date.now() };
-            const history = _adminChats.get(userId) || [];
+            const history = user.data?.chat_history || [];
             history.push(msg);
+            
+            // Save to DB
+            const updatedData = { ...user.data, chat_history: history };
+            await updateUser(userId, { data: updatedData });
+
+            // Update memory map for real-time list caching
             _adminChats.set(userId, history);
 
             // Forward to admins via Telegram
@@ -1952,7 +2016,14 @@ function createServer(port = 8080) {
         try {
             const { userId } = req.query;
             if (!userId) return res.status(400).json({ error: 'Missing userId' });
-            const messages = _adminChats.get(userId) || [];
+            
+            const { getUser } = require('./services/database');
+            const user = await getUser(userId).catch(() => null);
+            const messages = user?.data?.chat_history || [];
+            
+            // Sync memory map
+            _adminChats.set(userId, messages);
+            
             res.json({ messages });
         } catch (e) {
             res.status(500).json({ error: e.message });
@@ -1965,9 +2036,19 @@ function createServer(port = 8080) {
             const { targetUserId, text, adminName } = req.body;
             if (!targetUserId || !text) return res.status(400).json({ error: 'Missing fields' });
 
+            const { getUser, updateUser } = require('./services/database');
+            const user = await getUser(targetUserId);
+            if (!user) return res.status(404).json({ error: 'User not found' });
+
             const msg = { role: 'admin', text, ts: Date.now(), from: adminName || 'Support' };
-            const history = _adminChats.get(targetUserId) || [];
+            const history = user.data?.chat_history || [];
             history.push(msg);
+            
+            // Save to DB
+            const updatedData = { ...user.data, chat_history: history };
+            await updateUser(targetUserId, { data: updatedData });
+
+            // Update memory map
             _adminChats.set(targetUserId, history);
 
             // Notify the client via Telegram
@@ -1991,9 +2072,21 @@ function createServer(port = 8080) {
     // Admin: list all open support chats
     app.get('/api/admin-chat/all', authMiddleware, async (req, res) => {
         try {
-            const { getUser } = require('./services/database');
+            const { searchUsers, getUser } = require('./services/database');
+            // We fetch all users who have a chat_history
+            // Since we can't easily query JSONB deep keys, we'll fetch recently active users or just return the memory map + any loaded chats
+            
+            // Sync memory map with any users that have chat_history
+            const recentUsers = await searchUsers('', 'all'); 
+            for (const u of recentUsers) {
+                if (u.data && u.data.chat_history && u.data.chat_history.length > 0) {
+                    _adminChats.set(u.id, u.data.chat_history);
+                }
+            }
+
             const result = [];
             for (const [userId, messages] of _adminChats.entries()) {
+                if (!messages || messages.length === 0) continue;
                 const user = await getUser(userId).catch(() => null);
                 result.push({
                     userId,

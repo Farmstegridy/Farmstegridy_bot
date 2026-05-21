@@ -2265,9 +2265,7 @@
                     <div style="display:flex; gap:10px; align-items:center; flex: 1; min-width: 200px;">
                         <select id="insights-platform-filter" onchange="updatePlatformStats(); renderMainChart(window.currentTimeframe || 'hour')" 
                             style="background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.2); border-radius:12px; padding:0 15px; color:white; font-size:14px; font-weight:600; cursor:pointer; flex: 1; height: 42px; appearance: none; background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23FFFFFF%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E'); background-repeat: no-repeat; background-position: right 12px top 50%; background-size: 12px auto;">
-                            <option value="all" style="background:#222; color:#fff;">📱 Toutes Plateformes</option>
-                            <option value="telegram" style="background:#222; color:#fff;">🔹 Telegram Only</option>
-                            <option value="whatsapp" style="background:#222; color:#fff;">🔸 WhatsApp Only</option>
+                            <option value="all" style="background:#222; color:#fff;">📱 Telegram</option>
                         </select>
                         <button class="btn btn-accent" style="height: 42px; border-radius:12px; padding: 0 20px;" onclick="exportAnalyticsCSV()">📥 CSV</button>
                     </div>
@@ -2356,13 +2354,6 @@
                         </div>
                     </div>
 
-                    <!-- Platform Chart -->
-                    <div class="premium-card insights-secondary-card" style="display:flex; flex-direction:column;">
-                        <h3 style="margin-bottom:20px; font-size:18px;">📱 CA par Plateforme</h3>
-                        <div style="flex-grow:1; position:relative; min-height:250px;">
-                            <canvas id="canvas-platforms"></canvas>
-                        </div>
-                    </div>
                 </div>
 
                 <div class="stats-grid stats-grid-large" style="gap:25px; margin-bottom:30px;">
@@ -2476,11 +2467,11 @@
                                 <tr>
                                     <th>Date</th><th>Client</th><th>Produit</th><th>Ville</th>
                                     <th style="text-align:right;">Prix</th><th>Délai</th>
-                                    <th>Livreur</th><th>Plateforme</th><th>⚡</th>
+                                    <th>Livreur</th><th>Plateforme</th><th>⚡</th><th>Chat</th>
                                 </tr>
                             </thead>
                             <tbody id="raw-deliveries-table">
-                                <tr><td colspan="9" style="text-align:center; padding:20px; opacity:0.5;">Chargement...</td></tr>
+                                <tr><td colspan="10" style="text-align:center; padding:20px; opacity:0.5;">Chargement...</td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -2826,23 +2817,8 @@
                         <h3 style="margin:0;">📦 Gestion des Stocks</h3>
                         <span class="text-muted" style="font-size:12px;">Mettez à jour rapidement les quantités de vos produits</span>
                     </div>
-                    <div style="overflow-x:auto;">
-                        <table class="responsive-table">
-                            <thead>
-                                <tr>
-                                    <th>Image</th>
-                                    <th>Produit</th>
-                                    <th>Catégorie</th>
-                                    <th>Stock Actuel</th>
-                                    <th>Nouveau Stock</th>
-                                    <th>Statut</th>
-                                    <th>Action</th>
-                                </tr>
-                            </thead>
-                            <tbody id="stock-products-list-body">
-                                <!-- Liste générée dynamiquement -->
-                            </tbody>
-                        </table>
+                    <div id="stock-products-list-body" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 15px;">
+                        <!-- Liste générée dynamiquement -->
                     </div>
                 </div>
 
@@ -3364,7 +3340,7 @@
                     <div class="stat-badge">📢</div>
                     <h3>Diffusion (Broadcast)</h3>
                     <p style="color:var(--text-muted); font-size:13px; margin-top:10px;">
-                        Envoi massif de notifications sur Telegram et WhatsApp.
+                        Envoi massif de notifications sur Telegram.
                         <br><br>
                         <b>Utilisation :</b> Onglet "Diffusion". Rédigez, joignez un média et lancez. Le système gère les pauses (Rate Limit) pour éviter les bannissements.
                         <br><br>
@@ -3793,7 +3769,7 @@
                         <label>Bouton : Confirmer note (sans texte)</label>
                         <input id="set_btn_confirm_review">
                     </div>
-                    <div>
+                    <div style="display:none;">
                         <label>Nom WhatsApp par défaut (si inconnu)</label>
                         <input id="set_default_wa_name" placeholder="Utilisateur WhatsApp">
                     </div>
@@ -4486,7 +4462,7 @@
                         <td data-label="Identité">
                             <div style="display:flex; flex-direction:column; gap:2px;">
                                 <b>${o.first_name}</b>
-                                <button class="btn btn-sm btn-outline" style="border-color:#25D366; color:#25D366; font-size:10px; padding:2px 6px; width:fit-content;" onclick="contactUser('${o.platform}', '${o.username || ''}', '${o.user_id ? o.user_id.split('_')[1] : ''}', '${o.phone || ''}')">💬 Contact</button>
+                                <button class="btn btn-sm btn-outline" style="border-color:#0088cc; color:#0088cc; font-size:10px; padding:2px 6px; width:fit-content;" onclick="contactUser('${o.platform}', '${o.username || ''}', '${o.user_id ? o.user_id.split('_')[1] : ''}', '${o.phone || ''}', '${o.user_id}')">💬 Contact</button>
                             </div>
                         </td>
                         <td data-label="Statut & Actions" style="background: rgba(255,165,0,0.05); min-width: 160px;">
@@ -4544,8 +4520,8 @@
                     const createdTime = fmtDate(o.created_at);
                     const deliveredTime = fmtDate(o.delivered_at);
                     const isNew = o.created_at && ((new Date() - new Date(o.created_at)) / (1000*60*60) < 24);
-                    const platformColor = o.platform === 'whatsapp' ? '#25D366' : '#0088cc';
-                    const platformBg = o.platform === 'whatsapp' ? 'rgba(37,211,102,0.1)' : 'rgba(0,136,204,0.1)';
+                    const platformColor = '#0088cc';
+                    const platformBg = 'rgba(0,136,204,0.1)';
 
                     return `
                     <div class="m-order-card">
@@ -4559,7 +4535,7 @@
                                     </div>
                                     <div style="display:flex; gap:8px; align-items:center;">
                                         <div class="m-order-time">🕐 ${createdTime}${o.scheduled_at ? ' · 📅 ' + o.scheduled_at : ''}</div>
-                                        <button class="btn btn-sm btn-outline" style="border-color:#25D366; color:#25D366; font-size:9px; padding:1px 4px; border-radius:4px; height:auto; line-height:1;" onclick="contactUser('${o.platform}', '${o.username || ''}', '${o.user_id ? o.user_id.split('_')[1] : ''}', '${o.phone || ''}')">💬 Contact</button>
+                                        <button class="btn btn-sm btn-outline" style="border-color:#0088cc; color:#0088cc; font-size:9px; padding:1px 4px; border-radius:4px; height:auto; line-height:1;" onclick="contactUser('${o.platform}', '${o.username || ''}', '${o.user_id ? o.user_id.split('_')[1] : ''}', '${o.phone || ''}', '${o.user_id}')">💬 Contact</button>
                                     </div>
                                     ${isNew ? '<span class="m-order-new-tag">🔥 NOUVEAU</span>' : ''}
                                 </div>
@@ -4939,23 +4915,22 @@
                                         : '<span style="background:rgba(231,76,60,0.15); color:#e74c3c; padding:4px 8px; border-radius:4px; font-size:11px; font-weight:700;">Indisponible / Épuisé</span>';
                                         
                                     return `
-                                        <tr id="stock-row-${p.id}">
-                                            <td>${mediaHtml}</td>
-                                            <td style="font-weight:600;">${p.name}</td>
-                                            <td><span class="badge" style="opacity:0.8;">${p.category || 'Standard'}</span></td>
-                                            <td style="font-size:15px; font-weight:700;" id="stock-current-val-${p.id}">${stockVal}</td>
-                                            <td>
-                                                <div style="display:flex; align-items:center; gap:5px;">
-                                                    <button type="button" class="btn btn-sm" onclick="adjustStockInputValue('${p.id}', -1)" style="padding:0; width:28px; height:28px; font-size:14px; display:flex; align-items:center; justify-content:center;">-</button>
-                                                    <input type="number" id="stock-input-${p.id}" value="${stockVal}" min="0" style="width:60px; height:28px; text-align:center; padding:0; margin:0; font-size:14px; font-weight:700; border-radius:4px; border:1px solid var(--border); background:rgba(255,255,255,0.02);">
-                                                    <button type="button" class="btn btn-sm" onclick="adjustStockInputValue('${p.id}', 1)" style="padding:0; width:28px; height:28px; font-size:14px; display:flex; align-items:center; justify-content:center;">+</button>
-                                                </div>
-                                            </td>
-                                            <td>${statusLabel}</td>
-                                            <td>
-                                                <button type="button" class="btn btn-accent btn-sm" id="btn-save-stock-${p.id}" onclick="saveProductStock('${p.id}')" style="font-size:11px; padding:4px 10px; height:auto; line-height:1.2;">Sauvegarder</button>
-                                            </td>
-                                        </tr>
+                                        <div class="card" id="stock-row-${p.id}" style="display:flex; flex-direction:column; align-items:center; padding:15px; background:rgba(255,255,255,0.02); border-radius:12px; text-align:center; position:relative;">
+                                            <div style="margin-bottom:10px;">${mediaHtml}</div>
+                                            <div style="font-weight:600; font-size:16px; margin-bottom:5px;">${p.name}</div>
+                                            <div style="margin-bottom:10px;"><span class="badge" style="opacity:0.8;">${p.category || 'Standard'}</span></div>
+                                            <div style="font-size:14px; color:var(--text-muted); margin-bottom:10px;">Stock actuel: <b style="color:var(--text); font-size:16px;" id="stock-current-val-${p.id}">${stockVal}</b></div>
+                                            
+                                            <div style="display:flex; align-items:center; gap:10px; margin-bottom:15px;">
+                                                <button type="button" class="btn btn-sm" onclick="adjustStockInputValue('${p.id}', -1)" style="width:36px; height:36px; font-size:18px; display:flex; align-items:center; justify-content:center; border-radius:50%; background:rgba(255,255,255,0.05);">-</button>
+                                                <input type="number" id="stock-input-${p.id}" value="${stockVal}" min="0" style="width:80px; height:36px; text-align:center; font-size:16px; font-weight:700; border-radius:8px; border:1px solid var(--border); background:rgba(0,0,0,0.2);">
+                                                <button type="button" class="btn btn-sm" onclick="adjustStockInputValue('${p.id}', 1)" style="width:36px; height:36px; font-size:18px; display:flex; align-items:center; justify-content:center; border-radius:50%; background:rgba(255,255,255,0.05);">+</button>
+                                            </div>
+                                            
+                                            <div style="margin-bottom:15px;">${statusLabel}</div>
+                                            
+                                            <button type="button" class="btn btn-accent" id="btn-save-stock-${p.id}" onclick="saveProductStock('${p.id}')" style="width:100%; padding:10px; font-weight:bold; border-radius:8px;">Sauvegarder</button>
+                                        </div>
                                     `;
                                 }).join('');
                             }
@@ -5227,18 +5202,7 @@
                         options: { maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { color: '#fff', boxWidth: 10, font: { size: 10 } } } } }
                     });
 
-                    // Platform Chart
-                    if (chartInstances.platforms) chartInstances.platforms.destroy();
-                    const tgData = data.byPlatform?.telegram || { ca: 0, count: 0 };
-                    const waData = data.byPlatform?.whatsapp || { ca: 0, count: 0 };
-                    chartInstances.platforms = new Chart(document.getElementById('canvas-platforms'), {
-                        type: 'doughnut',
-                        data: {
-                            labels: ['Telegram', 'WhatsApp'],
-                            datasets: [{ data: [tgData.ca, waData.ca], backgroundColor: ['#0088cc', '#25D366'], borderWidth: 0 }]
-                        },
-                        options: { maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { color: '#fff', boxWidth: 10, font: { size: 10 } } } } }
-                    });
+                    // Platform Chart removed (Telegram only)
 
                     renderMainChart(window.currentTimeframe || 'hour');
 
@@ -5450,7 +5414,7 @@
                     if (rawTbody) {
                         const raw = (data.rawDelivered || []).slice(0, 200);
                         rawTbody.innerHTML = raw.length === 0
-                            ? '<tr><td colspan="9" style="text-align:center;padding:20px;opacity:0.5;">Aucune livraison.</td></tr>'
+                            ? '<tr><td colspan="10" style="text-align:center;padding:20px;opacity:0.5;">Aucune livraison.</td></tr>'
                             : raw.map(r => `<tr>
                                 <td style="white-space:nowrap; font-size:11px;">${r.date}</td>
                                 <td>${r.client}</td>
@@ -5459,8 +5423,9 @@
                                 <td style="text-align:right; font-weight:700; color:var(--accent);">${(parseFloat(r.price) || 0).toFixed(2)}€</td>
                                 <td style="text-align:center;">${r.delivery_time ? r.delivery_time + 'min' : '—'}</td>
                                 <td>${r.livreur}</td>
-                                <td><span style="font-size:10px; padding:2px 6px; border-radius:10px; background:${r.platform==='whatsapp'?'rgba(37,211,102,0.15)':'rgba(0,136,204,0.15)'}; color:${r.platform==='whatsapp'?'#25D366':'#0088cc'};">${r.platform}</span></td>
+                                <td><span style="font-size:10px; padding:2px 6px; border-radius:10px; background:rgba(0,136,204,0.15); color:#0088cc;">${r.platform}</span></td>
                                 <td style="text-align:center;">${r.is_priority ? '<span style="color:orange; font-size:14px;">⚡</span>' : ''}</td>
+                                <td>${r.chat_count > 0 ? `<button class="btn btn-sm btn-outline" style="font-size:10px; padding:2px 5px; height:auto; min-height:0;" onclick="contactUser(null, null, null, null, '${r.user_id}')">💬 (${r.chat_count})</button>` : ''}</td>
                             </tr>`).join('');
                     }
 
@@ -6880,7 +6845,7 @@
                         </td>
                         <td data-label="Commandes"><span class="badge" style="border:1px solid var(--border)">${u.order_count || 0}</span></td>
                         <td data-label="Actions" class="action-btns">
-                            <button class="btn btn-outline btn-sm" onclick="contactUser('${u.platform}', '${u.username || ''}', '${u.platform_id}', '${u.phone || ''}')" style="border-color:#25D366; color:#25D366">💬 Contact</button>
+                            <button class="btn btn-outline btn-sm" onclick="contactUser('${u.platform}', '${u.username || ''}', '${u.platform_id}', '${u.phone || ''}', '${u.id}')" style="border-color:#0088cc; color:#0088cc">💬 Contact</button>
                             <button class="btn btn-outline btn-sm" onclick="editUserProfileUI('${u.doc_id}', '${(u.first_name || '').replace(/'/g, "\\'")}', '${u.phone || ''}')" style="border-color:#ff9500; color:#ff9500">✏️ Profil</button>
                             <button class="btn btn-outline btn-sm" onclick="viewUserAddresses('${u.doc_id}')" style="border-color:#5ac8fa; color:#5ac8fa">📍 Adresses</button>
                             <button class="btn btn-outline btn-sm" onclick="checkUserStatus('${u.doc_id}')" style="border-color:var(--accent); color:var(--accent)">🔄 Check</button>
@@ -6903,8 +6868,8 @@
             const mobileFeed = document.getElementById('mobileUserFeed');
             if (mobileFeed) {
                 mobileFeed.innerHTML = users.map(u => {
-                    const platformColor = u.platform === 'whatsapp' ? '#25D366' : '#0088cc';
-                    const platformBg = u.platform === 'whatsapp' ? 'rgba(37,211,102,0.1)' : 'rgba(0,136,204,0.1)';
+                    const platformColor = '#0088cc';
+                    const platformBg = 'rgba(0,136,204,0.1)';
                     const isNew = u.created_at && ((new Date() - new Date(u.created_at)) / (1000*60*60) < 24);
                     const escapedName = (u.first_name || '').replace(/'/g, "\\'");
 
@@ -6942,7 +6907,7 @@
                         </div>
 
                         <div class="m-user-actions">
-                            <button class="m-btn" onclick="contactUser('${u.platform}', '${u.username || ''}', '${u.platform_id}', '${u.phone || ''}')" style="color:#25D366; border-color:rgba(37,211,102,0.3);">💬 Contact</button>
+                            <button class="m-btn" onclick="contactUser('${u.platform}', '${u.username || ''}', '${u.platform_id}', '${u.phone || ''}', '${u.id}')" style="color:#0088cc; border-color:rgba(0,136,204,0.3);">💬 Contact</button>
                             <button class="m-btn" onclick="editUserProfileUI('${u.doc_id}', '${escapedName}', '${u.phone || ''}')" style="color:#ff9500; border-color:rgba(255,149,0,0.3);">✏️ Profil</button>
                             <button class="m-btn" onclick="viewUserAddresses('${u.doc_id}')" style="color:#5ac8fa; border-color:rgba(90,200,250,0.3);">📍 Adresses</button>
                             <button class="m-btn m-btn-check" onclick="checkUserStatus('${u.doc_id}')">🔄 Check</button>
@@ -7716,33 +7681,24 @@
         }
 
         /**
-         * Ouvre une conversation avec le client sur la plateforme appropriée
+         * Ouvre une conversation avec le client sur Telegram
          */
-        function contactUser(platform, username, platformId, phone) {
-            if (platform === 'whatsapp') {
-                if (!phone && platformId) {
-                    // Nettoyage de l'ID WhatsApp pour obtenir le numéro
-                    phone = platformId.split('@')[0].split(':')[0];
-                }
-                if (phone) {
-                    const cleanPhone = phone.replace(/\D/g, '');
-                    window.open(`https://wa.me/${cleanPhone}`, '_blank');
-                } else {
-                    showToast("Numéro WhatsApp introuvable", "error");
-                }
+        function contactUser(platform, username, platformId, phone, userId) {
+            if (userId) {
+                switchTab('chat');
+                openChatReplyModal(userId);
+                return;
+            }
+            // Fallback (should rarely happen now)
+            if (username) {
+                const cleanUsername = username.replace('@', '');
+                window.open(`https://t.me/${cleanUsername}`, '_blank');
+            } else if (platformId) {
+                const cleanId = String(platformId).replace('telegram_', '');
+                window.open(`tg://user?id=${cleanId}`, '_blank');
+                showToast("Ouverture Telegram directe...", "info");
             } else {
-                // Telegram
-                if (username) {
-                    const cleanUsername = username.replace('@', '');
-                    window.open(`https://t.me/${cleanUsername}`, '_blank');
-                } else if (platformId) {
-                    // Tentative d'ouverture via tg://user?id= (ne fonctionne que si le client TG est installé et gère le protocole)
-                    const cleanId = platformId.replace('telegram_', '');
-                    window.open(`tg://user?id=${cleanId}`, '_blank');
-                    showToast("Tentative d'ouverture directe (nécessite Telegram Desktop)", "info");
-                } else {
-                    showToast("Identifiant Telegram introuvable", "error");
-                }
+                showToast("Identifiant Telegram introuvable", "error");
             }
         }
 
@@ -8384,14 +8340,43 @@
         // ═══════════════════════════════════════════════════════════
         // ADMIN SUPPORT CHAT FUNCTIONS
         // ═══════════════════════════════════════════════════════════
-        function filterAdminChats() {
+        let _chatSearchTimeout = null;
+        async function filterAdminChats() {
             const list = document.getElementById('admin-chat-list');
-            const q = document.getElementById('chat-search-input').value.toLowerCase();
-            const chats = window._adminChatsData || [];
+            const q = document.getElementById('chat-search-input').value.toLowerCase().trim();
+            let chats = window._adminChatsData || [];
 
+            if (q.length >= 2) {
+                clearTimeout(_chatSearchTimeout);
+                await new Promise(resolve => {
+                    _chatSearchTimeout = setTimeout(async () => {
+                        try {
+                            const results = await api('/admin-chat/search?q=' + encodeURIComponent(q), 'GET', null, true);
+                            if (results && results.length > 0) {
+                                results.forEach(r => {
+                                    if (!chats.find(c => c.userId === r.userId)) {
+                                        chats.push({
+                                            userId: r.userId,
+                                            username: r.username,
+                                            first_name: r.first_name,
+                                            platform_id: r.platform_id,
+                                            lastMessage: null,
+                                            unreadCount: 0,
+                                            messages: []
+                                        });
+                                    }
+                                });
+                            }
+                        } catch(e) {}
+                        resolve();
+                    }, 400);
+                });
+            }
+
+            const cleanQ = q.replace(/[@#]/g, '');
             const filtered = chats.filter(c => {
                 const searchStr = `${c.username || ''} ${c.first_name || ''} ${c.platform_id || ''}`.toLowerCase();
-                return searchStr.includes(q);
+                return searchStr.includes(cleanQ);
             });
 
             document.getElementById('chat-count-label').innerText = `${filtered.length} conversation(s)`;
@@ -8402,7 +8387,7 @@
             } else {
                 list.innerHTML = filtered.map(c => {
                     unreadTotal += (c.unreadCount || 0);
-                    const lastMsg = c.lastMessage ? c.lastMessage.text : '...';
+                    const lastMsg = c.lastMessage ? c.lastMessage.text : 'Nouvelle conversation...';
                     const lastTs = c.lastMessage ? new Date(c.lastMessage.ts).toLocaleString('fr-FR', {hour:'2-digit', minute:'2-digit'}) : '';
                     return `
                     <div class="card" style="padding:15px 20px; cursor:pointer; margin-bottom:0; display:flex; justify-content:space-between; align-items:center;" onclick="openChatReplyModal('${c.userId}')">
@@ -8426,9 +8411,28 @@
         }
 
         window._currentReplyUserId = null;
-        function openChatReplyModal(userId) {
+        async function openChatReplyModal(userId) {
             window._currentReplyUserId = userId;
-            const chat = (window._adminChatsData || []).find(c => c.userId === userId);
+            let chat = (window._adminChatsData || []).find(c => c.userId === userId);
+            
+            // Si on ouvre une conversation, on va chercher l'historique complet pour être sûr
+            try {
+                const res = await api('/admin-chat/history?userId=' + userId, 'GET', null, true);
+                if (res && res.messages) {
+                    if (chat) {
+                        chat.messages = res.messages;
+                        chat.lastMessage = res.messages[res.messages.length - 1] || null;
+                    } else {
+                        // Si le chat n'existait pas du tout (ex: via un bouton contact sur une commande)
+                        chat = { userId, first_name: 'Utilisateur', messages: res.messages, unreadCount: 0 };
+                        window._adminChatsData = window._adminChatsData || [];
+                        window._adminChatsData.push(chat);
+                    }
+                }
+            } catch (e) {
+                console.error("Erreur chargement historique:", e);
+            }
+            
             if (!chat) return;
 
             document.getElementById('chat-reply-header').innerText = `Chat - ${chat.first_name}`;
@@ -8439,10 +8443,38 @@
             } else {
                 msgContainer.innerHTML = chat.messages.map(m => {
                     const isAdmin = m.role === 'admin';
+                    const isSystem = m.role === 'system';
+                    const isLivreur = m.role === 'livreur';
+                    const isClient = m.role === 'client';
                     const time = new Date(m.ts).toLocaleString('fr-FR', {hour:'2-digit', minute:'2-digit'});
+                    
+                    if (isSystem) {
+                        return `
+                        <div style="display:flex; justify-content:center; margin-bottom:8px;">
+                            <div style="background:rgba(255,255,255,0.05); color:rgba(255,255,255,0.6); padding:4px 10px; border-radius:10px; font-size:11px; text-align:center; max-width:85%;">
+                                ${m.text}
+                                <div style="font-size:9px; opacity:0.5; margin-top:2px;">${time}</div>
+                            </div>
+                        </div>
+                        `;
+                    }
+                    
+                    if (isLivreur) {
+                        return `
+                        <div style="display:flex; flex-direction:column; align-items:flex-start; margin-bottom:8px;">
+                            <div style="background:rgba(255,165,0,0.15); border:1px solid rgba(255,165,0,0.3); color:#fff; padding:10px 14px; border-radius:18px 18px 18px 4px; max-width:85%; font-size:14px; line-height:1.4; word-break:break-word;">
+                                <div style="font-size:10px; font-weight:900; color:orange; margin-bottom:4px;">🚴 LIVREUR</div>
+                                ${m.text}
+                            </div>
+                            <div style="font-size:10px; opacity:0.4; margin-top:3px; padding:0 5px;">${time}</div>
+                        </div>
+                        `;
+                    }
+
                     return `
-                    <div style="display:flex; flex-direction:column; align-items:${isAdmin ? 'flex-end' : 'flex-start'}; margin-bottom:5px;">
+                    <div style="display:flex; flex-direction:column; align-items:${isAdmin ? 'flex-end' : 'flex-start'}; margin-bottom:8px;">
                         <div style="background:${isAdmin ? 'linear-gradient(135deg,#0096ff,#0050cc)' : 'rgba(255,255,255,0.08)'}; color:#fff; padding:10px 14px; border-radius:18px; max-width:85%; font-size:14px; line-height:1.4; word-break:break-word;">
+                            ${isClient && m.target === 'livreur' ? '<div style="font-size:10px; font-weight:900; color:rgba(255,255,255,0.5); margin-bottom:4px;">Au livreur :</div>' : ''}
                             ${m.text}
                         </div>
                         <div style="font-size:10px; opacity:0.4; margin-top:3px; padding:0 5px;">${time}</div>

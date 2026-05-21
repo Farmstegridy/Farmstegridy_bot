@@ -787,6 +787,9 @@ function setupOrderSystem(bot) {
             if (createResult.error) return ctx.reply(`❌ Erreur : ${createResult.error.message}`);
             
             const order = createResult.order;
+            const { adjustOrderStock } = require('../services/database');
+            await adjustOrderStock(order.id, 'decrement').catch(e => console.error("Stock decrement error:", e));
+            
             awaitingPaymentProof.delete(userId);
             userCarts.delete(userId);
             pendingOrders.delete(userId);
@@ -1318,6 +1321,7 @@ function setupOrderSystem(bot) {
             status: orderSupplierId ? 'supplier_pending' : 'pending',
             discount_applied: discount,
             scheduled_at: pending.scheduled_at || null,
+            notes: JSON.stringify(pending.cart || []) // Sauvegarde du panier pour gestion du stock après confirmation
         };
 
         const settings = ctx.state?.settings || await getAppSettings();
@@ -2003,6 +2007,12 @@ function setupOrderSystem(bot) {
 
         const shortId = orderId.slice(-5);
         await safeEdit(ctx, `❌ <b>Commande #${shortId} annulée</b>\n\nVotre demande d'annulation a bien été prise en compte.`, Markup.inlineKeyboard([[Markup.button.callback(settings.btn_back_quick_menu || '◀️ Retour Menu', 'main_menu')]]));
+        
+        const { appendChatHistory } = require('../services/database');
+        appendChatHistory(order.user_id, {
+            role: 'system',
+            text: `⚠️ La commande #${shortId} a été annulée par vous.`
+        }).catch(() => {});
 
         // Notifier Admin
         const alertMsg = `⚠️ <b>ANNULATION CLIENT</b>\n\nLa commande <b>#${shortId}</b> a été annulée par le client.\n👤 Client: ${ctx.from.first_name}`;
@@ -2028,6 +2038,12 @@ function setupOrderSystem(bot) {
 
         const shortId = orderId.slice(-5);
         await safeEdit(ctx, `🚩 <b>COMMANDE #${shortId} ANNULÉE</b>\n\nL'annulation a bien été effectuée.`, Markup.inlineKeyboard([[Markup.button.callback(settings.btn_back_to_livreur_menu || '◀️ Menu Livreur', 'livreur_menu')]]));
+        
+        const { appendChatHistory } = require('../services/database');
+        appendChatHistory(order.user_id, {
+            role: 'system',
+            text: `⚠️ La commande #${shortId} a été annulée par le livreur.`
+        }).catch(() => {});
 
         // Notifier Admin
         const alertMsg = `🚩 <b>ANNULATION LIVREUR</b>\n\nLa commande <b>#${shortId}</b> a été annulée par le livreur.\n👤 Livreur: ${ctx.from.first_name}`;
@@ -2609,6 +2625,15 @@ function setupOrderSystem(bot) {
                         }
                     );
                     if (chatMsg) addMessageToTrack(targetId, chatMsg.message_id).catch(() => { });
+
+                    // Enregistrer dans l'historique de chat global
+                    const { appendChatHistory } = require('../services/database');
+                    appendChatHistory(order.user_id, {
+                        role: isLivreur ? 'livreur' : 'client',
+                        target: isLivreur ? 'client' : 'livreur',
+                        text: reply,
+                        orderId: orderId
+                    }).catch(() => {});
 
                     // Alerte aux admins via service central
                     const alertMsg = `💬 <b>CHAT ${roleLabel.toUpperCase()}</b>\n\n🆔 Commande : <code>#${shortId}</code>\n👤 De : ${safeHtml(ctx.from.first_name)}\n📝 Message : "<i>${safeHtml(reply)}</i>"`;

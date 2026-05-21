@@ -58,7 +58,7 @@ function decryptUser(userData) {
         first_name: encryption.decrypt(userData.first_name) || userData.first_name || 'Utilisateur',
         last_name: encryption.decrypt(userData.last_name) || userData.last_name || '',
         address: userData.address || meta.address || '',
-        platform: userData.platform || (String(userData.id).startsWith('whatsapp') ? 'whatsapp' : 'telegram'),
+        platform: userData.platform || 'telegram',
         data: meta,
         is_available: !!(meta.is_available ?? userData.is_available),
         current_city: meta.current_city || userData.current_city || null
@@ -263,10 +263,6 @@ async function updateUser(docId, data) {
 async function searchUsers(query = '', filter = 'all') {
     let q = supabase.from(COL_USERS).select('*');
     
-    if (query) {
-        q = q.or(`id.ilike.%${query}%,username.ilike.%${query}%,first_name.ilike.%${query}%`);
-    }
-
     if (filter === 'pending') {
         q = q.eq('is_approved', false).eq('is_blocked', false);
     } else if (filter === 'approved') {
@@ -277,8 +273,20 @@ async function searchUsers(query = '', filter = 'all') {
         q = q.eq('is_livreur', true);
     }
 
-    const { data } = await q.order('created_at', { ascending: false }).limit(50);
-    return (data || []).map(decryptUser);
+    // Since username and first_name are encrypted in the DB, we cannot use SQL .ilike for them.
+    // We fetch a larger batch, decrypt, and filter in JS.
+    const { data } = await q.order('created_at', { ascending: false }).limit(1000);
+    let users = (data || []).map(decryptUser);
+
+    if (query) {
+        const lowerQuery = query.toLowerCase().replace(/[@#]/g, '');
+        users = users.filter(u => {
+            const searchStr = `${u.id || ''} ${u.username || ''} ${u.first_name || ''}`.toLowerCase();
+            return searchStr.includes(lowerQuery);
+        });
+    }
+
+    return users.slice(0, 50); // limit the final results
 }
 
 async function approveUser(docId) {
@@ -597,7 +605,7 @@ async function getStatsOverview() {
     return { 
         totalUsers: totalUsers || 0,
         totalUsersTelegram: totalUsers || 0,
-        totalUsersWhatsapp: 0,
+
         totalOrders,
         totalCA,
         avgBasket,
@@ -648,15 +656,40 @@ async function deleteSupplier(id) {
 function extractCityFromAddress(address) {
     if (!address) return { city: 'INCONNUE', postalCode: '', district: '' };
     const cleanAddr = address.replace(/[\r\n]/g, ' ').replace(/\s+/g, ' ').trim();
+    
+    // Look for 5 digits (French postal code)
     const cpMatch = cleanAddr.match(/\b(\d{5})\b/);
     const postalCode = cpMatch ? cpMatch[1] : '';
-    let city = 'PARIS';
+    
+    let city = 'INCONNUE';
     let district = postalCode;
-    // Basic Paris extraction
+    
+    if (postalCode) {
+        // Find text after postal code (usually the city)
+        const cityMatch = cleanAddr.match(new RegExp(`\\b${postalCode}\\b\\s*([A-Za-zÀ-ÿ\\s-]+)`));
+        if (cityMatch && cityMatch[1]) {
+            city = cityMatch[1].trim().toUpperCase();
+        }
+    }
+
     if (postalCode.startsWith('75')) {
+        city = 'PARIS';
         const arr = parseInt(postalCode) - 75000;
         district = `Paris ${arr}e`;
+    } else if (city === 'INCONNUE' || city.length < 2) {
+        // Try fallback parsing if no CP but maybe city at end
+        const parts = cleanAddr.split(',');
+        if (parts.length > 1) {
+            city = parts[parts.length - 1].trim().toUpperCase();
+            city = city.replace(/[0-9]/g, '').trim(); // remove any residual numbers
+        } else {
+            // Default to Paris if absolutely nothing found (legacy behavior)
+            city = 'PARIS';
+        }
     }
+    
+    if (!city) city = 'INCONNUE';
+
     return { city, postalCode, district };
 }
 
@@ -678,7 +711,7 @@ async function getOrderAnalytics() {
 
     // Fetch last 2000 orders for historical analysis (optimized fields selection for performance)
     const { data: ordersSnap } = await supabase.from(COL_ORDERS)
-        .select('id, created_at, delivered_at, total_price, status, product_name, priority_fee, is_priority, city, postal_code, district, address, livreur_name, user_id, platform, first_name, username, quantity')
+        .select('id, created_at, updated_at, total_price, status, product_name, city, postal_code, address, livreur_name, user_id, platform, first_name, username, quantity')
         .order('created_at', { ascending: false })
         .limit(2000);
 
@@ -688,8 +721,7 @@ async function getOrderAnalytics() {
         avgBasket: 0,
         avgDeliveryTime: 0,
         byPlatform: {
-            telegram: { ca: 0, count: 0, avgBasket: 0, products: {} },
-            whatsapp: { ca: 0, count: 0, avgBasket: 0, products: {} }
+            telegram: { ca: 0, count: 0, avgBasket: 0, products: {} }
         },
         byHour: {}, byDay: {}, byWeek: {}, byMonth: {}, byYear: {},
         byCity: {},         // city -> { ca, count, priority }
@@ -761,7 +793,7 @@ async function getOrderAnalytics() {
         analytics.totalOrders++;
 
         // Platform
-        const platform = order.platform || (String(order.user_id).startsWith('whatsapp') ? 'whatsapp' : 'telegram');
+        const platform = order.platform || 'telegram';
         if (!analytics.byPlatform[platform]) {
             analytics.byPlatform[platform] = { ca: 0, count: 0, avgBasket: 0, products: {} };
         }
@@ -770,9 +802,9 @@ async function getOrderAnalytics() {
 
         // Delivery time
         let deliveryMinutes = null;
-        if (order.created_at && order.delivered_at) {
+        if (order.created_at && order.updated_at) {
             const createdMs = new Date(order.created_at).getTime();
-            const deliveredMs = new Date(order.delivered_at).getTime();
+            const deliveredMs = new Date(order.updated_at).getTime();
             deliveryMinutes = Math.round((deliveredMs - createdMs) / 60000);
             if (deliveryMinutes > 0 && deliveryMinutes < 1440) {
                 totalDeliveryMinutes += deliveryMinutes;
@@ -897,7 +929,9 @@ async function getOrderAnalytics() {
             district: district || postalCode,
             livreur: order.livreur_name || 'N/A',
             platform: platform,
-            is_priority: isPriorityOrder
+            is_priority: isPriorityOrder,
+            chat_count: order.chat_count || 0,
+            user_id: order.user_id
         });
     });
 
@@ -961,15 +995,51 @@ async function updateOrderStatus(orderId, status, extraData = {}) {
     const updateData = { status, ...extraData };
     const { data, error } = await supabase.from(COL_ORDERS).update(updateData).eq('id', orderId).select().single();
     if (error) console.error('[DB] updateOrderStatus error:', error.message);
+    
+    // Invalidate stats cache so dashboard updates immediately
+    _statsCache.lastAnalytics = 0;
+    
+    // Si la commande est annulée ou refusée, on restocke !
+    if (status === 'cancelled' || status === 'refused') {
+        adjustOrderStock(orderId, 'increment').catch(e => console.error("Stock restore error:", e));
+    }
+    
     return data;
 }
 
+async function adjustOrderStock(orderId, action) {
+    const { data: order } = await supabase.from(COL_ORDERS).select('*').eq('id', orderId).maybeSingle();
+    if (!order || !order.notes) return;
+    try {
+        const cart = JSON.parse(order.notes);
+        if (!Array.isArray(cart)) return;
+        const { logStockMovement } = require('./inventory_manager');
+        
+        for (const item of cart) {
+            const productId = item.productId;
+            const qty = action === 'increment' ? item.qty : -item.qty;
+            
+            const { data: p } = await supabase.from(COL_PRODUCTS).select('id, stock, name').eq('id', productId).maybeSingle();
+            if (p && typeof p.stock === 'number') {
+                const newStock = Math.max(0, p.stock + qty);
+                await supabase.from(COL_PRODUCTS).update({ stock: newStock }).eq('id', productId);
+                await logStockMovement(productId, qty, `order_${action}`, orderId);
+            }
+        }
+    } catch(e) {
+        console.error('[DB] adjustOrderStock error:', e.message);
+    }
+}
+
 async function assignOrderLivreur(orderId, livreurId, livreurName) {
-    return await supabase.from(COL_ORDERS).update({
+    const res = await supabase.from(COL_ORDERS).update({
         livreur_id: livreurId,
         livreur_name: livreurName,
         status: 'taken'
     }).eq('id', orderId);
+    
+    _statsCache.lastAnalytics = 0;
+    return res;
 }
 
 async function getOrdersByUser(userId) {
@@ -1162,6 +1232,28 @@ async function incrementChatCount(orderId) {
     return count; // CRITICAL: must return count for display
 }
 
+
+async function appendChatHistory(userId, msgObj) {
+    try {
+        const idStr = String(userId).replace('telegram_', '');
+        const { data: user } = await supabase.from(COL_USERS).select('data').eq('id', idStr).maybeSingle();
+        if (!user) return false;
+        
+        const history = user.data?.chat_history || [];
+        // Ne pas stocker un historique infini, garder les 100 derniers
+        if (history.length > 100) history.shift();
+        
+        history.push({ ...msgObj, ts: Date.now() });
+        const newData = { ...user.data, chat_history: history };
+        
+        const { error } = await supabase.from(COL_USERS).update({ data: newData }).eq('id', idStr);
+        if (error) throw error;
+        return true;
+    } catch (err) {
+        console.error('[DB] appendChatHistory error:', err.message);
+        return false;
+    }
+}
 
 async function getAndClearPendingFeedback(userId) {
     return null; // Placeholder — no persistent feedback queue yet
@@ -1369,6 +1461,7 @@ const database = {
     incrementDailyStat,
     // Order management
     updateOrderStatus,
+    adjustOrderStock,
     assignOrderLivreur,
     getOrdersByUser,
     getClientActiveOrders,
@@ -1400,6 +1493,7 @@ const database = {
     // Feedback & help
     logHelpRequest,
     saveClientReply,
+    appendChatHistory,
     incrementChatCount,
     getAndClearPendingFeedback,
     saveFeedback,
