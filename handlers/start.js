@@ -484,7 +484,7 @@ async function getMainMenuKeyboard(ctx, settings, user, isFournisseur = false, i
 
     const baseDomain = process.env.RENDER_EXTERNAL_URL || (process.env.RAILWAY_PUBLIC_DOMAIN ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}` : 'https://farmstegridy-bot.onrender.com');
     const langCode = user?.language_code || 'fr';
-    const catalogUrl = (settings.mini_app_url ? `${settings.mini_app_url}/catalog` : `${baseDomain}/catalog`) + `?lang=${langCode}`;
+    const catalogUrl = (settings.mini_app_url ? `${settings.mini_app_url}/catalog` : `${baseDomain}/catalog`) + `?lang=${langCode}` + `&v=${Date.now()}`;
 
     // Ligne 1 : Commander (Gros bouton principal)
     buttons.push([Markup.button.callback(`${settings.ui_icon_catalog || '🛍'} ${t(user, 'btn_catalog_classic', 'CATALOGUE CLASSIQUE')}`, 'view_catalog')]);
@@ -569,9 +569,9 @@ async function updateMenuButton(ctx, user, settings, forceClient = false) {
         if (!settings) settings = await getAppSettings();
         const baseDomain = process.env.RENDER_EXTERNAL_URL || (process.env.RAILWAY_PUBLIC_DOMAIN ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}` : 'https://farmstegridy-bot.onrender.com');
         const langCode = user?.language_code || 'fr';
-        const catalogUrl = (settings.mini_app_url ? `${settings.mini_app_url}/catalog` : `${baseDomain}/catalog`) + `?lang=${langCode}`;
-        const livreurUrl = (settings.mini_app_url ? `${settings.mini_app_url}/livreur` : `${baseDomain}/livreur`) + `?lang=${langCode}`;
-        const dashboardUrl = (settings.mini_app_url ? `${settings.mini_app_url}/dashboard` : `${baseDomain}/dashboard`) + `?lang=${langCode}`;
+        const catalogUrl = (settings.mini_app_url ? `${settings.mini_app_url}/catalog` : `${baseDomain}/catalog`) + `?lang=${langCode}` + `&v=${Date.now()}`;
+        const livreurUrl = (settings.mini_app_url ? `${settings.mini_app_url}/livreur` : `${baseDomain}/livreur`) + `?lang=${langCode}` + `&v=${Date.now()}`;
+        const dashboardUrl = (settings.mini_app_url ? `${settings.mini_app_url}/dashboard` : `${baseDomain}/dashboard`) + `?lang=${langCode}` + `&v=${Date.now()}`;
 
         const isAdminUser = await isAdmin(ctx);
 
