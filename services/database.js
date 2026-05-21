@@ -1037,7 +1037,7 @@ async function adjustOrderStock(orderId, action) {
         const { logStockMovement } = require('./inventory_manager');
         
         for (const item of cart) {
-            const productId = item.productId;
+            const productId = item.productId || item.id;
             const qty = action === 'increment' ? item.qty : -item.qty;
             
             const { data: p } = await supabase.from(COL_PRODUCTS).select('id, stock, name').eq('id', productId).maybeSingle();
