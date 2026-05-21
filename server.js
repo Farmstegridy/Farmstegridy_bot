@@ -1362,7 +1362,8 @@ function createServer(port = 8080) {
                 balance: user.wallet_balance || 0,
                 points: user.points || 0,
                 referralLink: `https://t.me/${settings.bot_username}?start=${user.referral_code}`,
-                hotline: settings.admin_telegram_id || 'admin'
+                hotline: settings.admin_telegram_id || 'admin',
+                chat_history: user.data?.chat_history || []
             });
         } catch (e) {
             res.status(500).json({ error: e.message });
@@ -1410,13 +1411,19 @@ function createServer(port = 8080) {
             const { userId } = req.query;
             const { supabase } = require('./config/supabase');
             const { activeChatHistory } = require('./handlers/order_system');
+            const idRaw = String(userId).replace('telegram_', '');
+            const idPrefix = `telegram_${idRaw}`;
             const { data } = await supabase.from('bot_orders')
                 .select('*')
-                .eq('user_id', userId)
+                .or(`user_id.eq.${idRaw},user_id.eq.${idPrefix}`)
                 .order('created_at', { ascending: false })
                 .limit(20);
-            const idStr = String(userId).replace('telegram_', '');
-            const { data: user } = await supabase.from('bot_users').select('data').eq('id', idStr).maybeSingle();
+
+            const { data: user } = await supabase.from('bot_users')
+                .select('data')
+                .or(`id.eq.${idRaw},id.eq.${idPrefix}`)
+                .maybeSingle();
+
             const history = user?.data?.chat_history || [];
 
             const enriched = (data || []).map(o => {
@@ -1477,7 +1484,7 @@ function createServer(port = 8080) {
     app.post('/api/mini-app/create-order', async (req, res) => {
         try {
             const { userId, items, total, address, note, platform, discount, promoCode, promoDiscount, walletDiscount } = req.body;
-            const { createOrder, getUser, updateUserWallet } = require('./services/database');
+            const { createOrder, getUser, updateUserWallet, adjustOrderStock } = require('./services/database');
             const { notifyAdmins } = require('./services/notifications');
             
             const user = await getUser(userId);
@@ -1522,6 +1529,11 @@ function createServer(port = 8080) {
                 } else {
                     throw error;
                 }
+            }
+
+            // DEDUCT STOCK
+            if (order && order.id) {
+                adjustOrderStock(order.id, 'decrement').catch(e => console.error("Stock deduct error:", e));
             }
 
             // DEDUCT WALLET BALANCE ONLY FOR WALLET DISCOUNT
@@ -1852,6 +1864,48 @@ function createServer(port = 8080) {
         }
     });
 
+    app.post('/api/user/send-chat-message', async (req, res) => {
+        try {
+            const { userId, text } = req.body;
+            if (!userId || !text) return res.status(400).json({ error: 'Missing fields' });
+            
+            const { getUser, updateUser } = require('./services/database');
+            const { notifyAdmins } = require('./services/notifications');
+            const bot = getBotInstance();
+            
+            const user = await getUser(userId);
+            if (!user) return res.status(404).json({ error: 'User not found' });
+            
+            const history = user.data?.chat_history || [];
+            const msg = { role: 'client', text: text, ts: Date.now() };
+            history.push(msg);
+            
+            const updatedData = { ...user.data, chat_history: history };
+            await updateUser(userId, { data: updatedData });
+            
+            if (bot) {
+                const name = user.first_name || 'Client';
+                const idStr = String(userId).replace('telegram_', '');
+                const alertMsg = `💬 <b>MESSAGE SUPPORT (MINI APP)</b>\n\n👤 Client : ${name}\n📝 Message : "<i>${text}</i>"`;
+                
+                const { Markup } = require('telegraf');
+                // The admin can reply using the existing admin_chat_user_ ID button
+                const opts = {
+                    parse_mode: 'HTML',
+                    reply_markup: {
+                        inline_keyboard: [[Markup.button.callback('💬 Lui répondre', `admin_chat_user_${idStr}`)]]
+                    }
+                };
+                
+                notifyAdmins(bot, alertMsg, opts).catch(() => {});
+            }
+            
+            res.json({ success: true });
+        } catch (e) {
+            res.status(500).json({ error: e.message });
+        }
+    });
+
     app.post('/api/mini-app/send-chat-message', async (req, res) => {
         try {
             const { userId, orderId, text } = req.body;
@@ -1905,7 +1959,8 @@ function createServer(port = 8080) {
             appendChatHistory(userId, {
                 role: 'client',
                 target: 'livreur',
-                text: text
+                text: text,
+                orderId: orderId
             }).catch(() => {});
 
             if (bot) {

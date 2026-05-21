@@ -1,411 +1,11 @@
-<!DOCTYPE html>
-<html lang="fr">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Farmstegridy</title>
-    <script>
-        window.addEventListener('error', function(e) {
-            var err = e.error ? e.error.stack : e.message;
-            fetch('/api/log-error', { method: 'POST', headers: {'Content-Type':'application/json', 'ngrok-skip-browser-warning': '69420'}, body: JSON.stringify({error: err, type: 'error', ua: navigator.userAgent}) });
-        });
-        window.addEventListener('unhandledrejection', function(e) {
-            fetch('/api/log-error', { method: 'POST', headers: {'Content-Type':'application/json', 'ngrok-skip-browser-warning': '69420'}, body: JSON.stringify({error: e.reason ? (e.reason.stack || e.reason) : 'Unknown', type: 'promise', ua: navigator.userAgent}) });
-        });
-    </script>
-    <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <script src="https://unpkg.com/@phosphor-icons/web"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
-    <style>
-        :root {
-            --bg: #000000;
-            --accent: #ff0050;
-            --accent-glow: rgba(255, 0, 80, 0.5);
-            --secondary: #0096ff;
-            --secondary-glow: rgba(0, 150, 255, 0.4);
-            --card: rgba(255, 255, 255, 0.04);
-            --border: rgba(255, 255, 255, 0.08);
-            --glass: blur(35px) saturate(220%);
-            --safe-area-bottom: env(safe-area-inset-bottom);
-        }
-
-        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Outfit', sans-serif; -webkit-tap-highlight-color: transparent; }
-
-        body {
-            background: var(--bg); color: #fff; padding: 0; margin: 0; overflow-x: hidden;
-            background-image: 
-                radial-gradient(circle at 100% 0%, rgba(255, 0, 80, 0.12) 0%, transparent 40%),
-                radial-gradient(circle at 0% 100%, rgba(0, 150, 255, 0.08) 0%, transparent 40%);
-            min-height: 100vh;
-        }
-
-        /* NAVIGATION BAR */
-        .bottom-nav {
-            position: fixed; bottom: 0; left: 0; right: 0;
-            height: calc(85px + var(--safe-area-bottom));
-            background: rgba(8, 8, 8, 0.9); backdrop-filter: var(--glass);
-            border-top: 1px solid var(--border); display: flex; justify-content: space-around;
-            align-items: flex-start; z-index: 9000; padding-top: 15px;
-        }
-        .nav-item { display: flex; flex-direction: column; align-items: center; gap: 6px; opacity: 0.3; transition: 0.4s; width: 25%; }
-        .nav-item.active { opacity: 1; color: #fff; transform: translateY(-4px); }
-        .nav-icon { font-size: 26px; transition: 0.3s; position: relative; display: flex; align-items: center; justify-content: center; }
-        .nav-item.active .nav-icon::after { content: ''; position: absolute; width: 40px; height: 40px; background: var(--accent-glow); filter: blur(15px); z-index: -1; border-radius: 50%; }
-        .nav-label { font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 1.5px; }
-
-        /* HEADER */
-        .app-header {
-            padding: 25px 20px 10px 20px; display: flex; justify-content: space-between; align-items: center;
-            position: sticky; top: 0; background: rgba(0,0,0,0.6); backdrop-filter: blur(15px); z-index: 1000;
-        }
-        .logo { font-size: 28px; font-weight: 900; letter-spacing: -1px; }
-        .logo span { color: var(--accent); text-shadow: 0 0 20px var(--accent-glow); }
-        .header-actions { display: flex; align-items: center; gap: 15px; }
-        .cart-icon-btn { position: relative; font-size: 24px; cursor: pointer; }
-        .cart-badge-dot { position: absolute; top: -2px; right: -2px; width: 10px; height: 10px; background: var(--accent); border-radius: 50%; border: 2px solid #000; display: none; }
-
-        /* CAROUSEL - ULTRA COMPACT */
-        .featured-section { margin-bottom: 20px; padding: 0 20px; }
-        .carousel { display: flex; gap: 10px; overflow-x: auto; scrollbar-width: none; padding: 5px 0; }
-        .carousel::-webkit-scrollbar { display: none; }
-        .featured-item {
-            min-width: 80px; display: flex; flex-direction: column; align-items: center; gap: 6px; flex-shrink: 0;
-        }
-        .featured-thumb {
-            width: 64px; height: 64px; border-radius: 16px; overflow: hidden; border: 2px solid var(--border); transition: 0.3s;
-        }
-        .featured-item.active .featured-thumb { border-color: var(--accent); box-shadow: 0 0 15px var(--accent-glow); }
-        .featured-thumb img { width: 100%; height: 100%; object-fit: cover; }
-        .featured-label { font-size: 9px; font-weight: 800; text-transform: uppercase; opacity: 0.5; max-width: 80px; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-
-        /* SEARCH & CATS */
-        .search-area { padding: 0 20px 12px 20px; }
-        .search-bar { background: var(--card); border: 1px solid var(--border); border-radius: 16px; display: flex; align-items: center; padding: 10px 15px; gap: 10px; }
-        .search-bar input { background: none; border: none; color: #fff; font-size: 14px; width: 100%; outline: none; }
-        
-        .categories-scroll { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; padding: 0 20px 15px 20px; }
-        .categories-scroll::-webkit-scrollbar { display: none; }
-        .cat-chip { padding: 8px 16px; background: var(--card); border: 1px solid var(--border); border-radius: 100px; font-size: 11px; font-weight: 700; white-space: nowrap; transition: 0.3s; }
-        .cat-chip.active { background: #fff; color: #000; border-color: #fff; }
-        .del-tag { background: var(--card); border: 1px solid var(--border); border-radius: 100px; padding: 6px 12px; font-size: 11px; font-weight: 700; white-space: nowrap; cursor: pointer; transition: 0.3s; flex-shrink: 0; }
-        .del-tag.active { background: var(--accent); color: #fff; border-color: var(--accent); }
-
-        /* GRID */
-        .main-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; padding: 0 20px 180px 20px; }
-        .card { background: var(--card); border-radius: 18px; border: 1px solid var(--border); overflow: hidden; position: relative; }
-        .card-img-wrapper { width: 100%; padding-top: 100%; position: relative; overflow: hidden; }
-        .card-img { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; }
-        .card-content { padding: 10px; }
-        .card-name { font-size: 12px; font-weight: 700; opacity: 0.9; height: 30px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-        .card-price { font-size: 14px; font-weight: 900; color: var(--accent); margin-top: 4px; }
-        .add-btn { position: absolute; bottom: 10px; right: 10px; width: 28px; height: 28px; background: #fff; color: #000; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: 900; }
-
-        /* ORDERS */
-        .order-card { background: var(--card); border: 1px solid var(--border); border-radius: 24px; padding: 20px; margin-bottom: 15px; position: relative; border-left: 4px solid transparent; }
-        .order-card.taken { border-left-color: var(--secondary); }
-        .order-card.delivered { border-left-color: #00ff88; }
-        .order-status-pill { position: absolute; top: 20px; right: 20px; padding: 4px 10px; border-radius: 8px; font-size: 9px; font-weight: 900; }
-        .status-TAKEN { background: var(--secondary-glow); color: var(--secondary); }
-        .status-DELIVERED { background: rgba(0,255,136,0.1); color: #00ff88; }
-        .status-PENDING { background: rgba(255,170,0,0.1); color: #ffaa00; }
-
-        .reorder-btn { margin-top: 15px; width: 100%; height: 44px; background: rgba(255,255,255,0.05); border: 1px solid var(--border); border-radius: 14px; color: #fff; font-size: 12px; font-weight: 800; cursor: pointer; transition: 0.3s; }
-        .reorder-btn:active { background: #fff; color: #000; transform: scale(0.97); }
-
-        /* Module de chat intégré */
-        .chat-module {
-            margin-top: 15px;
-            padding-top: 15px;
-            border-top: 1px dashed var(--border);
-            display: none;
-        }
-        .chat-history-box {
-            background: rgba(0,0,0,0.4);
-            border-radius: 15px;
-            padding: 12px;
-            font-size: 12px;
-            max-height: 120px;
-            overflow-y: auto;
-            margin-bottom: 10px;
-            border: 1px solid rgba(255,255,255,0.03);
-            line-height: 1.4;
-        }
-        .chat-input-group {
-            display: flex;
-            gap: 8px;
-        }
-        .chat-input {
-            flex: 1;
-            background: rgba(255,255,255,0.05);
-            border: 1px solid var(--border);
-            border-radius: 12px;
-            padding: 0 12px;
-            color: #fff;
-            font-size: 12px;
-            outline: none;
-            height: 40px;
-        }
-        .chat-input:focus {
-            border-color: var(--accent);
-        }
-        .btn-send {
-            background: var(--accent);
-            border: none;
-            border-radius: 12px;
-            padding: 0 15px;
-            color: #fff;
-            font-weight: 900;
-            font-size: 11px;
-            cursor: pointer;
-            height: 40px;
-        }
-
-        /* FLOAT CART */
-        .cart-float {
-            position: fixed; bottom: calc(105px + var(--safe-area-bottom)); left: 20px; right: 20px;
-            background: var(--accent); height: 60px; border-radius: 20px;
-            display: flex; align-items: center; justify-content: space-between;
-            padding: 0 22px; font-weight: 900; box-shadow: 0 15px 30px var(--accent-glow);
-            transform: translateY(200px); transition: 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            z-index: 8000; cursor: pointer;
-        }
-        .cart-float.visible { transform: translateY(0); }
-
-        /* MODALS */
-        .modal { position: fixed; inset: 0; background: var(--bg); z-index: 10000; display: flex; flex-direction: column; transform: translateX(100%); transition: 0.4s cubic-bezier(0.4, 0, 0.2, 1); }
-        .modal.open { transform: translateX(0); }
-        .modal-header { padding: 30px 20px 15px 20px; display: flex; justify-content: space-between; align-items: center; }
-
-        .sheet { position: fixed; bottom: 0; left: 0; right: 0; background: #0a0a0a; border-radius: 40px 40px 0 0; border-top: 1px solid var(--border); z-index: 10001; padding: 30px 20px; transform: translateY(100%); transition: 0.4s cubic-bezier(0.4, 0, 0.2, 1); }
-        .sheet.open { transform: translateY(0); }
-
-        button, .btn-primary, .order-card, .product-card, .category-chip { transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), filter 0.2s; cursor: pointer; }
-        button:active, .btn-primary:active, .product-card:active, .order-card:active { transform: scale(0.96) !important; filter: brightness(0.9); }
-
-        .btn-primary { width: 100%; height: 50px; background: #fff; color: #000; border: none; border-radius: 14px; font-size: 14px; font-weight: 900; }
-        
-        #loading-screen { position: fixed; inset: 0; background: #000; z-index: 20000; display: flex; flex-direction: column; align-items: center; justify-content: center; transition: 0.5s; }
-        .loader-bar { width: 120px; height: 2px; background: rgba(255,255,255,0.05); border-radius: 10px; margin-top: 20px; overflow: hidden; }
-        .loader-fill { height: 100%; background: var(--accent); width: 0%; transition: 0.5s; }
-
-        .empty-state { text-align: center; padding: 60px 20px; opacity: 0.4; font-weight: 700; font-size: 14px; }
-        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.05); } 100% { transform: scale(1); } }
-    </style>
-</head>
-<body>
-    <div id="loading-screen">
-        <div style="margin-bottom:15px; text-align:center;">
-            <img src="/public/img/logo.png" style="width:100px; height:100px; object-fit:contain; border-radius:50%; margin-bottom:10px;" onerror="this.style.display='none'; document.getElementById('loading-text-logo').style.display='block';">
-            <div id="loading-text-logo" style="display:none; font-size:32px; font-weight:900; letter-spacing:-1px; margin-bottom:15px;">
-                <span style="color:#fff;">Farm</span><span style="color:var(--accent);">stegridy</span>
-            </div>
-        </div>
-        <div class="loader-bar"><div class="loader-fill" id="loader-fill"></div></div>
-    </div>
-
-    <div id="page-shop" class="page active">
-        <div class="app-header">
-            <div>
-                <div class="logo">
-                    <img src="/public/img/logo.png" style="height:36px; object-fit:contain; border-radius:50%;" onerror="this.style.display='none'; document.getElementById('header-text-logo').style.display='block';">
-                    <div id="header-text-logo" style="display:none;"><span style="color:#fff;">Farm</span><span style="color:var(--accent);">stegridy</span></div>
-                </div>
-                <div id="shop-stats" style="font-size:10px; font-weight:800; opacity:0.5; margin-top:2px; display:flex; gap:8px;">
-                    <span style="color:#ffaa00;"><i class="ph-fill ph-star"></i> <span id="shop-rating-avg">4.9</span></span>
-                    <span><i class="ph-fill ph-users"></i> <span id="shop-review-count">128</span> AVIS</span>
-                </div>
-            </div>
-            <div class="header-actions">
-                <div id="news-badge" class="nav-icon" style="font-size:22px; position:relative;" onclick="openNotifications()">
-                    <i class="ph-fill ph-bell"></i><div class="cart-badge-dot" id="news-dot" style="display:none; width:16px; height:16px; top:-5px; right:-5px; font-size:9px; font-weight:900; align-items:center; justify-content:center; border:1.5px solid #000;">0</div>
-                </div>
-                <div class="cart-icon-btn" onclick="openCheckout()"><i class="ph-fill ph-shopping-cart"></i><div class="cart-badge-dot" id="cart-dot"></div></div>
-            </div>
-        </div>
-
-        <div id="news-section" style="padding: 0 20px 20px 20px; display:none;">
-            <div style="font-size:11px; font-weight:900; opacity:0.3; margin-bottom:12px; letter-spacing:1px;">À LA UNE ⚡</div>
-            <div class="carousel" id="news-carousel"></div>
-        </div>
-
-        <div class="featured-section">
-            <div style="font-size:11px; font-weight:900; opacity:0.3; margin-bottom:12px; letter-spacing:1px;">PRODUITS EN VEDETTE</div>
-            <div class="carousel" id="featured-carousel"></div>
-        </div>
-
-        <div class="search-area"><div class="search-bar"><i class="ph-bold ph-magnifying-glass"></i><input type="text" placeholder="Rechercher..." id="search-input" oninput="handleSearch()"></div></div>
-
-        <div class="categories-scroll" id="categories"></div>
-
-        <div class="main-grid" id="products"></div>
-    </div>
-
-    <div id="page-orders" class="page" style="display:none; padding:30px 20px 150px 20px;">
-        <h1 style="font-size:28px; font-weight:900; margin-bottom:20px;">HISTORIQUE 📦</h1>
-        <div id="orders-list"></div>
-    </div>
-
-    <div id="page-chat" class="page" style="display:none; padding:30px 20px 150px 20px;">
-        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:25px;">
-            <h1 style="font-size:28px; font-weight:900;">SUPPORT <i class="ph-fill ph-headset" style="color:var(--secondary);"></i></h1>
-            <div id="chat-unread-badge" style="display:none; background:var(--accent); color:#fff; font-size:11px; font-weight:900; padding:4px 10px; border-radius:20px; animation:pulse 2s infinite;">NOUVEAU</div>
-        </div>
-        <div style="background:linear-gradient(135deg, rgba(0,150,255,0.08), rgba(0,150,255,0.03)); border:1px solid rgba(0,150,255,0.25); border-radius:28px; padding:20px; margin-bottom:20px;">
-            <div style="display:flex; align-items:center; gap:12px; margin-bottom:15px;">
-                <div style="width:42px; height:42px; background:rgba(0,150,255,0.15); border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:20px; color:var(--secondary);"><i class="ph-fill ph-shield-check"></i></div>
-                <div>
-                    <div style="font-weight:900; font-size:15px;">Support Officiel</div>
-                    <div style="font-size:11px; opacity:0.5;">Réponse sous 24h — Chiffré &amp; Sécurisé</div>
-                </div>
-                <div style="margin-left:auto; width:10px; height:10px; border-radius:50%; background:#00ff88; box-shadow:0 0 8px #00ff88;"></div>
-            </div>
-            <div id="admin-chat-messages" style="max-height:300px; overflow-y:auto; display:flex; flex-direction:column; gap:10px; margin-bottom:15px; padding:5px;"></div>
-            <div style="display:flex; gap:8px;">
-                <input type="text" id="admin-chat-input" placeholder="Votre message au support..." maxlength="500"
-                    style="flex:1; background:rgba(0,0,0,0.4); border:1px solid rgba(0,150,255,0.3); border-radius:14px; color:#fff; padding:12px 15px; font-family:'Outfit',sans-serif; font-size:13px; outline:none;"
-                    onkeydown="if(event.key==='Enter') sendAdminChatMessage()">
-                <button onclick="sendAdminChatMessage()" style="background:var(--secondary); border:none; border-radius:14px; color:#fff; width:48px; height:48px; font-size:20px; cursor:pointer; display:flex; align-items:center; justify-content:center; flex-shrink:0;"><i class="ph-fill ph-paper-plane-tilt"></i></button>
-            </div>
-        </div>
-        <div style="font-size:11px; font-weight:900; opacity:0.4; letter-spacing:1.5px; margin-bottom:12px;">COMMANDES ACTIVES — CHAT LIVREUR</div>
-        <div id="active-orders-chat-list"><div class="empty-state">Aucune commande active avec chat disponible.</div></div>
-    </div>
-
-    <div id="page-profile" class="page" style="display:none; padding:30px 20px 150px 20px;">
-        <h1 style="font-size:28px; font-weight:900; margin-bottom:20px;">MON COMPTE <i class="ph-fill ph-user-circle"></i></h1>
-        <div style="background:var(--card); padding:25px; border-radius:30px; text-align:center; margin-bottom:20px; border:1px solid var(--border);">
-            <div style="font-size:36px; font-weight:900; color:var(--accent);" id="user-balance">0.00€</div>
-            <div style="font-size:11px; font-weight:800; opacity:0.4; letter-spacing:1.5px; margin-top:5px;">SOLDE DISPONIBLE</div>
-        </div>
-        <div style="background:var(--card); border-radius:24px; overflow:hidden; border:1px solid var(--border); margin-bottom:20px;">
-            <div onclick="copyReferral()" style="padding:18px 20px; display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border);">
-                <div><div style="font-weight:800; font-size:15px;"><i class="ph-fill ph-handshake"></i> PARRAINAGE</div><div style="font-size:11px; opacity:0.4;">Invitez & Encaissez</div></div>
-                <div style="color:var(--accent); font-weight:900; font-size:12px;">PARTAGER</div>
-            </div>
-            <div onclick="openAddressModal()" style="padding:18px 20px; display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border);">
-                <div><div style="font-weight:800; font-size:15px;"><i class="ph-fill ph-map-pin"></i> MES ADRESSES</div><div style="font-size:11px; opacity:0.4;">Gérer vos lieux de livraison</div></div>
-                <div style="font-size:22px; color:var(--accent);"><i class="ph-fill ph-house"></i></div>
-            </div>
-            <div id="hotline-btn" style="padding:18px 20px; display:flex; justify-content:space-between; align-items:center;">
-                <div><div style="font-weight:800; font-size:15px;"><i class="ph-fill ph-lifebuoy"></i> SUPPORT CLIENT</div><div style="font-size:11px; opacity:0.4;">Assistance 24/7</div></div>
-                <div style="font-size:22px; color:var(--accent);"><i class="ph-fill ph-chat-circle-dots"></i></div>
-            </div>
-        </div>
-
-        <button onclick="confirmDeleteAccount()" style="width:100%; background:none; border:1px solid rgba(255,0,80,0.3); height:50px; border-radius:18px; color:var(--accent); font-size:12px; font-weight:800; letter-spacing:1px;"><i class="ph-fill ph-trash"></i> SUPPRIMER MON COMPTE</button>
-    </div>
-
-    <div class="cart-float" id="cart-bar" onclick="openCheckout()">
-        <div style="display:flex; align-items:center; gap:10px;"><span style="background:rgba(255,255,255,0.2); padding:5px 12px; border-radius:10px;" id="cart-count">0</span><span>FINALISER LA COMMANDE</span></div>
-        <div id="cart-total" style="font-size:16px;">0.00€</div>
-    </div>
-
-    <div class="bottom-nav">
-        <div class="nav-item active" onclick="switchPage('shop', this)"><div class="nav-icon"><i class="ph-fill ph-diamond"></i></div><div class="nav-label">Shop</div></div>
-        <div class="nav-item" onclick="switchPage('orders', this)"><div class="nav-icon"><i class="ph-fill ph-package"></i></div><div class="nav-label">Suivi</div></div>
-        <div class="nav-item" onclick="switchPage('chat', this)"><div class="nav-icon" style="color:var(--secondary);"><i class="ph-fill ph-chat-circle-dots"></i></div><div class="nav-label">Chat</div></div>
-        <div class="nav-item" onclick="switchPage('profile', this)"><div class="nav-icon"><i class="ph-fill ph-crown"></i></div><div class="nav-label">Profil</div></div>
-    </div>
-
-    <div class="sheet" id="selection-modal">
-        <h2 id="modal-product-name" style="font-size:22px; font-weight:900; margin-bottom:5px;">Produit</h2>
-        <p id="modal-product-desc" style="font-size:13px; opacity:0.4; margin-bottom:25px;">Choisissez la quantité :</p>
-        <div id="modal-options" style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:30px;"></div>
-        <button class="btn-primary" onclick="addSelectionToCart()">AJOUTER AU PANIER</button>
-        <p onclick="closeSelectionModal()" style="text-align:center; margin-top:20px; font-size:13px; font-weight:800; opacity:0.3;">FERMER</p>
-    </div>
-
-    <div class="modal" id="product-detail-modal" style="z-index: 10005;">
-        <div class="modal-header">
-            <div style="font-size:24px" onclick="closeProductModal()"><i class="ph-bold ph-x"></i></div>
-            <div style="font-weight:900; font-size:18px; color:var(--accent)">DÉTAILS DU PRODUIT</div>
-            <div></div>
-        </div>
-        <div style="flex:1; overflow-y:auto; padding-bottom:100px;">
-            <div id="p-media" style="width:100%; height:250px; background:#000; position:relative; overflow:hidden;">
-                <img id="p-img" src="" style="width:100%; height:100%; object-fit:contain;">
-            </div>
-            <div style="padding:25px;">
-                <div id="p-name" style="font-size:28px; font-weight:900; margin-bottom:10px;">Produit</div>
-                <div id="p-price" style="font-size:24px; font-weight:900; color:var(--accent); margin-bottom:15px;">0.00€</div>
-                <div id="p-promo-encart" style="display:none; background:linear-gradient(135deg, rgba(255,170,0,0.15), rgba(255,0,80,0.15)); border:1px solid #ffaa00; color:#ffaa00; font-size:12px; font-weight:900; padding:8px 12px; border-radius:10px; margin-bottom:15px;"></div>
-                <div id="p-desc" style="font-size:14px; opacity:0.6; line-height:1.6; margin-bottom:30px;">Description...</div>
-                
-                <div id="p-options-title" style="font-size:11px; font-weight:900; opacity:0.3; letter-spacing:1px; margin-bottom:15px;">FORMATS DISPONIBLES 📦</div>
-                <div id="p-options" style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:40px;"></div>
-
-                <div style="font-size:11px; font-weight:900; opacity:0.3; letter-spacing:1px; margin-bottom:15px;">AVIS CLIENTS ⭐</div>
-                <div id="p-reviews"></div>
-                <button id="btn-add-review" style="width:100%; background:rgba(255,255,255,0.05); border:1px solid var(--border); height:48px; border-radius:15px; color:#fff; font-weight:800; font-size:12px; margin-top:15px;">LAISSER UN AVIS</button>
-            </div>
-        </div>
-        <div style="position:absolute; bottom:0; left:0; right:0; padding:20px; background:rgba(0,0,0,0.8); backdrop-filter:blur(10px);">
-            <button class="btn-primary" id="p-add-cart-btn">AJOUTER AU PANIER</button>
-        </div>
-    </div>
-
-    <div class="modal" id="notifications-modal">
-        <div class="modal-header">
-            <div style="font-size:24px" onclick="closeNotifications()"><i class="ph-bold ph-x"></i></div>
-            <div style="font-weight:900; font-size:18px; color:var(--accent)">NOTIFICATIONS</div>
-            <div></div>
-        </div>
-        <div style="flex:1; overflow-y:auto; padding:20px;" id="notifications-list"></div>
-    </div>
-
-    <div class="modal" id="checkout-overlay">
-        <div class="modal-header">
-            <h2 style="font-weight:900; font-size:24px;">RECAPITULATIF</h2>
-            <div style="font-size:28px" onclick="closeCheckout()"><i class="ph-bold ph-x"></i></div>
-        </div>
-        <div style="padding:20px; flex:1; overflow-y:auto;" id="checkout-content"></div>
-        <div id="checkout-footer" style="padding:20px; border-top:1px solid var(--border); display:none">
-             <div id="checkout-total-row" style="display:flex; justify-content:space-between; margin-bottom:15px; font-weight:900;"><span>TOTAL :</span><span id="final-total" style="color:var(--accent); font-size:22px;">0.00€</span></div>
-             <button class="btn-primary" id="btn-next" style="background:var(--accent); color:#fff;" onclick="nextStep()">VALIDER LA COMMANDE</button>
-             <p id="checkout-back" onclick="prevStep()" style="text-align:center; margin-top:15px; font-size:13px; font-weight:800; opacity:0.3; display:none;">RETOUR</p>
-        </div>
-    </div>
-
-    <div class="modal" id="custom-modal-overlay">
-        <div class="modal-header">
-            <h2 style="font-weight:900; font-size:24px;" id="cmodal-title">TITRE</h2>
-            <div style="font-size:28px" onclick="closeCustomModal()"><i class="ph-bold ph-x"></i></div>
-        </div>
-        <div style="padding:20px;" id="cmodal-content"></div>
-    </div>
-
-    <script>
-        const originalFetch = window.fetch;
-        window.fetch = function() {
-            let resource = arguments[0];
-            let config = arguments[1] || {};
-            if (typeof resource === 'string' && resource.startsWith('/')) {
-                if (!config.headers) config.headers = {};
-                if (!(config.headers instanceof Headers)) {
-                    config.headers['ngrok-skip-browser-warning'] = '69420';
-                } else {
-                    config.headers.append('ngrok-skip-browser-warning', '69420');
-                }
-            }
-            return originalFetch.call(window, resource, config);
-        };
-
         const tg = window.Telegram.WebApp;
         tg.expand(); tg.ready();
-        
-        function safeGetStorage(key, def) {
-            try { return JSON.parse(localStorage.getItem(key) || def); }
-            catch(e) { return JSON.parse(def); }
-        }
-        function safeSetStorage(key, val) {
-            try { localStorage.setItem(key, JSON.stringify(val)); } catch(e) {}
-        }
 
         let allProducts = [];
-        let allCategories = [];
-        let cart = safeGetStorage('stb_cart', '[]');
+        let categories = [];
+        let cart = JSON.parse(localStorage.getItem('stb_cart') || '[]');
         let userInfo = null;
-        let favorites = safeGetStorage('stb_favorites', '[]');
+        let favorites = JSON.parse(localStorage.getItem('stb_favorites') || '[]');
         let selectedDeliveryTags = [];
         let activeProduct = null;
         let activeOption = null;
@@ -416,65 +16,16 @@
         let allNews = [];
         let userOrdersCache = [];
 
-        // Support Client <> Admin
-        let adminChatMessages = safeGetStorage('stb_admin_chat', '[]');
-
-        // Helper : extrait tous les médias (vidéos et images)
-        function getAllMedia(product) {
+        // Helper : extrait la première URL d'image depuis le format JSON array ou string
+        function getImgUrl(product) {
             const raw = product?.image_url;
-            if (!raw) return [];
+            if (!raw) return null;
             try {
                 const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
-                if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+                if (Array.isArray(parsed) && parsed.length > 0) return parsed[0].url || null;
             } catch(e) {}
-            if (typeof raw === 'string' && raw.startsWith('http')) return [{url: raw, type: 'image'}];
-            return [];
-        }
-
-        function getImgUrl(product) {
-            const media = getAllMedia(product);
-            return media.length > 0 ? media[0].url : null;
-        }
-
-        function renderMediaGallery(product, containerId) {
-            const container = document.getElementById(containerId);
-            if (!container) return;
-            const mediaList = getAllMedia(product);
-            
-            if (mediaList.length === 0) {
-                container.innerHTML = `<img src="https://placehold.co/400x400/111/fff?text=${encodeURIComponent(product.name)}" style="width:100%; height:100%; object-fit:contain;">`;
-                return;
-            }
-
-            if (mediaList.length === 1) {
-                const m = mediaList[0];
-                if (m.type === 'video' || m.url.endsWith('.mp4') || m.url.endsWith('.webm') || m.url.endsWith('.mov')) {
-                    container.innerHTML = `<video controls playsinline style="width:100%; height:100%; object-fit:contain; background:#000;"><source src="${m.url}"></video>`;
-                } else {
-                    container.innerHTML = `<img src="${m.url}" style="width:100%; height:100%; object-fit:contain;">`;
-                }
-                return;
-            }
-
-            // Gallery
-            let html = `<div style="position:relative; width:100%; height:100%; display:flex; overflow-x:auto; scroll-snap-type: x mandatory; background:#000;">`;
-            mediaList.forEach(m => {
-                const isVideo = m.type === 'video' || m.url.endsWith('.mp4') || m.url.endsWith('.webm') || m.url.endsWith('.mov');
-                if (isVideo) {
-                    html += `<div style="flex:0 0 100%; scroll-snap-align:start; position:relative; width:100%; height:100%;">
-                                <video controls playsinline style="width:100%; height:100%; object-fit:contain;"><source src="${m.url}"></video>
-                             </div>`;
-                } else {
-                    html += `<div style="flex:0 0 100%; scroll-snap-align:start; position:relative; width:100%; height:100%;">
-                                <img src="${m.url}" style="width:100%; height:100%; object-fit:contain;">
-                             </div>`;
-                }
-            });
-            html += `</div>
-                     <div style="position:absolute; bottom:10px; width:100%; text-align:center; pointer-events:none;">
-                         <span style="background:rgba(0,0,0,0.5); color:#fff; padding:2px 8px; border-radius:10px; font-size:10px; font-weight:800; backdrop-filter:blur(4px);">Glisser pour voir plus</span>
-                     </div>`;
-            container.innerHTML = html;
+            if (typeof raw === 'string' && raw.startsWith('http')) return raw;
+            return null;
         }
 
         function compareCategories(catA, catB) {
@@ -485,7 +36,6 @@
 
         async function init() {
             setLoader(30);
-            fetch('/api/log-error', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({error: 'Init Started', type: 'debug'}) }).catch(e=>{});
             try {
                 const uid = tg.initDataUnsafe?.user?.id;
                 const [pRes, uRes, newsRes] = await Promise.all([
@@ -495,17 +45,7 @@
                 ]);
                 setLoader(80);
                 allProducts = await pRes.json();
-                allCategories = ['TOUT', 'FAVORIS ❤️', ...new Set(allProducts.map(p => p.category).filter(c => c))];
-                if (uRes && uRes.ok) {
-                    userInfo = await uRes.json();
-                    if (userInfo && userInfo.chat_history) {
-                        adminChatMessages = userInfo.chat_history;
-                        safeSetStorage('stb_admin_chat', adminChatMessages);
-                        if (document.getElementById('page-chat').style.display === 'block') {
-                            loadSupportChat();
-                        }
-                    }
-                }
+                if (uRes && uRes.ok) userInfo = await uRes.json();
                 
                 allNews = await newsRes.json();
                 renderNews(allNews);
@@ -586,7 +126,7 @@
             e.stopPropagation();
             if (favorites.includes(pid)) favorites = favorites.filter(id => id !== pid);
             else favorites.push(pid);
-            safeSetStorage('stb_favorites', favorites);
+            localStorage.setItem('stb_favorites', JSON.stringify(favorites));
             
             favoriteToggle();
         }
@@ -625,9 +165,10 @@
                 if (carousel) carousel.appendChild(d);
             });
 
+            const cats = ['TOUT', 'FAVORIS ❤️', ...new Set(demoProducts.map(p => p.category).filter(c => c))];
             const catContainer = document.getElementById('categories');
             if (catContainer) catContainer.innerHTML = '';
-            allCategories.forEach(c => {
+            cats.forEach(c => {
                 const d = document.createElement('div');
                 d.className = `cat-chip ${c === 'TOUT' ? 'active' : ''}`;
                 d.innerText = c.toUpperCase();
@@ -917,7 +458,7 @@
                                 cart.push({ cid, id: it.id, name: prod.name, pr: it.price || prod.price, m: it.qty || 1, unit: prod.unit || 'g', n: 1 });
                             }
                         });
-                        safeSetStorage('stb_cart', cart);
+                        localStorage.setItem('stb_cart', JSON.stringify(cart));
                         updateCartUI();
                         switchPage('shop', document.querySelectorAll('.nav-item')[0]);
                         tg.showAlert("Articles ajoutés au panier !");
@@ -931,7 +472,7 @@
             activeProduct = allProducts.find(x => x.id === pid);
             if (!activeProduct) return;
 
-            renderMediaGallery(activeProduct, 'p-media');
+            document.getElementById('p-img').src = getImgUrl(activeProduct) || `https://placehold.co/400x400/111/fff?text=${encodeURIComponent(activeProduct.name)}`;
             document.getElementById('p-name').innerText = activeProduct.name;
             document.getElementById('p-price').innerText = activeProduct.price + '€';
             const promoEncart = document.getElementById('p-promo-encart');
@@ -1097,7 +638,7 @@
             const item = cart.find(i => i.id === p.id);
             if (item) item.n++;
             else cart.push({ id: p.id, name: p.name, pr: p.price, n: 1, cid: Date.now().toString() });
-            safeSetStorage('stb_cart', cart);
+            localStorage.setItem('stb_cart', JSON.stringify(cart));
             updateCartUI();
             tg.HapticFeedback.notificationOccurred('success');
             renderCheckout();
@@ -1109,7 +650,7 @@
             const ex = cart.find(i => i.cid === cid);
             if (ex) ex.n++;
             else cart.push({ cid, id: activeProduct.id, name: activeProduct.name, pr: activeOption.pr, m: activeOption.m, label: activeOption.label, unit: activeProduct.unit || 'g', n: 1 });
-            safeSetStorage('stb_cart', cart);
+            localStorage.setItem('stb_cart', JSON.stringify(cart));
             updateCartUI(); closeSelectionModal(); closeProductModal(); tg.HapticFeedback.notificationOccurred('success');
             
             syncCart();
@@ -1802,6 +1343,7 @@
         // ═══════════════════════════════════════════════════════
         // CHAT SUPPORT ADMIN-CLIENT (permanent)
         // ═══════════════════════════════════════════════════════
+        let adminChatMessages = JSON.parse(localStorage.getItem('stb_admin_chat') || '[]');
 
         async function loadSupportChat() {
             renderAdminChatMessages();
@@ -1874,7 +1416,7 @@
             const cont = document.getElementById('admin-chat-messages');
             if (!cont) return;
             if (!adminChatMessages.length) {
-                cont.innerHTML = `<div style="text-align:center; opacity:0.3; font-size:12px; padding:20px;">👋 Bonjour ! L'historique de vos commandes, notifications, et chats s'affichera ici.</div>`;
+                cont.innerHTML = '<div style="text-align:center; opacity:0.3; font-size:12px; padding:20px;">👋 Bonjour ! L\\'historique de vos commandes, notifications, et chats s\\'affichera ici.</div>';
                 return;
             }
             cont.innerHTML = '';
@@ -1931,7 +1473,7 @@
             const uid = tg.initDataUnsafe?.user?.id;
             const msg = { role: 'client', text, ts: Date.now() };
             adminChatMessages.push(msg);
-            safeSetStorage('stb_admin_chat', adminChatMessages);
+            localStorage.setItem('stb_admin_chat', JSON.stringify(adminChatMessages));
             input.value = '';
             renderAdminChatMessages();
             try { tg.HapticFeedback.notificationOccurred('success'); } catch(e){}
@@ -1954,7 +1496,7 @@
                         const data = await resChat.json();
                         if (data.messages && data.messages.length > adminChatMessages.length) {
                             adminChatMessages = data.messages;
-                            safeSetStorage('stb_admin_chat', adminChatMessages);
+                            localStorage.setItem('stb_admin_chat', JSON.stringify(adminChatMessages));
                             
                             if (document.getElementById('page-chat')?.style.display === 'block') {
                                 renderAdminChatMessages();
@@ -1972,9 +1514,9 @@
                 if (resStock.ok) {
                     const newProds = await resStock.json();
                     newProds.forEach(np => {
-                        const idx = allProducts.findIndex(p => p.id === np.id);
-                        if (idx > -1 && allProducts[idx].stock !== np.stock) {
-                            allProducts[idx].stock = np.stock;
+                        const idx = products.findIndex(p => p.id === np.id);
+                        if (idx > -1 && products[idx].stock !== np.stock) {
+                            products[idx].stock = np.stock;
                             const qtyBadge = document.getElementById(`stock-badge-${np.id}`);
                             if (qtyBadge) {
                                 qtyBadge.innerHTML = `<span class="stock-indicator" style="background:${np.stock>0?'#2ecc71':'#e74c3c'}"></span>${np.stock>0 ? np.stock+' en stock' : 'Épuisé'}`;
@@ -2042,6 +1584,3 @@
             pollUpdatesSilent();
         }, 15000);
 
-    </script>
-</body>
-</html>
