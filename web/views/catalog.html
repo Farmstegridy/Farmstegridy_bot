@@ -339,7 +339,7 @@
 
         <div style="font-size:11px; font-weight:900; opacity:0.4; letter-spacing:1.5px; margin-bottom:12px;">OPPORTUNITÉS</div>
         <div style="background:var(--card); border-radius:24px; overflow:hidden; border:1px solid var(--border); margin-bottom:25px;">
-            <div onclick="window.location.href='/livreur'" style="padding:18px 20px; display:flex; justify-content:space-between; align-items:center; cursor:pointer;">
+            <div onclick="requestCourierRole()" style="padding:18px 20px; display:flex; justify-content:space-between; align-items:center; cursor:pointer;">
                 <div style="display:flex; align-items:center; gap:12px;">
                     <div style="width:36px; height:36px; background:var(--secondary); border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:18px; color:#000;">
                         <i class="ph-fill ph-moped"></i>
@@ -585,6 +585,14 @@
                 if (uRes && uRes.ok) {
                     userInfo = await uRes.json();
                     
+                    if (userInfo && (userInfo.username || userInfo.first_name)) {
+                        const nameToDisplay = userInfo.username || userInfo.first_name;
+                        const pname = document.getElementById('profile-name');
+                        if (pname) pname.innerText = nameToDisplay;
+                        const pinit = document.getElementById('profile-initial');
+                        if (pinit) pinit.innerText = nameToDisplay.charAt(0).toUpperCase();
+                    }
+
                     if (userInfo && userInfo.mini_app_logo) {
                         updateAppLogo(userInfo.mini_app_logo);
                     }
@@ -1194,8 +1202,8 @@
                     }
                     
                     const d = document.createElement('div');
-                    d.style = "background:var(--card); padding:15px; border-radius:15px; margin-bottom:10px; border:1px solid var(--border);";
-                    d.innerHTML = `<div style="display:flex; justify-content:space-between; margin-bottom:5px;"><div style="font-weight:800; font-size:12px;">${r.first_name || 'Client'}</div><div style="color:#ffaa00;">${'⭐'.repeat(r.rating)}</div></div><div style="font-size:12px; opacity:0.7;">${r.text}</div>${mediaHtml}`;
+                    d.style = 'background:var(--card); border:1px solid var(--border); border-radius:18px; padding:15px; margin-bottom:12px;';
+                    d.innerHTML = `<div style="display:flex; justify-content:space-between; margin-bottom:5px;"><div style="font-weight:800; font-size:12px;">Client Farmstegridy</div><div style="color:#ffaa00;">${'⭐'.repeat(r.rating)}</div></div><div style="font-size:12px; opacity:0.7;">${r.text}</div>${mediaHtml}`;
                     cont.appendChild(d);
                 });
             } catch(e) {}
@@ -2071,6 +2079,15 @@
         
         function openAdminTelegram() {
             openGlobalSupportModal();
+        }
+
+        function requestCourierRole() {
+            const msg = "Votre demande d'admission a bien été reçue par Farmstegridy. Nous reviendrons vers vous pour vous donner notre décision.";
+            if (tg && tg.showAlert) {
+                tg.showAlert(msg);
+            } else {
+                alert(msg);
+            }
         }
 
         function scrollToNews() {
