@@ -692,6 +692,28 @@
             updateCartUI();
         }
 
+        async function subscribeToRestockAlert(pid, e) {
+            if (e) e.stopPropagation();
+            const uid = tg.initDataUnsafe?.user?.id;
+            if (!uid) return tg.showAlert("Erreur : Utilisateur non reconnu.");
+            
+            tg.HapticFeedback.impactOccurred('medium');
+            try {
+                const res = await fetch(`/api/products/${pid}/alert`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ telegramId: uid })
+                });
+                if (res.ok) {
+                    tg.showAlert("✅ Vous serez notifié par message privé dès que ce produit sera de nouveau en stock !");
+                } else {
+                    tg.showAlert("Une erreur est survenue.");
+                }
+            } catch (err) {
+                tg.showAlert("Impossible de s'abonner à l'alerte.");
+            }
+        }
+
         function toggleFavorite(pid, e) {
             e.stopPropagation();
             if (favorites.includes(pid)) favorites = favorites.filter(id => id !== pid);
@@ -787,11 +809,14 @@
                         <div style="display:flex; justify-content:space-between; align-items:center; margin-top:5px;">
                             <div class="card-price" style="margin-top:0;">${p.price}€</div>
                             <div id="stock-badge-${p.id}" style="font-size:10px; font-weight:800; background:rgba(255,255,255,0.1); padding:4px 8px; border-radius:8px; display:flex; align-items:center; gap:4px;">
-                                <span class="stock-indicator" style="background:${p.stock>0?'#2ecc71':'#e74c3c'}; width:6px; height:6px; border-radius:50%; display:inline-block;"></span>${p.stock>0 ? p.stock+' en stock' : 'Épuisé'}
+                                <span class="stock-indicator" style="background:${p.stock>0?'#2ecc71':'#e74c3c'}; width:6px; height:6px; border-radius:50%; display:inline-block;"></span>${p.stock>0 ? p.stock+' en stock' : 'Rupture, de retour bientôt'}
                             </div>
                         </div>
                     </div>
-                    <div class="add-btn" style="animation: pulse 2s infinite;" onclick="openProductModal('${p.id}', event)">+</div>
+                    ${p.stock > 0 
+                        ? `<div class="add-btn" style="animation: pulse 2s infinite;" onclick="openProductModal('${p.id}', event)">+</div>`
+                        : `<div class="add-btn" style="background:#e74c3c; font-size:16px; padding:0 8px; border-radius:10px; display:flex; align-items:center; gap:5px;" onclick="subscribeToRestockAlert('${p.id}', event)"><i class="notranslate ph-bold ph-bell"></i> Me prévenir</div>`
+                    }
                 `;
                 container.appendChild(d);
             });
@@ -1103,7 +1128,17 @@
                 });
             }
 
-            document.getElementById('p-add-cart-btn').onclick = addSelectionToCart;
+            const btn = document.getElementById('p-add-cart-btn');
+            if (activeProduct.stock <= 0) {
+                btn.innerHTML = '<i class="notranslate ph-bold ph-bell"></i> ME PRÉVENIR';
+                btn.style.background = '#e74c3c';
+                btn.onclick = (e) => subscribeToRestockAlert(pid, e);
+            } else {
+                btn.innerText = 'AJOUTER AU PANIER';
+                btn.style.background = 'var(--accent)';
+                btn.onclick = addSelectionToCart;
+            }
+            
             document.getElementById('btn-add-review').onclick = () => openReviewPrompt(pid);
             document.getElementById('product-detail-modal').classList.add('open');
             
@@ -1364,7 +1399,7 @@
                     if (badge) {
                         const inCart = cart.filter(item => String(item.id) === String(p.id)).reduce((s, item) => s + item.n, 0);
                         const displayStock = Math.max(0, p.stock - inCart);
-                        badge.innerHTML = `<span class="stock-indicator" style="background:${displayStock>0?'#2ecc71':'#e74c3c'}; width:6px; height:6px; border-radius:50%; display:inline-block;"></span>${displayStock>0 ? displayStock+' en stock' : 'Épuisé'}`;
+                        badge.innerHTML = `<span class="stock-indicator" style="background:${displayStock>0?'#2ecc71':'#e74c3c'}; width:6px; height:6px; border-radius:50%; display:inline-block;"></span>${displayStock>0 ? displayStock+' en stock' : 'Rupture, de retour bientôt'}`;
                     }
                 });
             }

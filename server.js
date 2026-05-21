@@ -534,6 +534,33 @@ function createServer(port = 8080) {
                         const reason = diff > 0 ? 'replenishment' : 'manual_adjustment';
                         await logStockMovement(id, diff, reason, 'admin_update');
                     }
+                    if (oldStock <= 0 && newStock > 0) {
+                        // RESTOCK ALERT
+                        const { supabase } = require('./services/supabase');
+                        const { COL_USERS } = require('./services/database');
+                        const { notifyUsersOfRestock } = require('./services/notifications');
+                        
+                        try {
+                            const { data: usersToNotify } = await supabase.from(COL_USERS)
+                                .select('telegram_id, data')
+                                .contains('data', { restock_alerts: [id] });
+                                
+                            if (usersToNotify && usersToNotify.length > 0) {
+                                const tgIds = usersToNotify.map(u => u.telegram_id);
+                                await notifyUsersOfRestock(tgIds, req.body.name);
+                                
+                                // Clean up their alerts
+                                for (const user of usersToNotify) {
+                                    let alerts = user.data.restock_alerts || [];
+                                    alerts = alerts.filter(a => String(a) !== String(id));
+                                    const newData = { ...user.data, restock_alerts: alerts };
+                                    await supabase.from(COL_USERS).update({ data: newData }).eq('telegram_id', user.telegram_id);
+                                }
+                            }
+                        } catch (e) {
+                            console.error('[RESTOCK] Error handling restock alerts:', e);
+                        }
+                    }
                 }
             }
 
@@ -584,6 +611,31 @@ function createServer(port = 8080) {
             await deleteProduct(req.params.id);
             res.json({ success: true });
         } catch (e) { res.status(500).json({ error: 'Erreur serveur' }); }
+    });
+
+    app.post('/api/products/:id/alert', async (req, res) => {
+        try {
+            const productId = req.params.id;
+            const { telegramId } = req.body;
+            if (!telegramId) return res.status(400).json({ error: 'telegramId requis' });
+            
+            const { supabase } = require('./services/supabase');
+            const { COL_USERS } = require('./services/database');
+            
+            const { data: user } = await supabase.from(COL_USERS).select('data').eq('telegram_id', String(telegramId)).maybeSingle();
+            if (user) {
+                const alerts = user.data.restock_alerts || [];
+                if (!alerts.includes(productId)) {
+                    alerts.push(productId);
+                    const newData = { ...user.data, restock_alerts: alerts };
+                    await supabase.from(COL_USERS).update({ data: newData }).eq('telegram_id', String(telegramId));
+                }
+            }
+            res.json({ success: true });
+        } catch (e) {
+            console.error('Restock alert sub error:', e.message);
+            res.status(500).json({ error: 'Erreur serveur' });
+        }
     });
 
     // ========== Order Routes ==========

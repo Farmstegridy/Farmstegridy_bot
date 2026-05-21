@@ -1366,33 +1366,8 @@ function setupOrderSystem(bot) {
             if (createResult.error) throw createResult.error;
             const order = createResult.order;
 
-            // DECREMENT STOCK & LOG TO LEDGER
-            const { saveProduct } = require('../services/database');
-            for (const item of cart) {
-                const p = allProducts.find(prod => String(prod.id) === String(item.productId));
-                if (p && typeof p.stock === 'number') {
-                    const newStock = Math.max(0, p.stock - item.qty);
-                    const updates = { id: p.id, stock: newStock };
-                    
-                    let alertMsg = null;
-                    if (newStock <= 0 && p.stock > 0) {
-                        updates.is_active = false;
-                        updates.is_available = false;
-                        alertMsg = `🚫 <b>Rupture de Stock</b>\nLe produit <b>${p.name}</b> est épuisé. Il a été automatiquement masqué du catalogue du bot.`;
-                    } else if (newStock <= 2 && p.stock > 2) {
-                        alertMsg = `⚠️ <b>Alerte Stock Critique (${newStock} restants)</b>\nLe produit <b>${p.name}</b> n'a plus que ${newStock} unités en stock ! Veuillez réapprovisionner au plus vite.`;
-                    } else if (newStock <= 5 && p.stock > 5) {
-                        alertMsg = `⚠️ <b>Alerte Stock Bas (${newStock} restants)</b>\nLe produit <b>${p.name}</b> n'a plus que ${newStock} unités en stock. Pensez à réapprovisionner !`;
-                    }
-                    
-                    if (alertMsg) {
-                        notifyAdmins(bot, alertMsg).catch(err => console.error("Error sending stock alert:", err.message));
-                    }
-                    
-                    await saveProduct(updates).catch(e => console.error(`[STOCK-ERR] ${p.id}:`, e.message));
-                    await logStockMovement(p.id, -item.qty, 'order', order?.id || 'unknown');
-                }
-            }
+            const { adjustOrderStock } = require('../services/database');
+            await adjustOrderStock(order.id, 'decrement').catch(e => console.error("Stock decrement error:", e));
             
             // On vérifie si c'est la première commande en utilisant l'ID officiel (possiblement fusionné)
             const officialUserId = ctx.state.user?.id || userId;

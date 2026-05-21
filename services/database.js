@@ -1043,8 +1043,32 @@ async function adjustOrderStock(orderId, action) {
             const { data: p } = await supabase.from(COL_PRODUCTS).select('id, stock, name').eq('id', productId).maybeSingle();
             if (p && typeof p.stock === 'number') {
                 const newStock = Math.max(0, p.stock + qty);
-                await supabase.from(COL_PRODUCTS).update({ stock: newStock }).eq('id', productId);
+                const updates = { stock: newStock };
+                
+                let alertMsg = null;
+                if (action === 'decrement') {
+                    if (newStock <= 0 && p.stock > 0) {
+                        updates.is_active = false;
+                        updates.is_available = false;
+                        alertMsg = `🚫 <b>Rupture de Stock</b>\nLe produit <b>${p.name}</b> est épuisé. Il a été automatiquement masqué du catalogue du bot.`;
+                    } else if (newStock <= 2 && p.stock > 2) {
+                        alertMsg = `⚠️ <b>Alerte Stock Critique (${newStock} restants)</b>\nLe produit <b>${p.name}</b> n'a plus que ${newStock} unités en stock ! Veuillez réapprovisionner au plus vite.`;
+                    } else if (newStock <= 5 && p.stock > 5) {
+                        alertMsg = `⚠️ <b>Alerte Stock Bas (${newStock} restants)</b>\nLe produit <b>${p.name}</b> n'a plus que ${newStock} unités en stock. Pensez à réapprovisionner !`;
+                    }
+                }
+                
+                await supabase.from(COL_PRODUCTS).update(updates).eq('id', productId);
                 await logStockMovement(productId, qty, `order_${action}`, orderId);
+                
+                if (alertMsg) {
+                    try {
+                        const { notifyAdmins } = require('./notifications');
+                        await notifyAdmins(null, alertMsg);
+                    } catch(err) {
+                        console.error("Error sending stock alert from DB:", err.message);
+                    }
+                }
             }
         }
     } catch(e) {

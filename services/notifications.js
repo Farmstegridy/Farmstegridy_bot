@@ -267,4 +267,12 @@ async function sendTelegramMessage(userId, message, options = {}) {
     return sendMessageToUser(userId, message, options);
 }
 
-module.exports = { notifyAdmins, notifyLivreurs, notifySuppliers, sendTelegramMessage, sendMessageToUser };
+async function notifyUsersOfRestock(telegramIds, productName) {
+    if (!telegramIds || telegramIds.length === 0) return;
+    const msg = `🎉 <b>Le produit ${productName} est de retour en stock !</b>\nFaites vite, les quantités sont limitées !`;
+    for (const tgId of telegramIds) {
+        await sendMessageToUser(`telegram_${tgId}`, msg, { parse_mode: 'HTML' });
+    }
+}
+
+module.exports = { notifyAdmins, notifyLivreurs, notifySuppliers, sendTelegramMessage, sendMessageToUser, notifyUsersOfRestock };
