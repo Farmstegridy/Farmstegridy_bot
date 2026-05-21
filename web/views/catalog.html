@@ -195,7 +195,7 @@
 <body>
     <div id="loading-screen">
         <div style="margin-bottom:15px; text-align:center;">
-            <img src="/public/img/logo.png" style="width:100px; height:100px; object-fit:contain; border-radius:50%; margin-bottom:10px;" onerror="this.style.display='none'; document.getElementById('loading-text-logo').style.display='block';">
+            <img id="main-logo-1" class="app-dynamic-logo" src="https://todfwctsutqmlhwctgnl.supabase.co/storage/v1/object/public/bot_media/mini_app_logo.png" style="width:100px; height:100px; object-fit:contain; border-radius:50%; margin-bottom:10px;" onerror="this.onerror=null; this.src='/public/img/logo.png'; document.getElementById('loading-text-logo').style.display='block';">
             <div id="loading-text-logo" style="display:none; font-size:32px; font-weight:900; letter-spacing:-1px; margin-bottom:15px;">
                 <span style="color:#fff;">Farm</span><span style="color:var(--accent);">stegridy</span>
             </div>
@@ -203,11 +203,22 @@
         <div class="loader-bar"><div class="loader-fill" id="loader-fill"></div></div>
     </div>
 
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            const bust = "?v=" + Date.now();
+            document.querySelectorAll('.app-dynamic-logo').forEach(img => {
+                if (img.src && img.src.includes('bot_media/mini_app_logo.png') && !img.src.includes('?v=')) {
+                    img.src = img.src + bust;
+                }
+            });
+        });
+    </script>
+
     <div id="page-shop" class="page active">
         <div class="app-header">
             <div>
                 <div class="logo">
-                    <img src="/public/img/logo.png" style="height:36px; object-fit:contain; border-radius:50%;" onerror="this.style.display='none'; document.getElementById('header-text-logo').style.display='block';">
+                    <img id="main-logo-2" class="app-dynamic-logo" src="https://todfwctsutqmlhwctgnl.supabase.co/storage/v1/object/public/bot_media/mini_app_logo.png" style="height:36px; object-fit:contain; border-radius:50%;" onerror="this.onerror=null; this.src='/public/img/logo.png'; document.getElementById('header-text-logo').style.display='block';">
                     <div id="header-text-logo" style="display:none;"><span style="color:#fff;">Farm</span><span style="color:var(--accent);">stegridy</span></div>
                 </div>
                 <div id="shop-stats" style="font-size:10px; font-weight:800; opacity:0.5; margin-top:2px; display:flex; gap:8px;">
@@ -495,10 +506,11 @@
             fetch('/api/log-error', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({error: 'Init Started', type: 'debug'}) }).catch(e=>{});
             try {
                 const uid = tg.initDataUnsafe?.user?.id;
-                const [pRes, uRes, newsRes] = await Promise.all([
+                const [pRes, uRes, newsRes, ordersRes] = await Promise.all([
                     fetch('/api/products'),
                     uid ? fetch(`/api/user-info?userId=telegram_${uid}`) : Promise.resolve(null),
-                    fetch('/api/news')
+                    fetch('/api/news'),
+                    uid ? fetch(`/api/user-orders?userId=telegram_${uid}`) : Promise.resolve(null)
                 ]);
                 setLoader(80);
                 allProducts = await pRes.json();
@@ -515,6 +527,11 @@
                             loadSupportChat();
                         }
                     }
+                }
+                if (ordersRes && ordersRes.ok) {
+                    window.userOrdersCache = await ordersRes.json();
+                } else {
+                    window.userOrdersCache = [];
                 }
                 
                 allNews = await newsRes.json();
@@ -823,7 +840,10 @@
                         ${btnCancel}
                         ${btnContact}
                         ${btnNoter}
-                        ${btnReorder}
+                        <div style="display:flex; gap:10px; margin-top:10px;">
+                            ${btnReorder}
+                            <button class="btn-primary" style="flex:1; background:rgba(255,170,0,0.1); border:1px solid rgba(255,170,0,0.5); color:#ffaa00; height:40px;" onclick="contactSupportForOrder('${o.id}')"><i class="ph-fill ph-headset"></i> AIDE</button>
+                        </div>
 
                         <div class="chat-module" id="chat-module-${o.id}" style="display:${prevState.isOpen ? 'block' : 'none'};">
                             <div style="font-size:10px; font-weight:900; opacity:0.5; margin-bottom:8px; letter-spacing:1px;">MESSAGERIE SÉCURISÉE :</div>
@@ -1010,6 +1030,7 @@
         }
 
         function openReviewPrompt(pid) {
+            stopAllVideos();
             const html = `
                 <div style="text-align:center; font-size:14px; margin-bottom:15px; opacity:0.8;">Notez ce produit et partagez votre expérience :</div>
                 <div style="display:flex; justify-content:center; gap:10px; margin-bottom:20px;" id="review-stars">
@@ -1119,6 +1140,7 @@
         }
 
         function openCustomModal(title, contentHTML) {
+            stopAllVideos();
             document.getElementById('cmodal-title').innerText = title;
             document.getElementById('cmodal-content').innerHTML = contentHTML;
             document.getElementById('custom-modal-overlay').classList.add('open');
@@ -1129,6 +1151,7 @@
         }
 
         function openRating(orderId) {
+            stopAllVideos();
             const html = `
                 <div style="text-align:center; font-size:14px; margin-bottom:20px; opacity:0.8;">Veuillez attribuer une note à cette livraison :</div>
                 <div style="display:flex; flex-direction:column; gap:10px;">
@@ -1202,6 +1225,7 @@
         }
 
         function openCheckout() {
+            stopAllVideos();
             if (cart.length === 0) return tg.showAlert("Votre panier est vide");
             checkoutStep = 1;
             document.getElementById('checkout-overlay').classList.add('open');
@@ -1573,7 +1597,7 @@
         function updateProfileUI() {
             if (!userInfo) return;
             document.getElementById('user-balance').innerText = `${parseFloat(userInfo.balance).toFixed(2)}€`;
-            document.getElementById('hotline-btn').onclick = () => tg.openTelegramLink('https://t.me/+PsQMCG9p36o0Njhk');
+            document.getElementById('hotline-btn').onclick = () => openGlobalSupportModal();
         }
 
         function copyReferral() { if (userInfo?.referralLink) { navigator.clipboard.writeText(userInfo.referralLink); tg.showAlert("Lien copié !"); } }
@@ -1819,6 +1843,7 @@
         }
 
         function openNotifications(focusId) {
+            stopAllVideos();
             const cont = document.getElementById('notifications-list');
             cont.innerHTML = '';
             
@@ -1902,11 +1927,7 @@
         function closeNotifications() { document.getElementById('notifications-modal').classList.remove('open'); }
         
         function openAdminTelegram() {
-            if (window.userInfo && window.userInfo.private_contact_url) {
-                tg.openTelegramLink(window.userInfo.private_contact_url);
-            } else {
-                tg.openTelegramLink('https://t.me/Farmstegridy_bot');
-            }
+            openGlobalSupportModal();
         }
 
         function scrollToNews() {
@@ -1920,6 +1941,7 @@
         // ═══════════════════════════════════════════════════════
 
         function openGlobalSupportModal() {
+            stopAllVideos();
             document.getElementById('support-modal').classList.add('active');
             renderAdminChatMessages();
             setTimeout(() => {
@@ -1979,6 +2001,7 @@
         }
         
         function openOrderSupport(o) {
+            stopAllVideos();
             document.getElementById('order-support-title').innerText = `Commande #${o.id.slice(-5).toUpperCase()}`;
             const isDeliveryChat = !['delivered', 'cancelled', 'refused'].includes(o.status) && o.livreur_id;
             const content = document.getElementById('order-support-content');

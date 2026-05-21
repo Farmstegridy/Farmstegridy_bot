@@ -151,13 +151,20 @@ function createServer(port = 8080) {
 
     // ========== Static Pages ==========
 
-    app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'web', 'views', 'login.html')));
-    app.get('/login', (req, res) => res.sendFile(path.join(__dirname, 'web', 'views', 'login.html')));
+    const noCache = (req, res, next) => {
+        res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+        res.setHeader('Pragma', 'no-cache');
+        res.setHeader('Expires', '0');
+        next();
+    };
+
+    app.get('/', noCache, (req, res) => res.sendFile(path.join(__dirname, 'web', 'views', 'login.html')));
+    app.get('/login', noCache, (req, res) => res.sendFile(path.join(__dirname, 'web', 'views', 'login.html')));
     app.get('/favicon.ico', (req, res) => res.status(204).end());
-    app.get('/dashboard', (req, res) => res.sendFile(path.join(__dirname, 'web', 'views', 'dashboard.html')));
-    app.get('/address-picker', (req, res) => res.sendFile(path.join(__dirname, 'web', 'views', 'address_picker.html')));
-    app.get('/catalog', (req, res) => res.sendFile(path.join(__dirname, 'web', 'views', 'catalog.html')));
-    app.get('/livreur', (req, res) => res.sendFile(path.join(__dirname, 'web', 'views', 'livreur.html')));
+    app.get('/dashboard', noCache, (req, res) => res.sendFile(path.join(__dirname, 'web', 'views', 'dashboard.html')));
+    app.get('/address-picker', noCache, (req, res) => res.sendFile(path.join(__dirname, 'web', 'views', 'address_picker.html')));
+    app.get('/catalog', noCache, (req, res) => res.sendFile(path.join(__dirname, 'web', 'views', 'catalog.html')));
+    app.get('/livreur', noCache, (req, res) => res.sendFile(path.join(__dirname, 'web', 'views', 'livreur.html')));
 
 
     // ========== API Routes ==========
@@ -638,6 +645,24 @@ function createServer(port = 8080) {
             const cleanName = `review_${Date.now()}_${Math.random().toString(36).substr(2,9)}${ext}`;
             const url = await uploadMediaBuffer(file.data, cleanName, file.mimetype);
             if (!url) throw new Error("Upload to Supabase failed");
+            res.json({ url });
+        } catch(e) {
+            res.status(500).json({error: e.message});
+        }
+    });
+
+    app.post('/api/admin/upload-logo', authMiddleware, async (req, res) => {
+        try {
+            if (!req.files || Object.keys(req.files).length === 0) return res.status(400).json({ error: 'No files uploaded.' });
+            const { uploadMediaBuffer, database } = require('./services/database');
+            const file = Object.values(req.files)[0];
+            const cleanName = `mini_app_logo.png`;
+            const url = await uploadMediaBuffer(file.data, cleanName, file.mimetype);
+            if (!url) throw new Error("Upload failed");
+            
+            // Trigger a settings updated_at change so clients refresh cache
+            await database.supabase.from('bot_settings').update({ updated_at: new Date().toISOString() }).eq('id', 'default');
+            
             res.json({ url });
         } catch(e) {
             res.status(500).json({error: e.message});
