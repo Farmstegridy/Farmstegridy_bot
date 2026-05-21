@@ -580,6 +580,7 @@
         function setLoader(p) { document.getElementById('loader-fill').style.width = p+'%'; }
 
         function switchPage(p, el) {
+            stopAllVideos();
             document.querySelectorAll('.page').forEach(pg => pg.style.display = 'none');
             document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
             const targetPage = document.getElementById(`page-${p}`);
@@ -1108,14 +1109,24 @@
             } catch(e) {}
         }
 
-        function closeProductModal() { document.getElementById('product-detail-modal').classList.remove('open'); }
+        function stopAllVideos() {
+            document.querySelectorAll('video').forEach(v => v.pause());
+        }
+
+        function closeProductModal() { 
+            stopAllVideos();
+            document.getElementById('product-detail-modal').classList.remove('open'); 
+        }
 
         function openCustomModal(title, contentHTML) {
             document.getElementById('cmodal-title').innerText = title;
             document.getElementById('cmodal-content').innerHTML = contentHTML;
             document.getElementById('custom-modal-overlay').classList.add('open');
         }
-        function closeCustomModal() { document.getElementById('custom-modal-overlay').classList.remove('open'); }
+        function closeCustomModal() { 
+            stopAllVideos();
+            document.getElementById('custom-modal-overlay').classList.remove('open'); 
+        }
 
         function openRating(orderId) {
             const html = `
