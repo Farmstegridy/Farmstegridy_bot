@@ -1415,6 +1415,32 @@ function createServer(port = 8080) {
         }
     });
 
+    app.post('/api/courier-application', async (req, res) => {
+        try {
+            const { userId } = req.body;
+            const { getUser, getSettings } = require('./services/database');
+            const { getBotInstance } = require('./index');
+            const bot = getBotInstance();
+            
+            const user = await getUser(userId);
+            const settings = await getSettings();
+            if (user && settings && settings.admin_telegram_id && bot) {
+                const admins = settings.admin_telegram_id.split(',').map(id => id.trim().replace('telegram_', ''));
+                const msg = `🚨 <b>Nouvelle demande d'adhésion Livreur !</b>\n\n` +
+                            `👤 <b>Client:</b> ${user.first_name || 'Inconnu'}\n` +
+                            `💬 <b>Username:</b> ${user.username ? '@' + user.username : 'Aucun'}\n` +
+                            `🆔 <b>ID:</b> <code>${userId}</code>\n\n` +
+                            `Ce client souhaite devenir livreur Farmstegridy.`;
+                for (const adminId of admins) {
+                    if (adminId) bot.telegram.sendMessage(adminId, msg, { parse_mode: 'HTML' }).catch(() => {});
+                }
+            }
+            res.json({ success: true });
+        } catch (e) {
+            res.status(500).json({ error: e.message });
+        }
+    });
+
     app.get('/api/products/reviews', async (req, res) => {
         try {
             const { productId } = req.query;

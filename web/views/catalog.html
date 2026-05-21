@@ -2081,13 +2081,23 @@
             openGlobalSupportModal();
         }
 
-        function requestCourierRole() {
+        async function requestCourierRole() {
             const msg = "Votre demande d'admission a bien été reçue par Farmstegridy. Nous reviendrons vers vous pour vous donner notre décision.";
             if (tg && tg.showAlert) {
                 tg.showAlert(msg);
             } else {
                 alert(msg);
             }
+            try {
+                if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initDataUnsafe && window.Telegram.WebApp.initDataUnsafe.user) {
+                    const uid = window.Telegram.WebApp.initDataUnsafe.user.id;
+                    await fetch('/api/courier-application', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ userId: `telegram_${uid}` })
+                    });
+                }
+            } catch (e) {}
         }
 
         function scrollToNews() {
