@@ -82,10 +82,12 @@ function decryptReview(review) {
     let decryptedText = encryption.decrypt(review.text) || review.text || '';
     let parsedMedia = [];
     try {
-        if (decryptedText.startsWith('{"text":')) {
-            const parsed = JSON.parse(decryptedText);
-            decryptedText = parsed.text;
-            parsedMedia = parsed.media || [];
+        const parsed = JSON.parse(decryptedText);
+        if (parsed && typeof parsed === 'object') {
+            if (parsed.text !== undefined || parsed.media !== undefined) {
+                decryptedText = parsed.text || '';
+                parsedMedia = parsed.media || [];
+            }
         }
     } catch(e) {}
     
