@@ -2598,7 +2598,11 @@ function setupOrderSystem(bot) {
                         return await ctx.reply("❌ Cette commande est terminée ou annulée. La discussion est fermée.").catch(() => { });
                     }
 
-                    const reply = String(ctx.message.text || '');
+                    const reply = String(ctx.message.text || ctx.message.caption || '');
+                    let photo = null, video = null;
+                    if (ctx.message.photo && ctx.message.photo.length > 0) photo = ctx.message.photo[ctx.message.photo.length - 1].file_id;
+                    if (ctx.message.video) { video = ctx.message.video.file_id; }
+                    
                     const newCount = await incrementChatCount(orderId);
                     const shortId = String(orderId).slice(-5);
 
@@ -2614,16 +2618,22 @@ function setupOrderSystem(bot) {
                     const roleLabel = isLivreur ? "livreur" : "client";
                     const targetLabelText = isLivreur ? "le livreur" : "au client"; // Inversé pour la logique de bouton
 
-                    const chatMsg = await sendTelegramMessage(targetId,
-                        `💬 <b>Message du ${roleLabel} (Commande #${shortId})</b>\n\n"<i>${safeHtml(reply)}</i>"\n\n` +
-                        `📊 <i>Message ${newCount}/6</i>${newCount >= 6 ? '\n⚠️ <b>Dernier échange consommé.</b>' : ''}`,
-                        {
-                            ...Markup.inlineKeyboard([
-                                ...(newCount < 6 ? [[Markup.button.callback(`💬 Répondre (Tour ${newCount + 1}/6)`, `chat_livreur_${orderId}`)]] : []),
-                                [Markup.button.callback('◀️ Menu', isLivreur ? 'livreur_menu' : 'main_menu')]
-                            ])
-                        }
-                    );
+                    const extraOpts = {
+                        ...Markup.inlineKeyboard([
+                            ...(newCount < 6 ? [[Markup.button.callback(`💬 Répondre (Tour ${newCount + 1}/6)`, `chat_livreur_${orderId}`)]] : []),
+                            [Markup.button.callback('◀️ Menu', isLivreur ? 'livreur_menu' : 'main_menu')]
+                        ])
+                    };
+                    if (photo) extraOpts.photo = photo;
+                    if (video) extraOpts.video = video;
+
+                    let msgText = `💬 <b>Message du ${roleLabel} (Commande #${shortId})</b>\n\n`;
+                    if (reply) msgText += `"<i>${safeHtml(reply)}</i>"\n\n`;
+                    else if (photo) msgText += `📸 <i>Photo reçue</i>\n\n`;
+                    else if (video) msgText += `🎥 <i>Vidéo reçue</i>\n\n`;
+                    msgText += `📊 <i>Message ${newCount}/6</i>${newCount >= 6 ? '\n⚠️ <b>Dernier échange consommé.</b>' : ''}`;
+
+                    const chatMsg = await sendTelegramMessage(targetId, msgText, extraOpts);
                     if (chatMsg) addMessageToTrack(targetId, chatMsg.message_id).catch(() => { });
 
                     // Enregistrer dans l'historique de chat global
@@ -2631,12 +2641,12 @@ function setupOrderSystem(bot) {
                     appendChatHistory(order.user_id, {
                         role: isLivreur ? 'livreur' : 'client',
                         target: isLivreur ? 'client' : 'livreur',
-                        text: reply,
+                        text: reply || (photo ? '(Photo)' : (video ? '(Vidéo)' : '')),
                         orderId: orderId
                     }).catch(() => {});
 
                     // Alerte aux admins via service central
-                    const alertMsg = `💬 <b>CHAT ${roleLabel.toUpperCase()}</b>\n\n🆔 Commande : <code>#${shortId}</code>\n👤 De : ${safeHtml(ctx.from.first_name)}\n📝 Message : "<i>${safeHtml(reply)}</i>"`;
+                    const alertMsg = `💬 <b>CHAT ${roleLabel.toUpperCase()}</b>\n\n🆔 Commande : <code>#${shortId}</code>\n👤 De : ${safeHtml(ctx.from.first_name)}\n📝 Message : ${reply ? `"<i>${safeHtml(reply)}</i>"` : (photo ? '📸 Photo' : '🎥 Vidéo')}`;
                     await notifyAdmins(bot, alertMsg);
 
                     const targetRoleLabel = isLivreur ? "client" : "livreur";

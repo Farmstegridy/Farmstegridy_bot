@@ -2122,7 +2122,7 @@
         }
         
         function closeOrderSupportModal() {
-            document.getElementById('order-support-modal').classList.remove('active');
+            document.getElementById('order-support-modal').classList.remove('open');
         }
 
         async function loadSupportChat() {
@@ -2211,7 +2211,7 @@
                 `;
             }
             
-            document.getElementById('order-support-modal').classList.add('active');
+            document.getElementById('order-support-modal').classList.add('open');
         }
         
         function contactSupportForOrder(orderId) {
