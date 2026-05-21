@@ -234,12 +234,24 @@ function setupOrderSystem(bot) {
 
         const user = ctx.state?.user || await getUser(`${ctx.platform}_${ctx.from.id}`);
         const stockBadge = await getScarcityBadge(product);
+        
+        let reviewStr = "";
+        try {
+            const { getReviews } = require('../services/database');
+            const reviews = await getReviews(100);
+            const pReviews = reviews.filter(r => String(r.product_id) === String(productId));
+            if (pReviews.length > 0) {
+                reviewStr = `\n\n💬 <b>Avis Client (${pReviews.length})</b>\n"<i>${pReviews[0].text}</i>" - ${'⭐'.repeat(pReviews[0].rating)}`;
+            }
+        } catch (e) {}
+
         let text = `🌟 <b>${esc(product.name)}</b> 🌟\n` +
             `📦 Statut : <b>${stockBadge}</b>\n\n` +
             t(user, 'label_unit_price', '💰 Prix Unitaire :') + ` <b>${product.price}€</b>\n` +
             (promoText ? `${promoText}\n` : "") +
             (product.description ? `\n<i>${product.description}</i>\n` : "") +
-            `\n💎 <b>Combien de sachets voulez-vous ?</b>\n\n` +
+            reviewStr +
+            `\n\n💎 <b>Combien de sachets voulez-vous ?</b>\n\n` +
             `💡 <i>Cliquez sur le chiffre qui correspond au nombre de sachets que vous voulez.</i>\n` +
             `<i>(Exemple : si vous cliquez sur <b>1</b>, vous recevrez 1 sachet de ${multiplier}${unitLabel})</i>`;
         const multipliers = [1, 2, 3, 4, 5, 10];
@@ -1559,12 +1571,15 @@ function setupOrderSystem(bot) {
         }
 
         const { getLivreurMenuKeyboard, updateMenuButton } = require('./start');
-        const city = user?.current_city || user?.data?.current_city || 'Non défini';
-        const text = `${settings.ui_icon_livreur} <b>${settings.label_livreur || 'Espace Livreur'}</b>\n\n` +
-            `👤 ${user ? (user.first_name || 'Inconnu') : ctx.from.first_name}\n` +
-            `📍 Secteur : <b>${city.toUpperCase()}</b>\n` +
-            `🔘 Statut : <b>${isAvailable ? (settings.ui_icon_success || '✅') + ' DISPONIBLE' : (settings.ui_icon_error || '❌') + ' INDISPONIBLE'}</b>\n\n` +
-            `Que voulez-vous faire ?`;
+        const cityRaw = user?.current_city || user?.data?.current_city;
+        const city = cityRaw ? cityRaw.toUpperCase() : t(user, 'label_not_defined', 'NON DÉFINI');
+        const statusLabel = isAvailable ? t(user, 'label_available', 'DISPONIBLE') : t(user, 'label_unavailable', 'INDISPONIBLE');
+        
+        const text = t(user, 'msg_livreur_welcome', `🚴 <b>Bienvenue, {first_name} !</b>`, { first_name: user ? (user.first_name || 'Inconnu') : ctx.from.first_name }) + '\n\n' +
+            t(user, 'msg_livreur_city', `📍 Secteur : <b>{city}</b>`, { city: city }) + '\n' +
+            t(user, 'msg_livreur_status', `🔘 Statut : <b>{status}</b>`, { 
+                status: (isAvailable ? (settings.ui_icon_success || '✅') : (settings.ui_icon_error || '❌')) + ' ' + statusLabel
+            }) + '\n\n';
 
         const keyboard = await getLivreurMenuKeyboard(ctx, settings, user || { is_available: isAvailable, data: { is_available: isAvailable } });
         await safeEdit(ctx, text, keyboard);
@@ -1665,13 +1680,16 @@ function setupOrderSystem(bot) {
         const user = await getUser(`${ctx.platform}_${ctx.from.id}`);
         const { getLivreurMenuKeyboard } = require('./start');
 
-        const city = user?.current_city || user?.data?.current_city || cityName || 'Non défini';
+        const cityRaw = user?.current_city || user?.data?.current_city || cityName;
+        const city = cityRaw ? cityRaw.toUpperCase() : t(user, 'label_not_defined', 'NON DÉFINI');
         const isAvail = user?.is_available || user?.data?.is_available;
-        const text = `${settings.ui_icon_livreur} <b>${settings.label_livreur || 'Espace Livreur'}</b>\n\n` +
-            `👤 ${user?.first_name || ctx.from.first_name}\n` +
-            `📍 Secteur : <b>${city.toUpperCase()}</b>\n` +
-            `🔘 Statut : <b>${isAvail ? (settings.ui_icon_success || '✅') + ' DISPONIBLE' : (settings.ui_icon_error || '❌') + ' INDISPONIBLE'}</b>\n\n` +
-            `Que voulez-vous faire ?`;
+        const statusLabel = isAvail ? t(user, 'label_available', 'DISPONIBLE') : t(user, 'label_unavailable', 'INDISPONIBLE');
+        
+        const text = t(user, 'msg_livreur_welcome', `🚴 <b>Bienvenue, {first_name} !</b>`, { first_name: user?.first_name || ctx.from.first_name }) + '\n\n' +
+            t(user, 'msg_livreur_city', `📍 Secteur : <b>{city}</b>`, { city: city }) + '\n' +
+            t(user, 'msg_livreur_status', `🔘 Statut : <b>{status}</b>`, { 
+                status: (isAvail ? (settings.ui_icon_success || '✅') : (settings.ui_icon_error || '❌')) + ' ' + statusLabel
+            }) + '\n\n';
 
         const opts = await getLivreurMenuKeyboard(ctx, settings, user);
         return await safeEdit(ctx, text, opts);
@@ -1930,7 +1948,7 @@ function setupOrderSystem(bot) {
         const targetId = isLivreur ? order.user_id : order.livreur_id;
         const targetRole = isLivreur ? "client" : "livreur";
 
-        awaitingChatReply.set(`${ctx.platform}_${ctx.from.id}`, { orderId, targetId, role: targetRole });
+        try { const { awaitingUserSupportReply } = require("./admin"); if (awaitingUserSupportReply) awaitingUserSupportReply.delete(`${ctx.platform}_${ctx.from.id}`); } catch(e) {} awaitingChatReply.set(`${ctx.platform}_${ctx.from.id}`, { orderId, targetId, role: targetRole });
 
         let promptText = `💬 <b>Message (${count + 1}/6)</b>\nEnvoyez votre message :`;
         if (count === 5) promptText = "💬 <b>Dernier message de conclusion (6/6)</b>\nEnvoyez votre message final :";
@@ -2389,6 +2407,13 @@ function setupOrderSystem(bot) {
         const userId = `${ctx.platform}_${ctx.from.id}`;
         const settings = await getAppSettings();
 
+        // 0. Si c'est une commande (/start, /language, etc.), on l'ignore et on annule les attentes
+        if (ctx.message?.text?.startsWith('/')) {
+            awaitingDelayReason.delete(userId);
+            awaitingChatReply.delete(userId);
+            return next();
+        }
+
         // 1. Feedback (Orders)
         const pendingOrderFeedback = await getAndClearPendingFeedback(userId);
         if (pendingOrderFeedback) {
@@ -2678,16 +2703,19 @@ function setupOrderSystem(bot) {
         if (!user || !user.is_livreur) return safeEdit(ctx, settings.msg_access_denied || '❌ Accès refusé.', Markup.inlineKeyboard([[Markup.button.callback(settings.btn_back_quick_menu || '◀️ Menu', 'main_menu')]]));
 
         const { getLivreurMenuKeyboard } = require('./start');
-        const city = user.current_city || user.data?.current_city || 'Non défini';
+        const cityRaw = user.current_city || user.data?.current_city;
+        const city = cityRaw ? cityRaw.toUpperCase() : t(user, 'label_not_defined', 'NON DÉFINI');
         const isAvail = user.is_available || user.data?.is_available;
+        const statusLabel = isAvail ? t(user, 'label_available', 'DISPONIBLE') : t(user, 'label_unavailable', 'INDISPONIBLE');
 
         const { getLivreurOrders } = require('../services/database');
         const activeOrders = await getLivreurOrders(`${ctx.platform}_${ctx.from.id}`);
 
-        let text = `${settings.ui_icon_livreur} <b>${settings.label_livreur || 'Espace Livreur'}</b>\n\n` +
-            `👤 ${user.first_name || ctx.from.first_name}\n` +
-            `📍 Secteur : <b>${city.toUpperCase()}</b>\n` +
-            `🔘 Statut : <b>${isAvail ? (settings.ui_icon_success || '✅') + ' DISPONIBLE' : (settings.ui_icon_error || '❌') + ' INDISPONIBLE'}</b>\n\n`;
+        let text = t(user, 'msg_livreur_welcome', `🚴 <b>Bienvenue, {first_name} !</b>`, { first_name: user.first_name || ctx.from.first_name }) + '\n\n' +
+            t(user, 'msg_livreur_city', `📍 Secteur : <b>{city}</b>`, { city: city }) + '\n' +
+            t(user, 'msg_livreur_status', `🔘 Statut : <b>{status}</b>`, { 
+                status: (isAvail ? (settings.ui_icon_success || '✅') : (settings.ui_icon_error || '❌')) + ' ' + statusLabel
+            }) + '\n\n';
 
         if (activeOrders.length > 0) {
             text += `🚨 <b>VOUS AVEZ ${activeOrders.length} COMMANDE(S) EN COURS !</b>\n\n`;

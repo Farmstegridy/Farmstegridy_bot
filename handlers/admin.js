@@ -175,6 +175,13 @@ function setupAdminHandlers(bot) {
         const userKey = `telegram_${userId}`;
         const isAdm = await isAdmin(ctx);
         
+        // 0. Ignore commands
+        if (ctx.message?.text?.startsWith('/')) {
+            if (ctx.message.text === '/admin' && isAdm) return next();
+            if (ctx.message.text === '/end' || ctx.message.text === '/stopchat') return next();
+            return next();
+        }
+
         console.log(`[Consolidated-Admin] Incoming type:${ctx.updateType} from:${userId} (isAdm:${isAdm})`);
 
         // A. ADMIN -> USER RELAY (Highest Priority)
@@ -699,6 +706,13 @@ function setupAdminHandlers(bot) {
     bot.action('user_chat_reply_admin', async (ctx) => {
         const userId = String(ctx.from.id);
         const userKey = `telegram_${userId}`;
+        
+        // Prevent conflict with Livreur Chat
+        try {
+            const { awaitingChatReply } = require('./order_system');
+            if (awaitingChatReply) awaitingChatReply.delete(userKey);
+        } catch(e) {}
+
         awaitingUserSupportReply.set(userKey, true);
         await ctx.answerCbQuery();
         return ctx.reply(`✍️ <b>RÉPONSE À L'ADMIN</b>\n\nEnvoyez votre message ci-dessous (texte, photo ou vidéo).\nChaque message sera transmis à l'administration.\n\n<i>Tapez /end pour quitter le mode discussion.</i>`, 
@@ -783,14 +797,16 @@ function setupAdminHandlers(bot) {
                 const baseDomain = process.env.RENDER_EXTERNAL_URL || (process.env.RAILWAY_PUBLIC_DOMAIN ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}` : 'https://farmstegridy-bot.onrender.com');
                 const settings = await getAppSettings();
                 if (newStatus) {
-                    const livreurUrl = settings.mini_app_url ? `${settings.mini_app_url}/livreur` : `${baseDomain}/livreur`;
+                    const langCode = u?.language_code || 'fr';
+                    const livreurUrl = (settings.mini_app_url ? `${settings.mini_app_url}/livreur` : `${baseDomain}/livreur`) + `?lang=${langCode}`;
                     await ctx.telegram.setChatMenuButton(targetChatId, {
                         type: 'web_app',
                         text: `${settings.ui_icon_livreur || '🚴'} Livreur`,
                         web_app: { url: livreurUrl }
                     }).catch(() => {});
                 } else {
-                    const catalogUrl = settings.mini_app_url ? `${settings.mini_app_url}/catalog` : `${baseDomain}/catalog`;
+                    const langCode = u?.language_code || 'fr';
+                    const catalogUrl = (settings.mini_app_url ? `${settings.mini_app_url}/catalog` : `${baseDomain}/catalog`) + `?lang=${langCode}`;
                     await ctx.telegram.setChatMenuButton(targetChatId, {
                         type: 'web_app',
                         text: `${settings.ui_icon_catalog || '🛍️'} Catalogue`,
@@ -919,14 +935,16 @@ function setupAdminHandlers(bot) {
                 const baseDomain = process.env.RENDER_EXTERNAL_URL || (process.env.RAILWAY_PUBLIC_DOMAIN ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}` : 'https://farmstegridy-bot.onrender.com');
                 const settings = await getAppSettings();
                 if (newState) {
-                    const dashboardUrl = settings.mini_app_url ? `${settings.mini_app_url}/dashboard` : `${baseDomain}/dashboard`;
+                    const langCode = u?.language_code || 'fr';
+                    const dashboardUrl = (settings.mini_app_url ? `${settings.mini_app_url}/dashboard` : `${baseDomain}/dashboard`) + `?lang=${langCode}`;
                     await ctx.telegram.setChatMenuButton(targetChatId, {
                         type: 'web_app',
                         text: `${settings.ui_icon_admin || '🛠️'} Dashboard`,
                         web_app: { url: dashboardUrl }
                     }).catch(() => {});
                 } else {
-                    const catalogUrl = settings.mini_app_url ? `${settings.mini_app_url}/catalog` : `${baseDomain}/catalog`;
+                    const langCode = u?.language_code || 'fr';
+                    const catalogUrl = (settings.mini_app_url ? `${settings.mini_app_url}/catalog` : `${baseDomain}/catalog`) + `?lang=${langCode}`;
                     await ctx.telegram.setChatMenuButton(targetChatId, {
                         type: 'web_app',
                         text: `${settings.ui_icon_catalog || '🛍️'} Catalogue`,
@@ -1262,4 +1280,4 @@ function setupAdminHandlers(bot) {
     });
 }
 
-module.exports = { setupAdminHandlers, isAdmin, initAdminState, clearAuthCache };
+module.exports = { setupAdminHandlers, isAdmin, initAdminState, clearAuthCache, awaitingUserSupportReply };

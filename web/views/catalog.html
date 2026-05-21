@@ -191,6 +191,7 @@
         .empty-state { text-align: center; padding: 60px 20px; opacity: 0.4; font-weight: 700; font-size: 14px; }
         @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.05); } 100% { transform: scale(1); } }
     </style>
+    <script src="/js/translations.js"></script>
 </head>
 <body>
     <div id="loading-screen">
@@ -226,10 +227,10 @@
             <div>
                 <div class="logo" style="display:flex; align-items:center; gap:10px;">
                     <img id="main-logo-2" class="app-dynamic-logo" src="/public/img/logo.png" style="height:32px; width:32px; object-fit:cover; border-radius:50%;" onerror="this.onerror=null; this.style.display='none';">
-                    <div id="header-text-logo" style="font-size:18px; font-weight:900; letter-spacing:-0.5px; display:block;"><span style="color:#fff;">Farm</span><span style="color:var(--accent);">stegridy</span></div>
+                    <div id="header-text-logo" style="font-size:18px; font-weight:900; letter-spacing:-0.5px; display:block;"><span style="color:#fff;">Farm</span><span style="color:var(--accent);">estegridy</span></div>
                 </div>
-                <div onclick="openAddressModal()" style="display:flex; align-items:center; gap:6px; margin-top:4px; font-size:11px; font-weight:800; opacity:0.8; cursor:pointer;">
-                    <i class="ph-fill ph-map-pin" style="color:var(--accent);"></i>
+                <div onclick="openAddressModal()" style="display:flex; align-items:center; gap:6px; margin-top:6px; font-size:12px; font-weight:900; opacity:1; cursor:pointer; background:rgba(255,255,255,0.05); padding:6px 12px; border-radius:12px;">
+                    <i class="ph-fill ph-map-pin" style="color:var(--accent); font-size:14px;"></i>
                     <div style="max-width:180px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">Livraison à : <span id="shop-default-address" style="color:var(--text); opacity:0.9;">Chargement...</span></div>
                     <i class="ph-bold ph-caret-down" style="font-size:10px; opacity:0.5;"></i>
                 </div>
@@ -254,7 +255,7 @@
             <div class="carousel" id="featured-carousel"></div>
         </div>
 
-        <div class="search-area"><div class="search-bar"><i class="ph-bold ph-magnifying-glass"></i><input type="text" placeholder="Rechercher..." id="search-input" oninput="handleSearch()"></div></div>
+        <div class="search-area"><div class="search-bar"><i class="ph-bold ph-magnifying-glass"></i><input type="text" placeholder="Rechercher..." data-i18n="search" data-i18n="search" id="search-input" oninput="handleSearch()"></div></div>
 
         <div class="categories-scroll" id="categories"></div>
 
@@ -287,7 +288,7 @@
         <div style="display:flex; gap:10px; margin-bottom:30px;">
             <div onclick="switchPage('orders')" style="flex:1; background:var(--card); padding:15px; border-radius:18px; text-align:center; border:1px solid var(--border); cursor:pointer;">
                 <i class="ph-fill ph-receipt" style="font-size:24px; color:var(--text); margin-bottom:5px;"></i>
-                <div style="font-size:12px; font-weight:800;">Commandes</div>
+                <div style="font-size:12px; font-weight:800;" data-i18n="orders"> data-i18n="orders">>Commandes</div>
             </div>
             <div onclick="openAddressModal()" style="flex:1; background:var(--card); padding:15px; border-radius:18px; text-align:center; border:1px solid var(--border); cursor:pointer;">
                 <i class="ph-fill ph-map-pin" style="font-size:24px; color:var(--text); margin-bottom:5px;"></i>
@@ -357,8 +358,8 @@
 
     <div class="bottom-nav">
         <div class="nav-item active" onclick="switchPage('shop', this)"><div class="nav-icon"><i class="ph-fill ph-diamond"></i></div><div class="nav-label">Shop</div></div>
-        <div class="nav-item" onclick="switchPage('orders', this)"><div class="nav-icon"><i class="ph-fill ph-package"></i></div><div class="nav-label">Commandes</div></div>
-        <div class="nav-item" onclick="switchPage('profile', this)"><div class="nav-icon"><i class="ph-fill ph-user"></i></div><div class="nav-label">Profil</div></div>
+        <div class="nav-item" onclick="switchPage('orders', this)"><div class="nav-icon"><i class="ph-fill ph-package"></i></div><div class="nav-label" data-i18n="orders"> data-i18n="orders">>Commandes</div></div>
+        <div class="nav-item" onclick="switchPage('profile', this)"><div class="nav-icon"><i class="ph-fill ph-user"></i></div><div class="nav-label" data-i18n="profile"> data-i18n="profile">>Profil</div></div>
     </div>
 
     <div class="sheet" id="selection-modal">
@@ -579,17 +580,10 @@
                 setLoader(80);
                 allProducts = await pRes.json();
                 allCategories = ['TOUT', 'FAVORIS ❤️', ...new Set(allProducts.map(p => p.category).filter(c => c))];
+                
                 if (uRes && uRes.ok) {
                     userInfo = await uRes.json();
                     
-                    if (userInfo && (userInfo.username || userInfo.first_name)) {
-                        const nameToDisplay = userInfo.username || userInfo.first_name;
-                        const pname = document.getElementById('profile-name');
-                        if (pname) pname.innerText = nameToDisplay;
-                        const pinit = document.getElementById('profile-initial');
-                        if (pinit) pinit.innerText = nameToDisplay.charAt(0).toUpperCase();
-                    }
-
                     if (userInfo && userInfo.mini_app_logo) {
                         updateAppLogo(userInfo.mini_app_logo);
                     }
@@ -605,6 +599,17 @@
                         }
                     }
                 }
+                
+                // Set the profile name directly from Telegram context
+                const tgUser = window.Telegram?.WebApp?.initDataUnsafe?.user;
+                if (tgUser && (tgUser.username || tgUser.first_name)) {
+                    const nameToDisplay = tgUser.username || tgUser.first_name;
+                    const pname = document.getElementById('profile-name');
+                    if (pname) pname.innerText = nameToDisplay;
+                    const pinit = document.getElementById('profile-initial');
+                    if (pinit) pinit.innerText = nameToDisplay.charAt(0).toUpperCase();
+                }
+
                 if (ordersRes && ordersRes.ok) {
                     window.userOrdersCache = await ordersRes.json();
                 } else {
@@ -1027,7 +1032,7 @@
                         safeSetStorage('stb_cart', cart);
                         updateCartUI();
                         switchPage('shop', document.querySelectorAll('.nav-item')[0]);
-                        tg.showAlert("Articles ajoutés au panier !");
+                        tg.showAlert(t("added_to_cart_notif"));
                     }
                 } catch(e) { tg.showAlert("Impossible de réclamer cette commande."); }
             });
@@ -2079,12 +2084,14 @@
         }
 
         async function requestCourierRole() {
-            const msg = "Votre demande d'admission a bien été reçue par Farmstegridy. Nous reviendrons vers vous pour vous donner notre décision.";
-            if (tg && tg.showAlert) {
-                tg.showAlert(msg);
-            } else {
-                alert(msg);
-            }
+            openCustomModal("DEMANDE DE LIVREUR", 
+                `<div style="text-align:center; padding:20px 0;">
+                    <div style="font-size:40px; margin-bottom:15px;">🚴</div>
+                    <div style="font-size:16px; font-weight:800; margin-bottom:10px;">Votre demande d'admission a bien été reçue par Farmestegridy !</div>
+                    <div style="font-size:13px; opacity:0.7;">Nous reviendrons vers vous très prochainement pour vous donner notre décision.</div>
+                </div>`
+            );
+            tg.HapticFeedback.notificationOccurred('success');
             try {
                 if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initDataUnsafe && window.Telegram.WebApp.initDataUnsafe.user) {
                     const uid = window.Telegram.WebApp.initDataUnsafe.user.id;
@@ -2415,5 +2422,43 @@
         }, 15000);
 
     </script>
+
+    <!-- Google Translate Injection -->
+    <style>
+        .goog-te-banner-frame.skiptranslate { display: none !important; }
+        body { top: 0px !important; }
+        #google_translate_element { display: none !important; }
+    </style>
+    <div id="google_translate_element"></div>
+    <script type="text/javascript">
+        function googleTranslateElementInit() {
+            new google.translate.TranslateElement({pageLanguage: 'fr', autoDisplay: false}, 'google_translate_element');
+        }
+    </script>
+    <script type="text/javascript" src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            let lang = urlParams.get('lang') || 'fr';
+            
+            // Map Telegram language codes to Google Translate codes
+            const langMap = { 'en': 'en', 'es': 'es', 'de': 'de', 'it': 'it', 'pt': 'pt', 'ru': 'ru', 'ar': 'ar' };
+            lang = langMap[lang] || lang;
+
+            if (lang !== 'fr') {
+                const interval = setInterval(() => {
+                    const select = document.querySelector('.goog-te-combo');
+                    if (select && select.options.length > 0) {
+                        select.value = lang;
+                        select.dispatchEvent(new Event('change'));
+                        clearInterval(interval);
+                    }
+                }, 300);
+                setTimeout(() => clearInterval(interval), 5000);
+            }
+        });
+    </script>
+    <!-- End Google Translate -->
+
 </body>
 </html>
