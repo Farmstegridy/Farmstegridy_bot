@@ -1363,6 +1363,7 @@ function createServer(port = 8080) {
                 points: user.points || 0,
                 referralLink: `https://t.me/${settings.bot_username}?start=${user.referral_code}`,
                 hotline: settings.admin_telegram_id || 'admin',
+                private_contact_url: settings.private_contact_url || 'https://t.me/Farmstegridy_bot',
                 chat_history: user.data?.chat_history || []
             });
         } catch (e) {
