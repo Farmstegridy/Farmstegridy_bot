@@ -1419,8 +1419,7 @@ function createServer(port = 8080) {
         try {
             const { userId } = req.body;
             const { getUser, getSettings } = require('./services/database');
-            const { getBotInstance } = require('./index');
-            const bot = getBotInstance();
+            const bot = botInstance;
             
             const user = await getUser(userId);
             const settings = await getSettings();

@@ -224,13 +224,14 @@
     <div id="page-shop" class="page active">
         <div class="app-header">
             <div>
-                <div class="logo">
-                    <img id="main-logo-2" class="app-dynamic-logo" src="/public/img/logo.png" style="height:36px; object-fit:contain; border-radius:50%;" onerror="this.onerror=null; document.getElementById('header-text-logo').style.display='block';">
-                    <div id="header-text-logo" style="display:none;"><span style="color:#fff;">Farm</span><span style="color:var(--accent);">stegridy</span></div>
+                <div class="logo" style="display:flex; align-items:center; gap:10px;">
+                    <img id="main-logo-2" class="app-dynamic-logo" src="/public/img/logo.png" style="height:32px; width:32px; object-fit:cover; border-radius:50%;" onerror="this.onerror=null; this.style.display='none';">
+                    <div id="header-text-logo" style="font-size:18px; font-weight:900; letter-spacing:-0.5px; display:block;"><span style="color:#fff;">Farm</span><span style="color:var(--accent);">stegridy</span></div>
                 </div>
-                <div id="shop-stats" style="font-size:10px; font-weight:800; opacity:0.5; margin-top:2px; display:flex; gap:8px;">
-                    <span style="color:#ffaa00;"><i class="ph-fill ph-star"></i> <span id="shop-rating-avg">4.9</span></span>
-                    <span><i class="ph-fill ph-users"></i> <span id="shop-review-count">128</span> AVIS</span>
+                <div onclick="openAddressModal()" style="display:flex; align-items:center; gap:6px; margin-top:4px; font-size:11px; font-weight:800; opacity:0.8; cursor:pointer;">
+                    <i class="ph-fill ph-map-pin" style="color:var(--accent);"></i>
+                    <div style="max-width:180px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">Livraison à : <span id="shop-default-address" style="color:var(--text); opacity:0.9;">Chargement...</span></div>
+                    <i class="ph-bold ph-caret-down" style="font-size:10px; opacity:0.5;"></i>
                 </div>
             </div>
             <div class="header-actions">
@@ -241,11 +242,7 @@
             </div>
         </div>
         
-        <div onclick="openAddressModal()" style="display:flex; align-items:center; justify-content:center; gap:8px; padding:12px; background:rgba(255,255,255,0.03); border-bottom:1px solid var(--border); margin:-20px -20px 20px -20px; cursor:pointer;">
-            <i class="ph-fill ph-map-pin" style="color:var(--accent); font-size:16px;"></i>
-            <div style="font-size:12px; font-weight:800; max-width:250px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">Livraison à : <span id="shop-default-address" style="color:var(--text); opacity:0.9;">Chargement...</span></div>
-            <i class="ph-bold ph-caret-down" style="font-size:12px; opacity:0.5;"></i>
-        </div>
+        <!-- Address bar moved to header -->
 
         <div id="news-section" style="padding: 0 20px 20px 20px; display:none;">
             <div style="font-size:11px; font-weight:900; opacity:0.3; margin-bottom:12px; letter-spacing:1px;">À LA UNE ⚡</div>
