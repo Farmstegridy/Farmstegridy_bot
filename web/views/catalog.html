@@ -2096,13 +2096,7 @@
         // ═══════════════════════════════════════════════════════
 
         function openGlobalSupportModal() {
-            stopAllVideos();
-            document.getElementById('support-modal').classList.add('open');
-            renderAdminChatMessages();
-            setTimeout(() => {
-                const c = document.getElementById('admin-chat-messages');
-                if (c) c.scrollTop = c.scrollHeight;
-            }, 50);
+            openAdminTelegram();
         }
 
         function closeSupportModal() {
@@ -2204,12 +2198,7 @@
         
         function contactSupportForOrder(orderId) {
             closeOrderSupportModal();
-            openGlobalSupportModal();
-            const input = document.getElementById('admin-chat-input');
-            if (input) {
-                input.value = `Bonjour, j'ai besoin d'aide concernant ma commande #${orderId.slice(-5).toUpperCase()}. `;
-                input.focus();
-            }
+            openAdminTelegram();
         }
 
         async function sendQuickCourierMsg(orderId) {
