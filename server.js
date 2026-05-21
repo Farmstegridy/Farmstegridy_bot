@@ -654,14 +654,17 @@ function createServer(port = 8080) {
     app.post('/api/admin/upload-logo', authMiddleware, async (req, res) => {
         try {
             if (!req.files || Object.keys(req.files).length === 0) return res.status(400).json({ error: 'No files uploaded.' });
-            const { uploadMediaBuffer, database } = require('./services/database');
+            const { uploadMediaBuffer, updateAppSettings } = require('./services/database');
             const file = Object.values(req.files)[0];
-            const cleanName = `mini_app_logo.png`;
+            const ext = require('path').extname(file.name) || '.png';
+            const cleanName = `mini_app_logo_${Date.now()}${ext}`;
             const url = await uploadMediaBuffer(file.data, cleanName, file.mimetype);
             if (!url) throw new Error("Upload failed");
             
-            // Trigger a settings updated_at change so clients refresh cache
-            await database.supabase.from('bot_settings').update({ updated_at: new Date().toISOString() }).eq('id', 'default');
+            await updateAppSettings({ 
+                mini_app_logo: url, 
+                updated_at: new Date().toISOString() 
+            });
             
             res.json({ url });
         } catch(e) {
@@ -1404,6 +1407,7 @@ function createServer(port = 8080) {
                 referralLink: `https://t.me/${settings.bot_username}?start=${user.referral_code}`,
                 hotline: settings.admin_telegram_id || 'admin',
                 private_contact_url: settings.private_contact_url || 'https://t.me/Farmstegridy_bot',
+                mini_app_logo: settings.mini_app_logo || 'https://todfwctsutqmlhwctgnl.supabase.co/storage/v1/object/public/bot_media/mini_app_logo.png',
                 chat_history: user.data?.chat_history || []
             });
         } catch (e) {
@@ -1416,7 +1420,29 @@ function createServer(port = 8080) {
             const { productId } = req.query;
             const { getReviews } = require('./services/database');
             const reviews = await getReviews(50);
-            res.json(reviews.filter(r => r.product_id === productId));
+            res.json(reviews.filter(r => String(r.product_id) === String(productId)));
+        } catch (e) {
+            res.status(500).json({ error: e.message });
+        }
+    });
+
+    app.get('/api/user/reviews', async (req, res) => {
+        try {
+            const { userId } = req.query;
+            const { getReviews } = require('./services/database');
+            const reviews = await getReviews(100);
+            res.json(reviews.filter(r => r.user_id === userId));
+        } catch (e) {
+            res.status(500).json({ error: e.message });
+        }
+    });
+
+    app.delete('/api/user/reviews/:id', async (req, res) => {
+        try {
+            const { id } = req.params;
+            const { deleteReview } = require('./services/database');
+            await deleteReview(id);
+            res.json({ success: true });
         } catch (e) {
             res.status(500).json({ error: e.message });
         }

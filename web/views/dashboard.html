@@ -5609,6 +5609,11 @@
                     setVal('set_ui_icon_welcome', s.ui_icon_welcome || '🏠');
                     setVal('set_label_welcome', s.label_welcome || 'Message d\'accueil');
 
+                    if (s.mini_app_logo) {
+                        const img = document.getElementById('dashboard_logo_preview');
+                        if (img) img.src = s.mini_app_logo;
+                    }
+
                     // --- ALL FIELDS (SAFENED TO PREVENT CRASHES) ---
                     setVal('set_status_pending_label', s.status_pending_label);
                     setVal('set_ui_icon_pending', s.ui_icon_pending);
