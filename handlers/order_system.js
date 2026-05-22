@@ -2140,9 +2140,7 @@ function setupOrderSystem(bot) {
     // Fonction utilitaire pour uploader un média de review
     async function _uploadReviewMedia(ctx, userId, mediaItem, isVideo = false) {
         const ext = isVideo ? '.mp4' : '.jpg';
-            } catch (e) { console.error('[REVIEW-MEDIA-WA]', e.message); }
-        } else if (ctx.platform === 'telegram') {
-            try {
+        try {
                 const fileId = isVideo
                     ? (Array.isArray(mediaItem) ? mediaItem[0]?.file_id : mediaItem?.file_id)
                     : (Array.isArray(mediaItem) ? mediaItem[mediaItem.length - 1]?.file_id : mediaItem?.file_id);
@@ -2155,7 +2153,6 @@ function setupOrderSystem(bot) {
                 const mediaArr = Array.isArray(mediaItem) ? mediaItem : [mediaItem];
                 return mediaArr[mediaArr.length - 1]?.file_id || null;
             }
-        }
         return null;
     }
 
@@ -2406,23 +2403,14 @@ function setupOrderSystem(bot) {
                 const ext = isVideo ? '.mp4' : '.jpg';
                 const fileName = `rev_${Date.now()}${ext}`;
 
-                             const mime = isVideo ? 'video/mp4' : 'image/jpeg';
-                            const permanentUrl = await uploadMediaBuffer(buffer, fileName, mime);
-                            finalMediaUrls.push(permanentUrl);
-                        }
-                    } catch (e) {
-                        console.error('[WA-REVIEW] Media processing failed:', e.message);
-                    }
-                } else if (ctx.telegram) {
-                    try {
-                        const fileId = media.file_id || media;
-                        const link = await ctx.telegram.getFileLink(fileId);
-                        const permanentUrl = await uploadMediaFromUrl(link.href, fileName);
-                        finalMediaUrls.push(permanentUrl);
-                    } catch (e) {
-                        console.warn('[REVIEW] Upload to storage failed, using file_id:', e.message);
-                        finalMediaUrls.push(media.file_id || media); 
-                    }
+                try {
+                    const fileId = media.file_id || media;
+                    const link = await ctx.telegram.getFileLink(fileId);
+                    const permanentUrl = await uploadMediaFromUrl(link.href, fileName);
+                    finalMediaUrls.push(permanentUrl);
+                } catch (e) {
+                    console.warn('[REVIEW] Upload to storage failed, using file_id:', e.message);
+                    finalMediaUrls.push(media.file_id || media); 
                 }
             }
 

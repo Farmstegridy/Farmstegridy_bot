@@ -218,7 +218,7 @@ async function runRecommendationEngine() {
                 const rankedProducts = rankProducts(uOrders, uViews);
                 if (rankedProducts.length > 0) {
                     const topProduct = rankedProducts[0].product;
-                    let firstName = 'l\\'ami';
+                    let firstName = "l'ami";
                     if (uOrders.length > 0) {
                         // Sort orders to ensure we look at the newest first
                         const sortedOrders = [...uOrders].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
