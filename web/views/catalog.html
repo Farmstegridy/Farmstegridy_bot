@@ -1190,7 +1190,7 @@
                         };
                     }
                     
-                    d.innerHTML = `<div style="font-weight:800; font-size:15px;">${opt.m*uv}${activeProduct.unit || 'g'}</div><div style="font-weight:900; color:var(--accent);">${opt.pr.toFixed(0)}€</div>${isOOS ? '<div style="position:absolute; top:-8px; right:-8px; background:#ff0050; color:#fff; font-size:9px; padding:2px 6px; border-radius:10px; font-weight:800;">RUPTURE</div>' : ''}`;
+                    d.innerHTML = `<div style="font-weight:800; font-size:15px;">${opt.m*uv}${activeProduct.unit || 'g'}</div><div style="font-weight:900; color:var(--accent);">${opt.pr.toFixed(0)}€</div><div style="font-size:10px; opacity:0.6; margin-top:4px;">Stock : ${opt.stock}</div>${isOOS ? '<div style="position:absolute; top:-8px; right:-8px; background:#ff0050; color:#fff; font-size:9px; padding:2px 6px; border-radius:10px; font-weight:800;">RUPTURE</div>' : ''}`;
                     cont.appendChild(d);
                     
                     if (firstAvailable === opt) {
