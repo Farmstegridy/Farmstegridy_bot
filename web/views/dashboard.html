@@ -4912,8 +4912,34 @@
                                     }
                                     
                                     const stockVal = p.stock !== undefined && p.stock !== null ? p.stock : 0;
+                                    let totalPhysical = stockVal;
+                                    
+                                    let stockInputsHtml = `
+                                        <div style="font-size:14px; color:var(--text-muted); margin-bottom:10px;">${p.has_discounts ? 'Stock (Format 1)' : 'Stock actuel'}: <b style="color:var(--text); font-size:16px;" id="stock-current-val-${p.id}-main">${stockVal}</b></div>
+                                        <div style="display:flex; align-items:center; gap:10px; margin-bottom:15px; justify-content:center;">
+                                            <button type="button" class="btn btn-sm" onclick="adjustStockInputValue('${p.id}-main', -1)" style="width:36px; height:36px; font-size:18px; display:flex; align-items:center; justify-content:center; border-radius:50%; background:rgba(255,255,255,0.05);">-</button>
+                                            <input type="number" id="stock-input-${p.id}-main" value="${stockVal}" min="0" style="width:80px; height:36px; text-align:center; font-size:16px; font-weight:700; border-radius:8px; border:1px solid var(--border); background:rgba(0,0,0,0.2);">
+                                            <button type="button" class="btn btn-sm" onclick="adjustStockInputValue('${p.id}-main', 1)" style="width:36px; height:36px; font-size:18px; display:flex; align-items:center; justify-content:center; border-radius:50%; background:rgba(255,255,255,0.05);">+</button>
+                                        </div>
+                                    `;
+
+                                    if (p.has_discounts && Array.isArray(p.discounts_config)) {
+                                        p.discounts_config.forEach((d, dIdx) => {
+                                            const dStock = d.stock !== undefined && d.stock !== null ? d.stock : 0;
+                                            totalPhysical += dStock;
+                                            stockInputsHtml += `
+                                                <div style="font-size:14px; color:var(--text-muted); margin-bottom:10px; margin-top:10px; border-top:1px solid var(--border); padding-top:10px;">Stock (Format ${dIdx + 2}): <b style="color:var(--text); font-size:16px;" id="stock-current-val-${p.id}-${dIdx}">${dStock}</b></div>
+                                                <div style="display:flex; align-items:center; gap:10px; margin-bottom:15px; justify-content:center;">
+                                                    <button type="button" class="btn btn-sm" onclick="adjustStockInputValue('${p.id}-${dIdx}', -1)" style="width:36px; height:36px; font-size:18px; display:flex; align-items:center; justify-content:center; border-radius:50%; background:rgba(255,255,255,0.05);">-</button>
+                                                    <input type="number" id="stock-input-${p.id}-${dIdx}" value="${dStock}" min="0" style="width:80px; height:36px; text-align:center; font-size:16px; font-weight:700; border-radius:8px; border:1px solid var(--border); background:rgba(0,0,0,0.2);">
+                                                    <button type="button" class="btn btn-sm" onclick="adjustStockInputValue('${p.id}-${dIdx}', 1)" style="width:36px; height:36px; font-size:18px; display:flex; align-items:center; justify-content:center; border-radius:50%; background:rgba(255,255,255,0.05);">+</button>
+                                                </div>
+                                            `;
+                                        });
+                                    }
+
                                     const isAvailable = (p.is_active !== undefined) ? p.is_active : p.is_available;
-                                    const statusLabel = isAvailable && stockVal > 0 
+                                    const statusLabel = isAvailable && totalPhysical > 0 
                                         ? '<span style="background:rgba(39,174,96,0.15); color:#27ae60; padding:4px 8px; border-radius:4px; font-size:11px; font-weight:700;">En vente</span>'
                                         : '<span style="background:rgba(231,76,60,0.15); color:#e74c3c; padding:4px 8px; border-radius:4px; font-size:11px; font-weight:700;">Indisponible / Épuisé</span>';
                                         
@@ -4922,13 +4948,8 @@
                                             <div style="margin-bottom:10px;">${mediaHtml}</div>
                                             <div style="font-weight:600; font-size:16px; margin-bottom:5px;">${p.name}</div>
                                             <div style="margin-bottom:10px;"><span class="badge" style="opacity:0.8;">${p.category || 'Standard'}</span></div>
-                                            <div style="font-size:14px; color:var(--text-muted); margin-bottom:10px;">Stock actuel: <b style="color:var(--text); font-size:16px;" id="stock-current-val-${p.id}">${stockVal}</b></div>
                                             
-                                            <div style="display:flex; align-items:center; gap:10px; margin-bottom:15px;">
-                                                <button type="button" class="btn btn-sm" onclick="adjustStockInputValue('${p.id}', -1)" style="width:36px; height:36px; font-size:18px; display:flex; align-items:center; justify-content:center; border-radius:50%; background:rgba(255,255,255,0.05);">-</button>
-                                                <input type="number" id="stock-input-${p.id}" value="${stockVal}" min="0" style="width:80px; height:36px; text-align:center; font-size:16px; font-weight:700; border-radius:8px; border:1px solid var(--border); background:rgba(0,0,0,0.2);">
-                                                <button type="button" class="btn btn-sm" onclick="adjustStockInputValue('${p.id}', 1)" style="width:36px; height:36px; font-size:18px; display:flex; align-items:center; justify-content:center; border-radius:50%; background:rgba(255,255,255,0.05);">+</button>
-                                            </div>
+                                            ${stockInputsHtml}
                                             
                                             <div style="margin-bottom:15px;">${statusLabel}</div>
                                             
@@ -7145,22 +7166,36 @@
         }
 
         async function saveProductStock(id) {
-            const input = document.getElementById('stock-input-' + id);
-            if (!input) return;
-            const newStock = parseInt(input.value) || 0;
+            const p = window._cachedProducts.find(x => String(x.id) === String(id));
+            if (!p) return showToast('Produit introuvable', 'error');
+
+            const mainInput = document.getElementById('stock-input-' + id + '-main');
+            if (!mainInput) return;
+            const newStock = parseInt(mainInput.value) || 0;
+            
+            let totalPhysical = newStock;
+
+            let newDiscountsConfig = p.discounts_config;
+            if (p.has_discounts && Array.isArray(p.discounts_config)) {
+                newDiscountsConfig = p.discounts_config.map((d, dIdx) => {
+                    const dInput = document.getElementById('stock-input-' + id + '-' + dIdx);
+                    const dStock = dInput ? (parseInt(dInput.value) || 0) : (d.stock || 0);
+                    totalPhysical += dStock;
+                    return { ...d, stock: dStock };
+                });
+            }
+
             const btn = document.getElementById('btn-save-stock-' + id);
             if (btn) {
                 btn.disabled = true;
                 btn.innerHTML = '...';
             }
             try {
-                const p = window._cachedProducts.find(x => String(x.id) === String(id));
-                if (!p) throw new Error('Produit introuvable');
-                
-                const is_active = newStock > 0;
+                const is_active = totalPhysical > 0;
                 const payload = {
                     ...p,
                     stock: newStock,
+                    discounts_config: newDiscountsConfig,
                     is_active: is_active
                 };
                 
