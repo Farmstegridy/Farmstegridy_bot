@@ -104,61 +104,9 @@ class TelegramChannel extends Channel {
         }
 
         // --- DISTRIBUTED LOCK ---
-        const { claimLock, checkLock } = require('../services/database');
+        // Lock désactivé pour Render (instance unique) pour assurer un boot immédiat
+        console.log(`[TG-LOCK] Distributed lock bypassed for instant boot.`);
         
-        const replicaCount = parseInt(process.env.RAILWAY_REPLICA_COUNT || '1', 10);
-        
-        // If we are running locally or with a single replica, bypass the lock to avoid 60s wait on Nodemon restarts
-        if (replicaCount <= 1) {
-            console.log(`[TG-LOCK] Single replica detected. Bypassing lock mechanism.`);
-            this.bot.launch().catch(err => console.error('[Telegram] Launch error:', err.message));
-            return;
-        }
-        
-        // Use a stable ID for the replica (index is better than PID for reboots)
-        const replicaIndex = process.env.RAILWAY_REPLICA_INDEX || 0;
-        const processUniqueId = Math.random().toString(36).substring(2, 8);
-        const instanceId = `replica-${replicaIndex}-${processUniqueId}`;
-        const telegramLockId = `tg_lock`;
-
-        try {
-            const lock = await checkLock(telegramLockId);
-            
-            // If lock exists and isn't ours, check if it's expired
-            if (lock && lock.owner && lock.owner !== instanceId) {
-                const now = Date.now();
-                const expiresAtDate = new Date(lock.expires).getTime();
-                
-                if (expiresAtDate > now) {
-                    const expiresAt = new Date(lock.expires).toLocaleTimeString();
-                    console.log(`[TG-LOCK] ⚠️ Session busy (Owner: ${lock.owner}, Expires: ${expiresAt}). Retrying in 30s...`);
-                    setTimeout(() => this.start(), 30000);
-                    return;
-                }
-            }
-
-            // Try to claim
-            const claimed = await claimLock(telegramLockId, instanceId);
-            if (!claimed) {
-                console.log(`[TG-LOCK] ❌ Claim failed. Retrying in 30s...`);
-                setTimeout(() => this.start(), 30000);
-                return;
-            }
-
-            console.log(`[TG-LOCK] 🎉 Lock obtained by ${instanceId}. launching bot...`);
-            
-            // Launch bot via heartbeat
-            if (this.heartbeatInterval) clearInterval(this.heartbeatInterval);
-            this.heartbeatInterval = setInterval(async () => {
-                await claimLock(telegramLockId, instanceId);
-            }, 45000); // refresh every 45s (lock TTL is 60s)
-        } catch (err) {
-            console.error('[TG-LOCK] Error during lock sequence:', err);
-            setTimeout(() => this.start(), 30000);
-            return;
-        }
-
-        console.log(`[TG-LOCK] Telegram lock claimed by ${instanceId}`);
         console.log(`[TG] Lancement du bot (${this.token.substring(0, 4)}****...)...`);
         
         // Build launch options

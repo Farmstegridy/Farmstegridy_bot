@@ -389,7 +389,8 @@ async function getProducts(onlyActive = false) {
                 // Lock for 30 mins max
                 if (c && c.cart && (now - c.updated_at < 30 * 60 * 1000)) {
                     c.cart.forEach(item => {
-                        lockedStock[item.id] = (lockedStock[item.id] || 0) + item.quantity;
+                        const qty = (item.n || 1) * (item.m || 1);
+                        lockedStock[item.id] = (lockedStock[item.id] || 0) + qty;
                     });
                 }
             }
@@ -570,18 +571,20 @@ async function getReviews(limit = 100) {
 
 async function saveReview(review) {
     const payload = JSON.stringify({ text: review.text, media: review.media || [], product_id: review.product_id });
-    const id = Date.now().toString(36) + Math.random().toString(36).substr(2, 5);
+    const id = review.id || (Date.now().toString(36) + Math.random().toString(36).substr(2, 5));
     const encrypted = {
         ...review,
         id: id,
         text: encryption.encrypt(payload),
         first_name: encryption.encrypt(review.first_name),
-        username: encryption.encrypt(review.username),
-        created_at: ts()
+        username: encryption.encrypt(review.username)
     };
+    if (!review.id) {
+        encrypted.created_at = ts();
+    }
     delete encrypted.media;
     delete encrypted.product_id;
-    return await supabase.from(COL_REVIEWS).insert(encrypted);
+    return await supabase.from(COL_REVIEWS).upsert(encrypted);
 }
 
 async function deleteReview(id) {

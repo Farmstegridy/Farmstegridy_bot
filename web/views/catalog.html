@@ -1185,8 +1185,9 @@
             tg.HapticFeedback.impactOccurred('light');
         }
 
-        function openReviewPrompt(pid) {
+        function openReviewPrompt(pid, existingReview = null) {
             stopAllVideos();
+            const textVal = existingReview ? existingReview.text.replace(/"/g, '&quot;') : '';
             const html = `
                 <div style="text-align:center; font-size:14px; margin-bottom:15px; opacity:0.8;">Notez ce produit et partagez votre expérience :</div>
                 <div style="display:flex; justify-content:center; gap:10px; margin-bottom:20px;" id="review-stars">
@@ -1196,21 +1197,27 @@
                     <i class="notranslate ph-fill ph-star" style="font-size:32px; color:var(--border);" onclick="setReviewStar(4)"></i>
                     <i class="notranslate ph-fill ph-star" style="font-size:32px; color:var(--border);" onclick="setReviewStar(5)"></i>
                 </div>
-                <textarea id="review-text" placeholder="Génial ! Je recommande fortement..." style="width:100%; height:80px; background:rgba(0,0,0,0.3); border:1px solid var(--border); border-radius:12px; color:#fff; padding:10px; font-family:'Outfit', sans-serif; resize:none; margin-bottom:10px;"></textarea>
+                <textarea id="review-text" placeholder="Génial ! Je recommande fortement..." style="width:100%; height:80px; background:rgba(0,0,0,0.3); border:1px solid var(--border); border-radius:12px; color:#fff; padding:10px; font-family:'Outfit', sans-serif; resize:none; margin-bottom:10px;">${textVal}</textarea>
                 
                 <div style="margin-bottom:15px;">
                     <label for="review-media-upload" style="display:inline-flex; align-items:center; gap:8px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); border-radius:10px; padding:10px 15px; font-size:13px; cursor:pointer;">
-                        <i class="notranslate ph-bold ph-image" style="font-size:18px;"></i> Ajouter Photo/Vidéo
+                        <i class="notranslate ph-bold ph-image" style="font-size:18px;"></i> ${existingReview && existingReview.media && existingReview.media.length ? 'Remplacer Photo/Vidéo' : 'Ajouter Photo/Vidéo'}
                     </label>
                     <input type="file" id="review-media-upload" accept="image/*,video/*" style="display:none;" onchange="document.getElementById('review-media-preview').innerText = this.files.length ? this.files[0].name : '';">
                     <div id="review-media-preview" style="font-size:11px; opacity:0.6; margin-top:5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;"></div>
                 </div>
 
-                <button class="btn-primary" id="btn-submit-review" style="background:var(--accent); color:#fff;" onclick="submitProductReview('${pid}')">ENVOYER L'AVIS</button>
+                <button class="btn-primary" id="btn-submit-review" style="background:var(--accent); color:#fff;" onclick="submitProductReview('${pid}', ${existingReview ? \\\`'\\\${existingReview.id}'\\\` : 'null'})">ENVOYER L'AVIS</button>
             `;
             openCustomModal('VOTRE AVIS', html);
-            window.currentReviewRating = 5;
-            setReviewStar(5);
+            window.currentReviewRating = existingReview ? existingReview.rating : 5;
+            setReviewStar(window.currentReviewRating);
+        }
+
+        function editUserReview(rid) {
+            if (!window.userReviewsCache) return;
+            const rev = window.userReviewsCache.find(r => r.id === rid);
+            if (rev) openReviewPrompt(rev.product_id, rev);
         }
 
         function setReviewStar(val) {
@@ -1221,7 +1228,7 @@
             }
         }
 
-        async function submitProductReview(pid) {
+        async function submitProductReview(pid, reviewId = null) {
             const text = document.getElementById('review-text').value;
             const uid = tg.initDataUnsafe?.user?.id;
             const fileInput = document.getElementById('review-media-upload');
@@ -1243,16 +1250,22 @@
                         const upData = await upRes.json();
                         if (upData.url) media.push(upData.url);
                     }
+                } else if (reviewId && window.userReviewsCache) {
+                    const existing = window.userReviewsCache.find(r => r.id === reviewId);
+                    if (existing && existing.media) media = existing.media;
                 }
                 
                 await fetch('/api/products/reviews', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ userId: `telegram_${uid}`, productId: pid, rating: window.currentReviewRating, text: text, media: media })
+                    body: JSON.stringify({ id: reviewId, userId: `telegram_${uid}`, productId: pid, rating: window.currentReviewRating, text: text, media: media })
                 });
                 closeCustomModal();
                 tg.showAlert("Merci pour votre avis !");
                 loadProductReviews(pid);
+                if (document.getElementById('cmodal-title')?.innerText === 'MES AVIS') {
+                    openUserReviewsModal();
+                }
             } catch(e) {
                 btn.disabled = false;
                 btn.innerText = "ENVOYER L'AVIS";
@@ -1293,8 +1306,9 @@
                 const uid = tg.initDataUnsafe?.user?.id;
                 const res = await fetch(`/api/user/reviews?userId=telegram_${uid}`);
                 const reviews = await res.json();
+                window.userReviewsCache = reviews;
                 
-                let contentHTML = reviews.length ? '' : '<div class="empty-state">Vous n\'avez laissé aucun avis.</div>';
+                let contentHTML = reviews.length ? '' : '<div class="empty-state">Vous n\\'avez laissé aucun avis.</div>';
                 
                 reviews.forEach(r => {
                     const p = allProducts.find(x => String(x.id) === String(r.product_id));
@@ -1318,8 +1332,9 @@
                             </div>
                             <div style="font-size:12px; opacity:0.8;">${r.text}</div>
                             ${mediaHtml}
-                            <div style="margin-top:10px; text-align:right;">
-                                <button class="btn-primary" style="background:rgba(255,0,80,0.1); border:1px solid rgba(255,0,80,0.5); color:#ff0050; padding:5px 10px; height:auto; font-size:11px; display:inline-block; width:auto;" onclick="deleteUserReview('${r.id}')"><i class="notranslate ph-bold ph-trash"></i> SUPPRIMER</button>
+                            <div style="margin-top:10px; display:flex; gap:10px; justify-content:flex-end;">
+                                <button class="btn-primary" style="background:rgba(255,170,0,0.1); border:1px solid rgba(255,170,0,0.5); color:#ffaa00; padding:5px 10px; height:auto; font-size:11px; width:auto;" onclick="editUserReview('${r.id}')"><i class="notranslate ph-bold ph-pencil"></i> MODIFIER</button>
+                                <button class="btn-primary" style="background:rgba(255,0,80,0.1); border:1px solid rgba(255,0,80,0.5); color:#ff0050; padding:5px 10px; height:auto; font-size:11px; width:auto;" onclick="deleteUserReview('${r.id}')"><i class="notranslate ph-bold ph-trash"></i> SUPPRIMER</button>
                             </div>
                         </div>
                     `;
@@ -1434,7 +1449,7 @@
 
         function getAvailableQuantity(p) {
             if (!p) return 0;
-            const inCart = cart.filter(i => String(i.id) === String(p.id)).reduce((s, i) => s + i.n, 0);
+            const inCart = cart.filter(i => String(i.id) === String(p.id)).reduce((s, i) => s + ((i.n || 1) * (i.m || 1)), 0);
             return Math.max(0, p.stock - inCart);
         }
 
@@ -2113,20 +2128,20 @@
                     let statusColor = '#fff';
                     let icon = '📦';
                     switch(o.status) {
-                        case 'pending': msg = `Votre commande #${o.ref} a bien été prise en compte. Elle est en attente de validation par l'équipe.`; statusColor='#ffaa00'; icon='⏳'; break;
-                        case 'accepted': msg = `Votre commande #${o.ref} a été validée ! Elle est en préparation.`; statusColor='#2ecc71'; icon='✅'; break;
-                        case 'delivering': msg = `Le livreur est en route pour votre commande #${o.ref} ! Préparez-vous.`; statusColor='#3498db'; icon='🛵'; break;
-                        case 'delivered': msg = `Votre commande #${o.ref} a été livrée. Merci pour votre confiance !`; statusColor='#9b59b6'; icon='🎉'; break;
-                        case 'cancelled': msg = `Votre commande #${o.ref} a été annulée.`; statusColor='#e74c3c'; icon='❌'; break;
-                        default: msg = `Mise à jour de votre commande #${o.ref} : ${o.status}`;
+                        case 'pending': msg = `Votre commande #${o.id.slice(-5).toUpperCase()} a bien été prise en compte. Elle est en attente de validation par l'équipe.`; statusColor='#ffaa00'; icon='⏳'; break;
+                        case 'accepted': msg = `Votre commande #${o.id.slice(-5).toUpperCase()} a été validée ! Elle est en préparation.`; statusColor='#2ecc71'; icon='✅'; break;
+                        case 'delivering': msg = `Le livreur est en route pour votre commande #${o.id.slice(-5).toUpperCase()} ! Préparez-vous.`; statusColor='#3498db'; icon='🛵'; break;
+                        case 'delivered': msg = `Votre commande #${o.id.slice(-5).toUpperCase()} a été livrée. Merci pour votre confiance !`; statusColor='#9b59b6'; icon='🎉'; break;
+                        case 'cancelled': msg = `Votre commande #${o.id.slice(-5).toUpperCase()} a été annulée.`; statusColor='#e74c3c'; icon='❌'; break;
+                        default: msg = `Mise à jour de votre commande #${o.id.slice(-5).toUpperCase()} : ${o.status}`;
                     }
                     
                     combined.push({
                         id: 'order_' + o.id,
                         type: 'order',
-                        message: `<div style="display:flex; align-items:center; gap:8px;"><span style="font-size:20px;">${icon}</span> <strong style="color:${statusColor};">Commande #${o.ref}</strong></div><div style="margin-top:5px; font-size:13px; opacity:0.9;">${msg}</div>`,
+                        message: `<div style="display:flex; align-items:center; gap:8px;"><span style="font-size:20px;">${icon}</span> <strong style="color:${statusColor};">Commande #${o.id.slice(-5).toUpperCase()}</strong></div><div style="margin-top:5px; font-size:13px; opacity:0.9;">${msg}</div>`,
                         created_at: o.created_at,
-                        order_ref: o.ref
+                        order_ref: o.id.slice(-5).toUpperCase()
                     });
                 });
             }

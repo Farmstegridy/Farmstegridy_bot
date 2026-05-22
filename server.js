@@ -2151,12 +2151,13 @@ function createServer(port = 8080) {
 
     app.post('/api/products/reviews', async (req, res) => {
         try {
-            const { userId, productId, rating, text, media } = req.body;
+            const { id, userId, productId, rating, text, media } = req.body;
             const { getUser, saveReview } = require('./services/database');
             const user = await getUser(userId);
             if (!user) return res.status(404).json({ error: 'User not found' });
             
             await saveReview({
+                id,
                 user_id: userId,
                 product_id: productId,
                 rating,

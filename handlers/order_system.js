@@ -275,6 +275,18 @@ function setupOrderSystem(bot) {
             photo: isVideo ? null : firstPhoto,
             video: isVideo ? firstPhoto : null
         });
+
+        if (allMedia.length > 1) {
+            try {
+                const mediaGroup = allMedia.slice(1).map(m => ({
+                    type: m.type === 'video' ? 'video' : 'photo',
+                    media: m.url
+                }));
+                await ctx.telegram.sendMediaGroup(ctx.from.id, mediaGroup);
+            } catch(e) {
+                console.error('[Product] Failed to send media group', e.message);
+            }
+        }
     });
 
     bot.action(/^qty_(.+)_(.+)$/, async (ctx) => {
