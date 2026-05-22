@@ -2752,21 +2752,22 @@
                                 </select>
                             </div>
 
-                            <!-- 📉 PRIX DÉGRESSIFS -->
+                            <!-- 📦 CONDITIONNEMENTS SUPPLÉMENTAIRES (ex-prix dégressifs) -->
                             <div style="display:flex; align-items:center; gap:8px; margin-bottom:6px; background:rgba(0,191,255,0.06); padding:8px 10px; border-radius:8px; cursor:pointer;" onclick="document.getElementById('prod_has_discounts').click()">
                                 <input type="checkbox" id="prod_has_discounts" onchange="toggleDiscountsArea()"
                                     style="width:16px; height:16px; cursor:pointer; flex-shrink:0;">
                                 <div>
-                                    <span style="font-weight:600; color:#00bfff; font-size:12px;">📉 Prix dégressifs</span>
-                                    <span style="font-size:10px; opacity:0.5; margin-left:4px;">1=10€, 3=25€, 5=35€</span>
+                                    <span style="font-weight:600; color:#00bfff; font-size:12px;">📦 Conditionnements & Stocks</span>
+                                    <span style="font-size:10px; opacity:0.5; margin-left:4px;">Jusqu'à 4 formats optionnels (ex: 2g, 5g)</span>
                                 </div>
                             </div>
                             <div id="discounts_config_area"
                                 style="display:none; background:rgba(0,191,255,0.04); padding:12px; border-radius:8px; border:1px dashed rgba(0,191,255,0.15); margin-bottom:10px;">
-                                <div style="display:grid; grid-template-columns: auto 1fr; gap:3px 6px; align-items:center; font-size:10px; font-weight:600; margin-bottom:4px;">
-                                    <span>Qté</span><span>Prix total (€)</span>
+                                <div style="display:grid; grid-template-columns: 1fr 1fr 1fr 30px; gap:6px; align-items:center; font-size:10px; font-weight:600; margin-bottom:4px;">
+                                    <span>Format (Multiplicateur)</span><span>Prix (€)</span><span>Stock</span><span></span>
                                 </div>
                                 <div id="discounts_list" style="display:flex; flex-direction:column; gap:4px;"></div>
+                                <button class="btn btn-sm" onclick="addDiscountRow()" style="margin-top:8px; font-size:11px; width:100%;"><i class="notranslate ph-bold ph-plus"></i> Ajouter un conditionnement optionnel</button>
                                 
                                 <!-- ✨ MAGIC PARSER V2 (PREMIUM) -->
                                 <div style="margin-top:15px; background:rgba(0,191,255,0.05); padding:15px; border-radius:15px; border:1px solid rgba(0,191,255,0.15);">
@@ -6297,7 +6298,8 @@
                     const qty = parseInt(r.querySelector('.discount-qty').value);
                     const totalVal = r.querySelector('.discount-price').value.replace(',', '.');
                     const total = parseFloat(totalVal);
-                    if (!isNaN(qty) && !isNaN(total)) discounts_config.push({ qty, total });
+                    const stockVal = parseInt(r.querySelector('.discount-stock').value) || 0;
+                    if (!isNaN(qty) && !isNaN(total)) discounts_config.push({ qty, total, stock: stockVal });
                 });
                 discounts_config.sort((a, b) => a.qty - b.qty);
             }
@@ -6375,7 +6377,7 @@
             const dList = document.getElementById('discounts_list');
             dList.innerHTML = '';
             if (p.discounts_config && p.discounts_config.length > 0) {
-                p.discounts_config.forEach(d => addDiscountRow(d.qty, d.total));
+                p.discounts_config.forEach(d => addDiscountRow(d.qty, d.total, d.stock || 0));
             } else if (p.has_discounts) {
                 addDiscountRow();
             }
@@ -6544,10 +6546,10 @@
             }
         }
 
-        function addDiscountRow(qty = '', price = '') {
+        function addDiscountRow(qty = '', price = '', stock = '') {
             const div = document.createElement('div');
             div.className = 'discount-row';
-            div.style = 'display:grid; grid-template-columns: 1fr 1fr 40px; gap:8px; align-items:end; background:rgba(255,255,255,0.03); padding:8px; border-radius:8px;';
+            div.style = 'display:grid; grid-template-columns: 1fr 1fr 1fr 30px; gap:6px; align-items:end; background:rgba(255,255,255,0.03); padding:8px; border-radius:8px;';
             
             let options = '';
             for (let i = 1; i <= 100; i++) {
@@ -6556,14 +6558,19 @@
 
             div.innerHTML = `
                 <div>
-                    <label style="font-size:10px">Quantité (Nb. Sachets)</label>
+                    <label style="font-size:10px">Format (ex: 2)</label>
                     <select class="discount-qty" style="background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.1); border-radius:8px; color:white; font-size:12px; height:36px; padding:0 8px;">
+                        <option value="" disabled ${!qty ? 'selected' : ''}>Sél.</option>
                         ${options}
                     </select>
                 </div>
                 <div>
-                    <label style="font-size:10px">Prix TOTAL (€)</label>
-                    <input type="number" class="discount-price" value="${price}" placeholder="ex: 120" min="0" style="height:36px;">
+                    <label style="font-size:10px">Prix (€)</label>
+                    <input type="number" class="discount-price" value="${price}" placeholder="Prix" min="0" style="height:36px; font-size:12px; margin:0; border-radius:8px;">
+                </div>
+                <div>
+                    <label style="font-size:10px">Stock</label>
+                    <input type="number" class="discount-stock" value="${stock}" placeholder="Qté" min="0" style="height:36px; font-size:12px; margin:0; border-radius:8px;">
                 </div>
                 <button class="btn btn-sm btn-outline text-danger" onclick="this.parentElement.remove()" style="padding:8px; margin-bottom:0; height:36px; display:flex; align-items:center; justify-content:center;">🗑️</button>
             `;

@@ -1072,35 +1072,66 @@ async function adjustOrderStock(orderId, action) {
             const productId = item.productId || item.id;
             const qty = action === 'increment' ? item.qty : -item.qty;
             
-            const { data: p } = await supabase.from(COL_PRODUCTS).select('id, stock, name').eq('id', productId).maybeSingle();
-            if (p && typeof p.stock === 'number') {
-                const newStock = Math.max(0, p.stock + qty);
-                const updates = { stock: newStock };
+            const { data: p } = await supabase.from(COL_PRODUCTS).select('id, stock, discounts_config, name').eq('id', productId).maybeSingle();
+            if (p) {
+                const packageIndex = item.packageIndex || 0;
+                let newStock = 0;
+                let isBase = packageIndex === 0;
                 
-                let alertMsg = null;
-                if (action === 'decrement') {
-                    if (newStock <= 0 && p.stock > 0) {
-                        updates.is_active = false;
-                        updates.is_available = false;
-                        alertMsg = `🚫 <b>Rupture de Stock</b>\nLe produit <b>${p.name}</b> est épuisé. Il a été automatiquement masqué du catalogue du bot.`;
-                    } else if (newStock <= 2 && p.stock > 2) {
-                        alertMsg = `⚠️ <b>Alerte Stock Critique (${newStock} restants)</b>\nLe produit <b>${p.name}</b> n'a plus que ${newStock} unités en stock ! Veuillez réapprovisionner au plus vite.`;
-                    } else if (newStock <= 5 && p.stock > 5) {
-                        alertMsg = `⚠️ <b>Alerte Stock Bas (${newStock} restants)</b>\nLe produit <b>${p.name}</b> n'a plus que ${newStock} unités en stock. Pensez à réapprovisionner !`;
+                if (isBase && typeof p.stock === 'number') {
+                    newStock = Math.max(0, p.stock + qty);
+                    const updates = { stock: newStock };
+                    
+                    let alertMsg = null;
+                    if (action === 'decrement') {
+                        if (newStock <= 0 && p.stock > 0) {
+                            updates.is_active = false;
+                            updates.is_available = false;
+                            alertMsg = `🚫 <b>Rupture de Stock</b>\nLe produit <b>${p.name}</b> (Base) est épuisé. Il a été automatiquement masqué.`;
+                        } else if (newStock <= 2 && p.stock > 2) {
+                            alertMsg = `⚠️ <b>Alerte Stock Critique (${newStock} restants)</b>\nLe produit <b>${p.name}</b> (Base) n'a plus que ${newStock} unités en stock ! Veuillez réapprovisionner au plus vite.`;
+                        } else if (newStock <= 5 && p.stock > 5) {
+                            alertMsg = `⚠️ <b>Alerte Stock Bas (${newStock} restants)</b>\nLe produit <b>${p.name}</b> (Base) n'a plus que ${newStock} unités en stock. Pensez à réapprovisionner !`;
+                        }
+                    }
+                    
+                    await supabase.from(COL_PRODUCTS).update(updates).eq('id', productId);
+                    if (alertMsg) {
+                        try {
+                            const { notifyAdmins } = require('./notifications');
+                            await notifyAdmins(null, alertMsg);
+                        } catch(err) {
+                            console.error("Error sending stock alert from DB:", err.message);
+                        }
+                    }
+                } else if (!isBase && Array.isArray(p.discounts_config) && p.discounts_config[packageIndex - 1]) {
+                    const dc = p.discounts_config;
+                    const pkg = dc[packageIndex - 1];
+                    const oldStock = pkg.stock || 0;
+                    pkg.stock = Math.max(0, oldStock + qty);
+                    newStock = pkg.stock;
+                    
+                    let alertMsg = null;
+                    if (action === 'decrement') {
+                        if (newStock <= 0 && oldStock > 0) {
+                            alertMsg = `🚫 <b>Rupture de Stock</b>\nLe produit <b>${p.name}</b> (Format x${pkg.qty}) est épuisé.`;
+                        } else if (newStock <= 2 && oldStock > 2) {
+                            alertMsg = `⚠️ <b>Alerte Stock Critique (${newStock} restants)</b>\nLe produit <b>${p.name}</b> (Format x${pkg.qty}) n'a plus que ${newStock} unités.`;
+                        }
+                    }
+                    
+                    await supabase.from(COL_PRODUCTS).update({ discounts_config: dc }).eq('id', productId);
+                    if (alertMsg) {
+                        try {
+                            const { notifyAdmins } = require('./notifications');
+                            await notifyAdmins(null, alertMsg);
+                        } catch(err) {
+                            console.error("Error sending stock alert from DB:", err.message);
+                        }
                     }
                 }
                 
-                await supabase.from(COL_PRODUCTS).update(updates).eq('id', productId);
-                
-                if (alertMsg) {
-                    try {
-                        const { notifyAdmins } = require('./notifications');
-                        await notifyAdmins(null, alertMsg);
-                    } catch(err) {
-                        console.error("Error sending stock alert from DB:", err.message);
-                    }
-                }
-                await logStockMovement(productId, qty, `order_${action}`, orderId);
+                await logStockMovement(productId, qty, `order_${action}_pkg${packageIndex}`, orderId);
             }
         }
     } catch(e) {

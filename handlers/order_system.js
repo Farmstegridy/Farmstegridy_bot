@@ -233,32 +233,36 @@ function setupOrderSystem(bot) {
         const unitLabel = (product.unit && product.unit.toLowerCase() !== 'unité') ? product.unit : 'g';
 
         const user = ctx.state?.user || await getUser(`${ctx.platform}_${ctx.from.id}`);
-        const stockBadge = await getScarcityBadge(product);
+        const stockBadge = await getScarcityBadge(product); // global badge
         let text = `🌟 <b>${esc(product.name)}</b> 🌟\n` +
             `📦 Statut : <b>${stockBadge}</b>\n\n` +
-            t(user, 'label_unit_price', '💰 Prix Unitaire :') + ` <b>${product.price}€</b>\n` +
             (promoText ? `${promoText}\n` : "") +
             (product.description ? `\n<i>${product.description}</i>\n` : "") +
-            `\n💎 <b>Combien de sachets voulez-vous ?</b>\n\n` +
-            `💡 <i>Cliquez sur le chiffre qui correspond au nombre de sachets que vous voulez.</i>\n` +
-            `<i>(Exemple : si vous cliquez sur <b>1</b>, vous recevrez 1 sachet de ${multiplier}${unitLabel})</i>`;
-        const multipliers = [1, 2, 3, 4, 5, 10];
-        
-        const qtyRows = [];
-        for (let i = 0; i < multipliers.length; i += 2) {
-            const m1 = multipliers[i];
-            const q1 = m1 * multiplier;
-            const label1 = `${m1}`;
-            const row = [Markup.button.callback(label1, `qty_${productId}_${q1}`)];
-            
-            if (i + 1 < multipliers.length) {
-                const m2 = multipliers[i+1];
-                const q2 = m2 * multiplier;
-                const label2 = `${m2}`;
-                row.push(Markup.button.callback(label2, `qty_${productId}_${q2}`));
-            }
-            qtyRows.push(row);
+            `\n💎 <b>Quel conditionnement (format) souhaitez-vous ?</b>\n\n`;
+
+        const uv = parseFloat(String(product.unit_value || '1').replace(',','.')) || 1;
+        const unitLabel = (product.unit && product.unit.toLowerCase() !== 'unité') ? product.unit : 'g';
+
+        let optionsList = [{ packageIndex: 0, m: 1, pr: product.price, stock: parseInt(product.stock) || 0 }];
+        if (product.has_discounts && Array.isArray(product.discounts_config)) {
+            product.discounts_config.forEach((d, idx) => {
+                optionsList.push({ packageIndex: idx + 1, m: d.qty, pr: parseFloat(d.total || d.total_price), stock: parseInt(d.stock) || 0 });
+            });
         }
+
+        const qtyRows = [];
+        for (const opt of optionsList) {
+            const avail = opt.stock;
+            if (avail > 0) {
+                const label = `${opt.m * uv}${unitLabel} - ${opt.pr}€`;
+                qtyRows.push([Markup.button.callback(label, `pkg_${productId}_${opt.packageIndex}`)]);
+            }
+        }
+        
+        if (qtyRows.length === 0) {
+            text += `\n❌ <i>Désolé, tous les formats sont actuellement en rupture de stock.</i>\n`;
+        }
+
         qtyRows.push([Markup.button.callback(t(user, 'btn_cancel', '❌ Annuler'), 'view_catalog')]);
         const keyboard = Markup.inlineKeyboard(qtyRows);
 
@@ -289,11 +293,62 @@ function setupOrderSystem(bot) {
         }
     });
 
+    bot.action(/^pkg_([a-zA-Z0-9-]+)_(\d+)$/, async (ctx) => {
+        await ctx.answerCbQuery();
+        const productId = ctx.match[1];
+        const packageIndex = parseInt(ctx.match[2]);
+        const products = await getProducts(true);
+        const product = products.find(p => String(p.id) === String(productId));
+        
+        if (!product) return;
+        const user = ctx.state?.user || await getUser(`${ctx.platform}_${ctx.from.id}`);
+        
+        const uv = parseFloat(String(product.unit_value || '1').replace(',','.')) || 1;
+        const unitLabel = (product.unit && product.unit.toLowerCase() !== 'unité') ? product.unit : 'g';
+        
+        let pkgLabel, pkgPrice;
+        if (packageIndex === 0) {
+            pkgLabel = `${uv}${unitLabel}`;
+            pkgPrice = parseFloat(product.price);
+        } else {
+            const d = product.discounts_config[packageIndex - 1];
+            pkgLabel = `${d.qty * uv}${unitLabel}`;
+            pkgPrice = parseFloat(d.total || d.total_price);
+        }
+
+        const text = `🌟 <b>${esc(product.name)} - Format ${pkgLabel}</b> 🌟\n\n` +
+            `💰 Prix : <b>${pkgPrice}€</b> le sachet\n\n` +
+            `💎 <b>Combien de sachets de ce format voulez-vous ?</b>\n\n`;
+
+        const multipliers = [1, 2, 3, 4, 5, 10];
+        const qtyRows = [];
+        for (let i = 0; i < multipliers.length; i += 2) {
+            const m1 = multipliers[i];
+            const row = [Markup.button.callback(`${m1}`, `qty_${productId}_${packageIndex}_${m1}`)];
+            if (i + 1 < multipliers.length) {
+                const m2 = multipliers[i+1];
+                row.push(Markup.button.callback(`${m2}`, `qty_${productId}_${packageIndex}_${m2}`));
+            }
+            qtyRows.push(row);
+        }
+        qtyRows.push([Markup.button.callback(t(user, 'btn_back', '◀️ Retour'), `product_${product.id}`)]);
+
+        await safeEdit(ctx, text, Markup.inlineKeyboard(qtyRows));
+    });
+
+    // Ancien format pour la retro-compatibilité
     bot.action(/^qty_(.+)_(.+)$/, async (ctx) => {
+        await ctx.answerCbQuery();
+        await safeEdit(ctx, "⚠️ Menu expiré. Veuillez relancer le catalogue.", Markup.inlineKeyboard([[Markup.button.callback('◀️ Retour', 'view_catalog')]]));
+    });
+
+    // Nouveau format
+    bot.action(/^qty_([a-zA-Z0-9-]+)_(\d+)_(\d+)$/, async (ctx) => {
         await ctx.answerCbQuery();
         const userId = `${ctx.platform}_${ctx.from.id}`;
         const productId = ctx.match[1];
-        const qty = parseFloat(ctx.match[2]);
+        const packageIndex = parseInt(ctx.match[2]);
+        const nSachets = parseInt(ctx.match[3]);
         const products = await getProducts(true);
         const product = products.find(p => String(p.id) === String(productId));
         const settings = (ctx.state?.settings || await getAppSettings());
@@ -303,26 +358,22 @@ function setupOrderSystem(bot) {
             return safeEdit(ctx, settings.msg_product_not_found || '❌ Produit non trouvé.', Markup.inlineKeyboard([[Markup.button.callback(settings.btn_back_generic || '◀️ Retour', 'view_catalog')]]));
         }
 
-        // Calcul du prix avec gestion des paliers dégressifs et NaN Fix
-        const baseVal = Math.max(0.001, parseFloat(String(product.unit_value || '1').replace(',', '.')) || 1);
-        const effectiveQty = (Number.isFinite(qty) && Number.isFinite(baseVal)) ? (qty / baseVal) : 0; 
-        const basePrice = Math.max(0, parseFloat(product.price) || 0);
-        let totalPriceValue = basePrice * effectiveQty;
-
-        if (product.has_discounts && product.discounts_config && Array.isArray(product.discounts_config)) {
-            const sortedDiscounts = [...product.discounts_config].sort((a, b) => b.qty - a.qty);
-            const bestDiscount = sortedDiscounts.find(d => effectiveQty >= d.qty);
-            if (bestDiscount) {
-                const discountValue = parseFloat(bestDiscount.total || bestDiscount.total_price || 0);
-                const discountQty = parseFloat(bestDiscount.qty);
-                totalPriceValue = discountValue + (effectiveQty - discountQty) * basePrice;
-            }
-        }
+        const uv = parseFloat(String(product.unit_value || '1').replace(',','.')) || 1;
+        const unitLabel = (product.unit && product.unit.toLowerCase() !== 'unité') ? product.unit : 'g';
         
-        if (!Number.isFinite(totalPriceValue)) {
-            console.error(`❌ [NaN Fix] totalPriceValue is invalid for product ${productId}. basePrice=${basePrice}, effectiveQty=${effectiveQty}`);
-            totalPriceValue = 0;
+        let pkgLabel, pkgPrice, pkgM;
+        if (packageIndex === 0) {
+            pkgM = 1;
+            pkgLabel = `${uv}${unitLabel}`;
+            pkgPrice = parseFloat(product.price);
+        } else {
+            const d = product.discounts_config[packageIndex - 1];
+            pkgM = d.qty;
+            pkgLabel = `${d.qty * uv}${unitLabel}`;
+            pkgPrice = parseFloat(d.total || d.total_price);
         }
+
+        let totalPriceValue = pkgPrice * nSachets;
         const totalPrice = totalPriceValue.toFixed(2);
 
         let bundleText = "";
@@ -330,7 +381,7 @@ function setupOrderSystem(bot) {
             const config = product.bundle_config || { trigger_qty: 1, offered_qty: 1, offered_id: null };
             const trigger = config.trigger_qty || 1;
             const offered = config.offered_qty || 1;
-            const numGifts = Math.floor(effectiveQty / trigger) * offered;
+            const numGifts = Math.floor(nSachets / trigger) * offered;
 
             if (numGifts > 0) {
                 if (config.offered_id) {
@@ -342,26 +393,23 @@ function setupOrderSystem(bot) {
             }
         }
 
+        const formattedName = product.name + ` [Format: ${pkgLabel}]` + bundleText;
+
         pendingOrders.set(userId, {
             productId,
-            qty,
+            qty: nSachets,
+            packageIndex,
             totalPrice,
-            productName: product.name + bundleText,
+            productName: formattedName,
             is_bundle: product.is_bundle,
-            supplier_id: product.supplier_id, // IMPORTANT pour la notification fournisseur
-            nSachets: (baseVal > 1) ? effectiveQty : null,
+            supplier_id: product.supplier_id,
             productUnit: product.unit || 'g'
         });
 
-        if (baseVal === 1 && product.unit && product.unit.length > 0 && !(['unité', 'unite', 'piece', 'pce'].includes(product.unit.toLowerCase()))) {
-            const nSachets = Math.round(qty / baseVal) || 1;
-            return askUnitSelection(ctx, product, nSachets);
-        }
-
-        await showAddToCartChoice(ctx, product, qty, totalPrice);
+        await showAddToCartChoice(ctx, product, nSachets, pkgLabel, totalPrice);
     });
 
-    async function showAddToCartChoice(ctx, product, qty, totalPrice, unitAmount = null) {
+    async function showAddToCartChoice(ctx, product, nSachets, pkgLabel, totalPrice, unitAmount = null) {
         const userId = `${ctx.platform}_${ctx.from.id}`;
         const settings = ctx.state?.settings || await getAppSettings();
         const pending = pendingOrders.get(userId);
@@ -369,19 +417,9 @@ function setupOrderSystem(bot) {
         if (unitAmount) pending.chosen_unit_amount = unitAmount;
 
         const user = ctx.state?.user || await getUser(userId);
-        const rawVal = String(product.unit_value || '1');
-        const multiplier = parseFloat(rawVal.replace(',', '.')) || 1;
-        const unitLabel = product.unit || '';
         
-        let displayQty;
-        let sachetInfo = "";
-        if (multiplier > 1) {
-            const nSachets = qty / multiplier;
-            displayQty = `${qty}${unitLabel}`;
-            sachetInfo = `\n📦 <b>Format : ${nSachets} sachet${nSachets > 1 ? 's' : ''} de ${multiplier}${unitLabel}</b>`;
-        } else {
-            displayQty = unitLabel ? `${qty}${unitLabel}` : `${qty}x`;
-        }
+        let displayQty = `${nSachets} sachet${nSachets > 1 ? 's' : ''}`;
+        let sachetInfo = `\n📦 <b>Format sélectionné : ${pkgLabel}</b>`;
 
         const text = t(user, 'msg_selection', '🛒 <b>Vous avez choisi : {qty} {name}</b>', { qty: displayQty, name: product.name }) + (unitAmount ? ` (${unitAmount})` : '') + 
             sachetInfo + '\n' +
@@ -399,8 +437,6 @@ function setupOrderSystem(bot) {
             ]
         ];
 
-        // Si un media group est actif (multi-images), pas de photo dans safeEdit
-        // sinon le media group reste visible au-dessus et safeEdit édite juste le texte+boutons
         const hasActiveGroup = getAllMediaUrls(product).length > 1;
         await safeEdit(ctx, text, {
             ...Markup.inlineKeyboard(buttons),
@@ -424,47 +460,17 @@ function setupOrderSystem(bot) {
         const product = products.find(p => String(p.id) === String(pending.productId));
 
         if (product) {
-            // Tentative de fusion avec un item existant du même produit et même quantité unitaire (ex: 0.5g)
             const sameIdx = cart.findIndex(it => 
                 String(it.productId) === String(pending.productId) && 
-                it.chosen_unit_amount === pending.chosen_unit_amount
+                it.packageIndex === pending.packageIndex
             );
 
             if (sameIdx !== -1) {
                 // FUSION
                 const existing = cart[sameIdx];
+                const unitPrice = parseFloat(existing.totalPrice) / existing.qty;
                 existing.qty += pending.qty;
-                
-                // RECALCUL DU PRIX DÉGRESSIF pour la nouvelle quantité cumulée
-                let priceUsed = product.price;
-                let effectiveQty = existing.qty;
-
-                // Si c'est un produit à l'unité (0.5g, etc.), on ajuste le calcul
-                if (existing.chosen_unit_amount) {
-                    const cleanUnitVal = String(product.unit_value || '1').replace(',', '.');
-                    const baseVal = parseFloat(cleanUnitVal) || 1;
-                    // On extrait le nombre du chosen_unit_amount (ex: "0.5g" -> 0.5)
-                    const amountMatch = existing.chosen_unit_amount.match(/^[0-9.]+/);
-                    const amount = amountMatch ? parseFloat(amountMatch[0]) : baseVal;
-                    effectiveQty = (amount / baseVal) * existing.qty;
-                    priceUsed = (product.price / baseVal) * amount; // Prix de base de cette sélection (ex: prix de 0.5g)
-                }
-
-                let newTotalValue = priceUsed * existing.qty;
-                if (product.has_discounts && product.discounts_config && product.discounts_config.length > 0) {
-                    const sortedDiscounts = [...product.discounts_config].sort((a, b) => b.qty - a.qty);
-                    const bestD = sortedDiscounts.find(d => effectiveQty >= d.qty);
-                    if (bestD) {
-                        const dVal = parseFloat(bestD.total || bestD.total_price || 0);
-                        const dQty = parseFloat(bestD.qty);
-                        // extra_qty est la différence entre l'effectiveQty cumulée et le palier
-                        const extra = Math.max(0, effectiveQty - dQty);
-                        newTotalValue = dVal + (extra * (product.price / (parseFloat(String(product.unit_value || '1').replace(',', '.')) || 1)));
-                        // Si l'item fusionné avait un prix spécifique (amount != baseVal), on ajuste si besoin (mais dVal est déjà le total pour dQty)
-                        // Note: C'est complexe car dVal est un total fixe pour un certain nombre de baseUnits.
-                    }
-                }
-                existing.totalPrice = formatPrice(newTotalValue);
+                existing.totalPrice = formatPrice(unitPrice * existing.qty);
             } else {
                 cart.push(pending);
             }
@@ -517,7 +523,7 @@ function setupOrderSystem(bot) {
             const price = parseFloat(item.totalPrice) || 0;
             total += price;
             const unit = item.productUnit || 'g';
-            const qtyLabel = item.nSachets ? `(x${item.nSachets} sachet${item.nSachets > 1 ? 's' : ''} - ${item.qty}${unit})` : `(x${item.qty}${unit})`;
+            const qtyLabel = `(x${item.qty})`;
             
             const warningText = getReservationWarningText(item);
             summary += `${idx + 1}. ${item.productName} <b>${qtyLabel}</b>${item.chosen_unit_amount ? ` [${item.chosen_unit_amount}]` : ''} - <b>${formatPrice(price)}€</b>\n`;
@@ -1298,8 +1304,18 @@ function setupOrderSystem(bot) {
             const p = allProducts.find(prod => String(prod.id) === String(item.productId));
             if (!p) {
                 outOfStockItems.push(`${item.productName} (Indisponible)`);
-            } else if (typeof p.stock === 'number' && p.stock < item.qty) {
-                outOfStockItems.push(`${p.name} (Stock insuffisant : reste ${p.stock})`);
+            } else {
+                let pStock = 0;
+                if (item.packageIndex && item.packageIndex > 0) {
+                    const dConf = p.discounts_config && p.discounts_config[item.packageIndex - 1];
+                    pStock = dConf ? parseInt(dConf.stock) : 0;
+                } else {
+                    pStock = parseInt(p.stock) || 0;
+                }
+                
+                if (pStock < item.qty) {
+                    outOfStockItems.push(`${item.productName} (Stock insuffisant : reste ${pStock})`);
+                }
             }
         }
         if (outOfStockItems.length > 0) {
@@ -1367,32 +1383,8 @@ function setupOrderSystem(bot) {
             const order = createResult.order;
 
             // DECREMENT STOCK & LOG TO LEDGER
-            const { saveProduct } = require('../services/database');
-            for (const item of cart) {
-                const p = allProducts.find(prod => String(prod.id) === String(item.productId));
-                if (p && typeof p.stock === 'number') {
-                    const newStock = Math.max(0, p.stock - item.qty);
-                    const updates = { id: p.id, stock: newStock };
-                    
-                    let alertMsg = null;
-                    if (newStock <= 0 && p.stock > 0) {
-                        updates.is_active = false;
-                        updates.is_available = false;
-                        alertMsg = `🚫 <b>Rupture de Stock</b>\nLe produit <b>${p.name}</b> est épuisé. Il a été automatiquement masqué du catalogue du bot.`;
-                    } else if (newStock <= 2 && p.stock > 2) {
-                        alertMsg = `⚠️ <b>Alerte Stock Critique (${newStock} restants)</b>\nLe produit <b>${p.name}</b> n'a plus que ${newStock} unités en stock ! Veuillez réapprovisionner au plus vite.`;
-                    } else if (newStock <= 5 && p.stock > 5) {
-                        alertMsg = `⚠️ <b>Alerte Stock Bas (${newStock} restants)</b>\nLe produit <b>${p.name}</b> n'a plus que ${newStock} unités en stock. Pensez à réapprovisionner !`;
-                    }
-                    
-                    if (alertMsg) {
-                        notifyAdmins(bot, alertMsg).catch(err => console.error("Error sending stock alert:", err.message));
-                    }
-                    
-                    await saveProduct(updates).catch(e => console.error(`[STOCK-ERR] ${p.id}:`, e.message));
-                    await logStockMovement(p.id, -item.qty, 'order', order?.id || 'unknown');
-                }
-            }
+            const { adjustOrderStock } = require('../services/database');
+            await adjustOrderStock(order.id, 'decrement').catch(e => console.error("Stock decrement error:", e));
             
             // On vérifie si c'est la première commande en utilisant l'ID officiel (possiblement fusionné)
             const officialUserId = ctx.state.user?.id || userId;

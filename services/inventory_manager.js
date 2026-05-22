@@ -80,14 +80,15 @@ async function cleanupExpiredReservations() {
 /**
  * Calculate the total reserved quantity of a product in all active shopping carts.
  */
-async function getReservedStock(productId) {
+async function getReservedStock(productId, packageIndex = 0) {
     await cleanupExpiredReservations();
     
     let reserved = 0;
     userCarts.forEach(cart => {
         if (!Array.isArray(cart)) return;
         cart.forEach(item => {
-            if (String(item.productId) === String(productId)) {
+            const itemPkgIdx = item.packageIndex || 0;
+            if (String(item.productId) === String(productId) && itemPkgIdx === packageIndex) {
                 reserved += parseFloat(item.qty) || 0;
             }
         });
@@ -97,20 +98,25 @@ async function getReservedStock(productId) {
 }
 
 /**
- * Get available stock (physical stock minus reserved stock).
+ * Get available stock (physical stock minus reserved stock) for a specific conditionnement.
  */
-async function getAvailableStock(product) {
+async function getAvailableStock(product, packageIndex = 0) {
     if (!product) return 0;
-    const physical = parseInt(product.stock) || 0;
-    const reserved = await getReservedStock(product.id);
+    let physical = 0;
+    if (packageIndex === 0) {
+        physical = parseInt(product.stock) || 0;
+    } else if (Array.isArray(product.discounts_config) && product.discounts_config[packageIndex - 1]) {
+        physical = parseInt(product.discounts_config[packageIndex - 1].stock) || 0;
+    }
+    const reserved = await getReservedStock(product.id, packageIndex);
     return Math.max(0, physical - reserved);
 }
 
 /**
  * Return scarcity label and emoji badge.
  */
-async function getScarcityBadge(product) {
-    const available = await getAvailableStock(product);
+async function getScarcityBadge(product, packageIndex = 0) {
+    const available = await getAvailableStock(product, packageIndex);
     if (available <= 0) {
         return "🔴 Rupture de stock";
     }

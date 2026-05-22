@@ -155,36 +155,36 @@
     <script src="/js/translations.js"></script>
 </head>
 <body>
-    <div id="loading-screen"><div class="loader"></div><p style="margin-top:20px; font-weight:800; font-size:12px; opacity:0.5;">CHARGEMENT CONSOLE...</p></div>
+    <div id="loading-screen"><div class="loader"></div><p style="margin-top:20px; font-weight:800; font-size:12px; opacity:0.5;"><span data-i18n="loading_console">CHARGEMENT CONSOLE...</span></p></div>
 
     <div class="app-container">
         <header>
-            <div class="logo">Farm<span>stegridy</span> <span style="font-size:12px; color:#fff; font-weight:400;">LIVREUR</span></div>
+            <div class="logo">Farm<span>stegridy</span> <span style="font-size:12px; color:#fff; font-weight:400;"><span data-i18n="courier">LIVREUR</span></span></div>
             <div class="status-badge" onclick="toggleAvailability()">
                 <div class="status-dot status-offline" id="avail-dot"></div>
-                <span id="avail-text">INDISPONIBLE</span>
+                <span id="avail-text"><span data-i18n="unavailable">INDISPONIBLE</span></span>
             </div>
         </header>
 
         <div id="tab-deliveries" class="tab-content active">
             <div id="active-orders-section">
-                <div class="section-title">En livraison 🔥</div>
+                <div class="section-title"><span data-i18n="in_delivery_fire">En livraison 🔥</span></div>
                 <div id="active-orders-list"></div>
             </div>
 
             <div id="available-orders-section" style="margin-top:40px;">
-                <div class="section-title">Commandes disponibles 📦</div>
+                <div class="section-title"><span data-i18n="orders_available_box">Commandes disponibles 📦</span></div>
                 <div id="available-orders-list"></div>
             </div>
         </div>
 
         <div id="tab-chat" class="tab-content" style="display:none; padding-bottom: 80px;">
-            <div class="section-title">Discussions actives 💬</div>
+            <div class="section-title"><span data-i18n="active_chats">Discussions actives 💬</span></div>
             <div id="chat-active-list"></div>
         </div>
 
         <div id="tab-history" class="tab-content" style="display:none;">
-            <div class="section-title">Mon historique cumulé 📈</div>
+            <div class="section-title"><span data-i18n="history_cumulative">Mon historique cumulé 📈</span></div>
             <div id="history-orders-list"></div>
         </div>
     </div>
@@ -192,15 +192,15 @@
     <div class="tab-bar">
         <div class="tab-item active" onclick="switchTab('deliveries')">
             <div class="tab-icon notranslate">🚚</div>
-            <div>COURSES</div>
+            <div><span data-i18n="courses">COURSES</span></div>
         </div>
         <div class="tab-item" onclick="switchTab('chat')">
             <div class="tab-icon notranslate">💬</div>
-            <div>CHAT</div>
+            <div><span data-i18n="chat">CHAT</span></div>
         </div>
         <div class="tab-item" onclick="switchTab('history')">
             <div class="tab-icon notranslate">📈</div>
-            <div>HISTORIQUE</div>
+            <div><span data-i18n="history_caps">HISTORIQUE</span></div>
         </div>
     </div>
 
@@ -276,10 +276,10 @@
             const text = document.getElementById('avail-text');
             if (userInfo.isAvailable) {
                 dot.className = 'status-dot status-online';
-                text.innerText = 'DISPONIBLE';
+                text.innerText = t('available_caps', {default: 'DISPONIBLE'});
             } else {
                 dot.className = 'status-dot status-offline';
-                text.innerText = 'INDISPONIBLE';
+                text.innerText = t('unavailable_caps', {default: 'INDISPONIBLE'});
             }
         }
 
@@ -363,7 +363,7 @@
                     chatSection = `
                         <div class="chat-history-box" id="chat-box-${o.id}">
                             <span style="opacity:0.4; font-size:10px;">Dernier échange (${count}/6) :</span><br>
-                            <b style="color:${h.senderRole === 'client' ? '#00ff88' : 'var(--accent)'}">${h.senderRole === 'client' ? 'Client' : 'Vous'} :</b> <i>${h.lastMessage}</i>
+                            <b style="color:${h.senderRole === 'client' ? '#00ff88' : 'var(--accent)'}">${h.senderRole === 'client' ? t('client', {default: 'Client'}) : t('you', {default: 'Vous'})} :</b> <i>${h.lastMessage}</i>
                         </div>
                     `;
                 } else if (count > 0) {
@@ -412,7 +412,7 @@
                         <div style="font-size:10px; font-weight:900; opacity:0.5; margin-bottom:8px; letter-spacing:1px;">MESSAGERIE ANONYME :</div>
                         ${chatSection}
                         <div class="chat-input-group">
-                            <input type="text" class="chat-input" id="chat-input-${o.id}" value="${safeQuote(prevState.text)}" placeholder="Votre message au client..." onkeydown="if(event.key==='Enter') sendChatMessage('${o.id}')">
+                            <input type="text" class="chat-input" id="chat-input-${o.id}" value="${safeQuote(prevState.text)}" placeholder="Votre message au client..." data-i18n-placeholder="msg_to_client" onkeydown="if(event.key==='Enter') sendChatMessage('${o.id}')">
                             <button class="btn-send" onclick="sendChatMessage('${o.id}')">ENVOYER</button>
                         </div>
                         <div style="font-size:9px; opacity:0.3; margin-top:6px; text-align:center;">Le client verra ce message sans connaître votre numéro.</div>
@@ -498,7 +498,7 @@
                     chatHistoryHtml = `
                         <div class="chat-history-box" id="tab-chat-box-${o.id}">
                             <span style="opacity:0.4; font-size:10px;">Dernier échange (${count}/6) :</span><br>
-                            <b style="color:${h.senderRole === 'client' ? 'var(--accent)' : '#00ff88'}">${h.senderRole === 'client' ? 'Client' : 'Vous'} :</b> <i>${h.lastMessage}</i>
+                            <b style="color:${h.senderRole === 'client' ? 'var(--accent)' : '#00ff88'}">${h.senderRole === 'client' ? t('client', {default: 'Client'}) : t('you', {default: 'Vous'})} :</b> <i>${h.lastMessage}</i>
                         </div>
                     `;
                 } else if (count > 0) {

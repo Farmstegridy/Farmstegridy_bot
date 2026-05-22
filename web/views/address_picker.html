@@ -156,12 +156,12 @@
 
 <body>
     <div class="header">
-        <h1>📍 Ma Livraison</h1>
-        <p>Saisissez votre adresse pour commander</p>
+        <h1><span data-i18n="my_delivery">📍 Ma Livraison</span></h1>
+        <p><span data-i18n="enter_address">Saisissez votre adresse pour commander</span></p>
     </div>
 
     <div class="search-container">
-        <input type="text" id="addressInput" class="search-input" placeholder="Ex: 11 rue de la Paix..."
+        <input type="text" id="addressInput" class="search-input" placeholder="Ex: 11 rue de la Paix..." data-i18n-placeholder="address_ex"
             autocomplete="off">
     </div>
 
@@ -214,7 +214,7 @@
                 loader.style.display = 'none';
 
                 if (data.features.length === 0) {
-                    emptyState.textContent = 'Aucun résultat trouvé.';
+                    emptyState.textContent = t('no_result_found', {default: 'Aucun résultat trouvé.'});
                     emptyState.style.display = 'block';
                     return;
                 }
@@ -239,7 +239,7 @@
                 });
             } catch (err) {
                 loader.style.display = 'none';
-                emptyState.textContent = 'Erreur lors de la recherche.';
+                emptyState.textContent = t('search_error', {default: 'Erreur lors de la recherche.'});
                 emptyState.style.display = 'block';
             }
         }
