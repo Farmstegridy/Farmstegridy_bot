@@ -2662,9 +2662,9 @@
                             </label>
                         </div>
                         <div style="flex:1; margin-left:20px;">
-                            <label style="font-size:12px; font-weight:600;" id="label_main_stock">Stock principal *</label>
+                            <label style="font-size:12px; font-weight:600;" id="label_main_stock">Stock (Format 1) *</label>
                             <input type="number" id="edit_prod_stock" placeholder="Quantité de stock" style="margin-bottom:0; height:35px; font-size:14px;" oninput="if(typeof calculateTotalStock === 'function') calculateTotalStock()">
-                            <div id="total_stock_display" style="display:none; font-size:11px; color:#00bfff; font-weight:bold; margin-top:4px;">Stock Total (Tous formats) : <span id="val_total_stock">0</span></div>
+                            <div id="total_stock_display" style="display:none; font-size:11px; color:#00bfff; font-weight:bold; margin-top:4px;">Stock Total (Tous formats confondus) : <span id="val_total_stock">0</span></div>
                         </div>
                     </div>
                     
@@ -2687,14 +2687,14 @@
                             </select>
                         </div>
                         <div style="flex:3;">
-                            <label style="font-size:11px; font-weight:600;">Valeur (Conditionnement - ex: 5 pour 5g)</label>
-                            <input id="prod_unit_value" placeholder="10" style="margin-bottom:0; font-size:12px; height:36px;">
+                            <label style="font-size:11px; font-weight:600;">Format de base (ex: 1 pour 1g)</label>
+                            <input id="prod_unit_value" placeholder="ex: 1" style="margin-bottom:0; font-size:12px; height:36px;">
                         </div>
                     </div>
 
                     <div style="display:flex; gap:12px; margin-bottom:14px;">
                         <div style="flex:1;">
-                            <label style="font-size:12px; font-weight:600;">Prix (€) *</label>
+                            <label style="font-size:12px; font-weight:600;">Prix du Format 1 (€) *</label>
                             <input type="number" id="prod_price" placeholder="199" style="margin-bottom:0; font-size:18px; font-weight:700; color:var(--accent);">
                         </div>
                         <div style="flex:1;">
@@ -2716,15 +2716,9 @@
                     </div>
 
                     <!-- 📦 CONDITIONNEMENTS SUPPLÉMENTAIRES (ex-prix dégressifs) -->
-                    <div style="display:flex; align-items:center; gap:8px; margin-bottom:6px; background:rgba(0,191,255,0.06); padding:8px 10px; border-radius:8px; cursor:pointer;" onclick="document.getElementById('prod_has_discounts').click()">
-                        <input type="checkbox" id="prod_has_discounts" onchange="toggleDiscountsArea()"
-                            style="width:16px; height:16px; cursor:pointer; flex-shrink:0;">
-                        <div>
-                            <span style="font-weight:600; color:#00bfff; font-size:13px;">📦 Ajouter d'autres formats à ce produit (ex: 2g, 5g)</span>
-                        </div>
-                    </div>
                     <div id="discounts_config_area"
-                        style="display:none; background:rgba(0,191,255,0.04); padding:12px; border-radius:8px; border:1px dashed rgba(0,191,255,0.15); margin-bottom:10px;">
+                        style="background:rgba(0,191,255,0.04); padding:12px; border-radius:8px; border:1px dashed rgba(0,191,255,0.15); margin-bottom:10px;">
+                        <div style="font-weight:600; color:#00bfff; font-size:13px; margin-bottom:10px;">📦 Ajouter d'autres formats / quantités (Optionnel)</div>
                         <div style="display:grid; grid-template-columns: 1fr 1fr 1fr 30px; gap:6px; align-items:center; font-size:10px; font-weight:600; margin-bottom:4px;">
                             <span>Format (Multiplicateur)</span><span>Prix (€)</span><span>Stock</span><span></span>
                         </div>
@@ -6323,7 +6317,7 @@
             const promo = document.getElementById('prod_promo').value;
             const image_url = document.getElementById('prod_image_url').value;
             const is_bundle = document.getElementById('prod_is_bundle').checked;
-            const has_discounts = document.getElementById('prod_has_discounts').checked;
+            const has_discounts = document.querySelectorAll('#discounts_list .discount-row').length > 0;
             const is_active = document.getElementById('edit_prod_active')?.checked ?? true;
 
             const bundle_config = {
@@ -6448,13 +6442,14 @@
                 document.getElementById('bundle_offered_id').value = '';
             }
 
-            document.getElementById('prod_has_discounts').checked = !!p.has_discounts;
+            }
+
             const dList = document.getElementById('discounts_list');
             dList.innerHTML = '';
             if (p.discounts_config && p.discounts_config.length > 0) {
                 p.discounts_config.forEach(d => addDiscountRow(d.qty, d.total, d.stock || 0));
             } else if (p.has_discounts) {
-                addDiscountRow();
+                // Keep empty or add one if needed, but not strictly necessary.
             }
 
             // Ouvrir les options avancées si des valeurs avancées sont remplies
@@ -6467,7 +6462,7 @@
             }
 
             toggleBundleArea();
-            toggleDiscountsArea();
+            
 
             // Detect product type for UX
             if (p.has_discounts) setProductType('degressif', false);
@@ -6496,24 +6491,21 @@
             // Toggle Toggles
             if (type === 'standard') {
                 document.getElementById('prod_is_bundle').checked = false;
-                document.getElementById('prod_has_discounts').checked = false;
-                document.getElementById('label_main_stock').innerHTML = 'Stock principal *';
+                document.getElementById('label_main_stock').innerHTML = 'Stock (Format 1) *';
                 document.getElementById('total_stock_display').style.display = 'none';
             } else if (type === 'bundle') {
                 document.getElementById('prod_is_bundle').checked = true;
-                document.getElementById('prod_has_discounts').checked = false;
-                document.getElementById('label_main_stock').innerHTML = 'Stock principal *';
+                document.getElementById('label_main_stock').innerHTML = 'Stock (Format 1) *';
                 document.getElementById('total_stock_display').style.display = 'none';
             } else if (type === 'degressif') {
                 document.getElementById('prod_is_bundle').checked = false;
-                document.getElementById('prod_has_discounts').checked = true;
-                document.getElementById('label_main_stock').innerHTML = 'Stock (Format de base) *';
+                document.getElementById('label_main_stock').innerHTML = 'Stock (Format 1) *';
                 document.getElementById('total_stock_display').style.display = 'block';
                 if(typeof calculateTotalStock === 'function') calculateTotalStock();
             }
 
             toggleBundleArea();
-            toggleDiscountsArea();
+            
 
             if (scroll) {
                 const targetId = type === 'bundle' ? 'bundle_config_area' : (type === 'degressif' ? 'discounts_config_area' : 'prod_advanced');
@@ -6620,23 +6612,15 @@
             document.getElementById('bundle_config_area').style.display = isBundle ? 'block' : 'none';
         }
 
-        function toggleDiscountsArea() {
-            const hasDiscounts = document.getElementById('prod_has_discounts').checked;
-            document.getElementById('discounts_config_area').style.display = hasDiscounts ? 'block' : 'none';
-            document.getElementById('total_stock_display').style.display = hasDiscounts ? 'block' : 'none';
-            if (hasDiscounts && document.getElementById('discounts_list').children.length === 0) {
-                addDiscountRow();
-            }
-            if(typeof calculateTotalStock === 'function') calculateTotalStock();
-        }
-
         function calculateTotalStock() {
             let total = parseInt(document.getElementById('edit_prod_stock').value) || 0;
+            const hasDiscounts = document.querySelectorAll('.discount-stock').length > 0;
             document.querySelectorAll('.discount-stock').forEach(input => {
                 total += parseInt(input.value) || 0;
             });
             const displayEl = document.getElementById('val_total_stock');
             if (displayEl) displayEl.innerText = total;
+            document.getElementById('total_stock_display').style.display = hasDiscounts ? 'block' : 'none';
         }
 
         function addDiscountRow(qty = '', price = '', stock = '') {
@@ -6668,6 +6652,7 @@
                 <button class="btn btn-sm btn-outline text-danger" onclick="this.parentElement.remove(); if(typeof calculateTotalStock === 'function') calculateTotalStock();" style="padding:8px; margin-bottom:0; height:36px; display:flex; align-items:center; justify-content:center;">🗑️</button>
             `;
             document.getElementById('discounts_list').appendChild(div);
+            if(typeof calculateTotalStock === 'function') calculateTotalStock();
         }
 
         function clearProdForm() {
@@ -6705,7 +6690,6 @@
             renderPreview('prod');
             document.getElementById('prod_supplier_id').value = '';
             document.getElementById('prod_is_bundle').checked = false;
-            document.getElementById('prod_has_discounts').checked = false;
             document.getElementById('bundle_trigger_qty').value = 1;
             document.getElementById('bundle_offered_qty').value = 1;
             document.getElementById('bundle_offered_id').value = '';
@@ -6718,7 +6702,7 @@
                 if (arrow) arrow.textContent = '▸';
             }
             toggleBundleArea();
-            toggleDiscountsArea();
+            
             setProductType('standard', false);
             document.getElementById('quick_paste_tiers').value = '';
             renderPreview('prod');
