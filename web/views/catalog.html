@@ -650,7 +650,13 @@
                 updateProfileUI();
                 setLoader(100);
                 setTimeout(() => { document.getElementById('loading-screen').style.opacity = '0'; setTimeout(() => document.getElementById('loading-screen').style.display='none', 500); }, 300);
-            } catch (e) { tg.showAlert("Erreur réseau"); }
+            } catch (e) {
+                console.error("INIT ERROR:", e);
+                fetch('/api/log-error', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({error: e.stack || e.message, type: 'init_catch'}) }).catch(()=>{});
+                try { tg.showAlert("Erreur réseau: " + e.message); } catch(err) {}
+                setLoader(0);
+                document.getElementById('loading-screen').innerHTML = '<div style="color:white; padding: 20px; text-align:center;">Une erreur est survenue lors du chargement. Veuillez fermer et rouvrir l\'application.<br><br><small style="opacity:0.5">' + (e.message || 'Erreur inconnue') + '</small></div>';
+            }
         }
 
         function renderNews(news) {
