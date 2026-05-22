@@ -2629,7 +2629,7 @@
                     <!-- 💎 SÉLECTEUR DE TYPE DE PRODUIT (UX) -->
                     <div style="margin-bottom:20px; display:flex; gap:8px; background:rgba(255,255,255,0.03); padding:4px; border-radius:12px; border:1px solid var(--border);">
                         <button type="button" class="btn btn-sm btn-prod-type active" id="type-std" onclick="setProductType('standard')" style="flex:1; font-size:12px; height:36px; gap:6px;">📦 Standard</button>
-                        <button type="button" class="btn btn-sm btn-prod-type" id="type-deg" onclick="setProductType('degressif')" style="flex:1; font-size:12px; height:36px; gap:6px;">📉 Dégressif</button>
+                        <button type="button" class="btn btn-sm btn-prod-type" id="type-deg" onclick="setProductType('degressif')" style="flex:1; font-size:12px; height:36px; gap:6px;">⚖️ Multi-Grammages</button>
                         <button type="button" class="btn btn-sm btn-prod-type" id="type-bun" onclick="setProductType('bundle')" style="flex:1; font-size:12px; height:36px; gap:6px;">🎁 Cadeau</button>
                     </div>
 
@@ -6627,7 +6627,7 @@
 
             div.innerHTML = `
                 <div>
-                    <label style="font-size:10px">Format (ex: 2)</label>
+                    <label style="font-size:10px">Mult. (ex: 5 pour 5x)</label>
                     <select class="discount-qty" style="background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.1); border-radius:8px; color:white; font-size:12px; height:36px; padding:0 8px;">
                         <option value="" disabled ${!qty ? 'selected' : ''}>Sél.</option>
                         ${options}

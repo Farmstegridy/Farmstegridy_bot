@@ -253,7 +253,9 @@ function setupOrderSystem(bot) {
         for (const opt of optionsList) {
             const avail = opt.stock;
             if (avail > 0) {
-                const label = `${opt.m * uv}${unitLabel} - ${opt.pr}€`;
+                let scarcity = '';
+                if (avail <= 5) scarcity = ` (Plus que ${avail}!)`;
+                const label = `${opt.m * uv}${unitLabel} - ${opt.pr}€${scarcity}`;
                 qtyRows.push([Markup.button.callback(label, `pkg_${productId}_${opt.packageIndex}`)]);
             }
         }
