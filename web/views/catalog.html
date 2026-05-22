@@ -1185,7 +1185,7 @@
                             
                             const addBtn = document.getElementById('p-add-cart-btn');
                             addBtn.innerText = "AJOUTER AU PANIER";
-                            addBtn.style.background = "var(--primary)";
+                            addBtn.style.background = "var(--accent)";
                             addBtn.onclick = addSelectionToCart;
                         };
                     }
@@ -1203,7 +1203,7 @@
             const addBtn = document.getElementById('p-add-cart-btn');
             if (activeOption && (!activeOption.packageIndex || activeOption.packageIndex === 0 ? activeProduct.stock > 0 : true)) {
                 addBtn.innerText = "AJOUTER AU PANIER";
-                addBtn.style.background = "var(--primary)";
+                addBtn.style.background = "var(--accent)";
                 addBtn.onclick = addSelectionToCart;
             } else {
                 addBtn.innerText = "M'AVERTIR DU RETOUR 🔔";
