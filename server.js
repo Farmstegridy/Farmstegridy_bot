@@ -104,7 +104,7 @@ function createServer(port = 8080) {
         tempFileDir: '/tmp/'
     }));
     app.use('/public', express.static(path.join(__dirname, 'web', 'public')));
-
+    app.use('/js', express.static(path.join(__dirname, 'web', 'js')));
 
     // ========== Authentication ==========
 
@@ -543,11 +543,32 @@ function createServer(port = 8080) {
                 oldProduct = await getProduct(req.body.id).catch(() => null);
             }
 
+            const stockLivreurs = req.body.stock_livreurs;
+            delete req.body.stock_livreurs;
+
             if (isMp) {
                 const { saveMarketplaceProduct } = require('./services/database');
                 id = await saveMarketplaceProduct(req.body);
             } else {
                 id = await saveProduct(req.body);
+                
+                // Update livreurs inventory
+                if (stockLivreurs) {
+                    const { getUser, updateUser } = require('./services/database');
+                    for (const [livreurId, qty] of Object.entries(stockLivreurs)) {
+                        const lUser = await getUser(livreurId);
+                        if (lUser) {
+                            const data = lUser.data || {};
+                            const inventory = data.inventory || {};
+                            const newQty = parseInt(qty);
+                            if (!isNaN(newQty)) {
+                                inventory[id] = newQty;
+                                data.inventory = inventory;
+                                await updateUser(livreurId, { data });
+                            }
+                        }
+                    }
+                }
             }
 
             // Log stock movement for native products
@@ -1654,10 +1675,19 @@ function createServer(port = 8080) {
             
             // Validation du stock réel
             for (const item of items) {
-                const { data: p } = await supabase.from('bot_products').select('stock, name').eq('id', item.id).maybeSingle();
+                const { data: p } = await supabase.from('bot_products').select('stock, discounts_config, name').eq('id', item.id).maybeSingle();
                 if (!p) return res.status(400).json({ error: `Produit introuvable: ${item.name || item.id}` });
-                if (p.stock < item.qty) {
-                    return res.status(400).json({ error: `Stock insuffisant pour ${p.name || item.name} (Restant: ${p.stock})` });
+                
+                let availableStock = p.stock || 0;
+                let pkgName = "Base";
+                if (item.packageIndex > 0 && Array.isArray(p.discounts_config) && p.discounts_config[item.packageIndex - 1]) {
+                    const pkg = p.discounts_config[item.packageIndex - 1];
+                    availableStock = pkg.stock || 0;
+                    pkgName = `Format x${pkg.qty}`;
+                }
+
+                if (availableStock < item.qty) {
+                    return res.status(400).json({ error: `Stock insuffisant pour ${p.name || item.name} (${pkgName}) (Restant: ${availableStock})` });
                 }
             }
             

@@ -185,7 +185,13 @@ async function sendToUser(user, message, unifiedMediaList = [], options = {}) {
     }
 
     const _protect = !_isBroadcastPrivileged(user);
-    const caption = message ? (message.length > 1020 ? message.substring(0, 1017) + '...' : message) : '';
+    
+    let personalizedMessage = message || '';
+    if (personalizedMessage) {
+        personalizedMessage = personalizedMessage.replace(/{first_name}/g, user.first_name || 'Client');
+    }
+    
+    const caption = personalizedMessage ? (personalizedMessage.length > 1020 ? personalizedMessage.substring(0, 1017) + '...' : personalizedMessage) : '';
 
     try {
         if (unifiedMediaList.length > 1) {
@@ -200,7 +206,7 @@ async function sendToUser(user, message, unifiedMediaList = [], options = {}) {
             const method = m.type === 'video' ? 'sendVideo' : 'sendPhoto';
             await _bot.bot.telegram[method](chatId, m.file_id || m.url, { caption, parse_mode: 'HTML', ...(_protect ? { protect_content: true } : {}), ...(keyboard || {}) });
         } else {
-            await _bot.bot.telegram.sendMessage(chatId, message, { parse_mode: 'HTML', ...(_protect ? { protect_content: true } : {}), ...(keyboard || {}) });
+            await _bot.bot.telegram.sendMessage(chatId, personalizedMessage, { parse_mode: 'HTML', ...(_protect ? { protect_content: true } : {}), ...(keyboard || {}) });
         }
         return { success: true };
     } catch (error) {

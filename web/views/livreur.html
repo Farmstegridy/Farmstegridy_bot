@@ -152,39 +152,39 @@
         .tab-item.active { opacity: 1; color: var(--accent); }
         .tab-icon { font-size: 20px; margin-bottom: 4px; }
     </style>
-    <script src="/js/translations.js"></script>
+    <script src="/js/translations.js?v=1.1"></script>
 </head>
 <body>
-    <div id="loading-screen"><div class="loader"></div><p style="margin-top:20px; font-weight:800; font-size:12px; opacity:0.5;"><span data-i18n="loading_console">CHARGEMENT CONSOLE...</span></p></div>
+    <div id="loading-screen"><div class="loader"></div><p style="margin-top:20px; font-weight:800; font-size:12px; opacity:0.5;"><span >CHARGEMENT CONSOLE...</span></p></div>
 
     <div class="app-container">
         <header>
-            <div class="logo">Farm<span>stegridy</span> <span style="font-size:12px; color:#fff; font-weight:400;"><span data-i18n="courier">LIVREUR</span></span></div>
+            <div class="logo">Farm<span>stegridy</span> <span style="font-size:12px; color:#fff; font-weight:400;"><span >LIVREUR</span></span></div>
             <div class="status-badge" onclick="toggleAvailability()">
                 <div class="status-dot status-offline" id="avail-dot"></div>
-                <span id="avail-text"><span data-i18n="unavailable">INDISPONIBLE</span></span>
+                <span id="avail-text"><span >INDISPONIBLE</span></span>
             </div>
         </header>
 
         <div id="tab-deliveries" class="tab-content active">
             <div id="active-orders-section">
-                <div class="section-title"><span data-i18n="in_delivery_fire">En livraison 🔥</span></div>
+                <div class="section-title"><span >En livraison 🔥</span></div>
                 <div id="active-orders-list"></div>
             </div>
 
             <div id="available-orders-section" style="margin-top:40px;">
-                <div class="section-title"><span data-i18n="orders_available_box">Commandes disponibles 📦</span></div>
+                <div class="section-title"><span >Commandes disponibles 📦</span></div>
                 <div id="available-orders-list"></div>
             </div>
         </div>
 
         <div id="tab-chat" class="tab-content" style="display:none; padding-bottom: 80px;">
-            <div class="section-title"><span data-i18n="active_chats">Discussions actives 💬</span></div>
+            <div class="section-title"><span >Discussions actives 💬</span></div>
             <div id="chat-active-list"></div>
         </div>
 
         <div id="tab-history" class="tab-content" style="display:none;">
-            <div class="section-title"><span data-i18n="history_cumulative">Mon historique cumulé 📈</span></div>
+            <div class="section-title"><span >Mon historique cumulé 📈</span></div>
             <div id="history-orders-list"></div>
         </div>
     </div>
@@ -192,15 +192,15 @@
     <div class="tab-bar">
         <div class="tab-item active" onclick="switchTab('deliveries')">
             <div class="tab-icon notranslate">🚚</div>
-            <div><span data-i18n="courses">COURSES</span></div>
+            <div><span >COURSES</span></div>
         </div>
         <div class="tab-item" onclick="switchTab('chat')">
             <div class="tab-icon notranslate">💬</div>
-            <div><span data-i18n="chat">CHAT</span></div>
+            <div><span >CHAT</span></div>
         </div>
         <div class="tab-item" onclick="switchTab('history')">
             <div class="tab-icon notranslate">📈</div>
-            <div><span data-i18n="history_caps">HISTORIQUE</span></div>
+            <div><span >HISTORIQUE</span></div>
         </div>
     </div>
 
@@ -412,7 +412,7 @@
                         <div style="font-size:10px; font-weight:900; opacity:0.5; margin-bottom:8px; letter-spacing:1px;">MESSAGERIE ANONYME :</div>
                         ${chatSection}
                         <div class="chat-input-group">
-                            <input type="text" class="chat-input" id="chat-input-${o.id}" value="${safeQuote(prevState.text)}" placeholder="Votre message au client..." data-i18n-placeholder="msg_to_client" onkeydown="if(event.key==='Enter') sendChatMessage('${o.id}')">
+                            <input type="text" class="chat-input" id="chat-input-${o.id}" value="${safeQuote(prevState.text)}" placeholder="Votre message au client..."  onkeydown="if(event.key==='Enter') sendChatMessage('${o.id}')">
                             <button class="btn-send" onclick="sendChatMessage('${o.id}')">ENVOYER</button>
                         </div>
                         <div style="font-size:9px; opacity:0.3; margin-top:6px; text-align:center;">Le client verra ce message sans connaître votre numéro.</div>

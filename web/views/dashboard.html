@@ -2121,7 +2121,7 @@
             .m-nav-item span { font-size: 9px; }
         }
     </style>
-    <script src="/js/translations.js"></script>
+    <script src="/js/translations.js?v=1.1"></script>
 </head>
 
 <body>
@@ -2137,8 +2137,8 @@
                 <p id="modalMessage">Êtes-vous sûr ?</p>
             </div>
             <div class="modal-actions" id="modalActions">
-                <button class="btn btn-outline" onclick="closeModal(false)" data-i18n="cancel">Annuler</button>
-                <button class="btn btn-accent" id="modalConfirmBtn" onclick="closeModal(true)" data-i18n="confirm">Confirmer</button>
+                <button class="btn btn-outline" onclick="closeModal(false)" >Annuler</button>
+                <button class="btn btn-accent" id="modalConfirmBtn" onclick="closeModal(true)" >Confirmer</button>
             </div>
         </div>
     </div>
@@ -2183,7 +2183,7 @@
     <!-- Bottom Nav Mobile -->
     <nav class="mobile-nav">
         <a class="m-nav-item active" onclick="switchSection('overview')" id="m-nav-overview"><i>🏠</i><span>Accueil</span></a>
-        <a class="m-nav-item" onclick="switchSection('logistique')" id="m-nav-logistique"><i>🛵</i><span data-i18n="orders">Commandes</span></a>
+        <a class="m-nav-item" onclick="switchSection('logistique')" id="m-nav-logistique"><i>🛵</i><span >Commandes</span></a>
         <a class="m-nav-item" onclick="switchSection('products')" id="m-nav-products"><i>👟</i><span>Produits</span></a>
         <a class="m-nav-item" onclick="switchSection('support-chat')" id="m-nav-support-chat"><i>💬</i><span>Chat</span></a>
         <a class="m-nav-item" onclick="switchSection('settings')" id="m-nav-settings"><i>⚙️</i><span>Réglages</span></a>
@@ -2218,7 +2218,7 @@
                 <div class="stat-card stat-orders">
                     <div class="icon">📦</div>
                     <div>
-                        <div class="stat-label" data-i18n="orders">Commandes</div>
+                        <div class="stat-label" >Commandes</div>
                         <div class="stat-value" id="ovStatOrders">-</div>
                     </div>
                 </div>
@@ -2296,7 +2296,7 @@
                     <div class="stat-value" id="avg-delivery-time" style="font-size:24px; color:var(--success);">—</div>
                 </div>
                 <div class="stat-card premium-card">
-                    <div class="stat-label" data-i18n="orders">Commandes</div>
+                    <div class="stat-label" >Commandes</div>
                     <div class="stat-value" id="insights-total-orders" style="font-size:24px;">—</div>
                 </div>
                 <div class="stat-card premium-card">
@@ -2468,7 +2468,7 @@
                                 <tr>
                                     <th>Date</th><th>Client</th><th>Produit</th><th>Ville</th>
                                     <th style="text-align:right;">Prix</th><th>Délai</th>
-                                    <th data-i18n="livreur">Livreur</th><th>Plateforme</th><th>⚡</th><th>Chat</th>
+                                    <th >Livreur</th><th>Plateforme</th><th>⚡</th><th>Chat</th>
                                 </tr>
                             </thead>
                             <tbody id="raw-deliveries-table">
@@ -2516,7 +2516,8 @@
                                     <th style="text-align:left;">Catégorie</th>
                                     <th style="text-align:right;">Prix</th>
                                     <th style="text-align:center;">Niveau de Stock</th>
-                                    <th style="text-align:right;">Quantité</th>
+                                    <th style="text-align:right;">Qté (Total)</th>
+                                    <th style="text-align:right;">Livreurs</th>
                                     <th style="text-align:center;">Statut</th>
                                 </tr>
                             </thead>
@@ -2562,7 +2563,7 @@
                         <tr>
                             <th>Identité</th>
                             <th>Fidélité</th>
-                            <th data-i18n="orders">Commandes</th>
+                            <th >Commandes</th>
                             <th>Actions</th>
                         </tr>
                     </thead>
@@ -2661,9 +2662,14 @@
                             </label>
                         </div>
                         <div style="flex:1; margin-left:20px;">
-                            <label style="font-size:12px; font-weight:600;">Stock disponible *</label>
+                            <label style="font-size:12px; font-weight:600;">Stock principal *</label>
                             <input type="number" id="edit_prod_stock" placeholder="Quantité de stock (Obligatoire)" style="margin-bottom:0; height:35px; font-size:14px;">
                         </div>
+                    </div>
+                    
+                    <div id="livreurs_stock_container" style="background:rgba(255,255,255,0.03); padding:10px; border-radius:10px; margin-bottom:12px; display:none;">
+                        <label style="font-size:12px; font-weight:600; margin-bottom:8px; display:block;">Stocks Livreurs</label>
+                        <div id="livreurs_stock_list" style="display:flex; flex-direction:column; gap:8px;"></div>
                     </div>
 
                     <!-- Unité + Valeur (Moved for UX) -->
@@ -2796,7 +2802,7 @@
                     <!-- BOUTONS -->
                     <div style="display:flex; gap:10px; margin-top:16px;">
                         <button class="btn btn-accent" onclick="saveProduct()" style="flex:1; font-size:15px; padding:14px;">Sauvegarder</button>
-                        <button class="btn btn-outline" onclick="clearProdForm()" style="padding:14px 20px;" data-i18n="cancel">Annuler</button>
+                        <button class="btn btn-outline" onclick="clearProdForm()" style="padding:14px 20px;" >Annuler</button>
                     </div>
                 </div>
             </div>
@@ -2925,7 +2931,7 @@
                     <table class="responsive-table" style="width:100%; border-collapse:collapse; min-width: 600px;">
                         <thead>
                             <tr style="border-bottom:1px solid var(--border)">
-                                <th style="padding:10px;text-align:left" data-i18n="livreur">Livreur</th>
+                                <th style="padding:10px;text-align:left" >Livreur</th>
                                 <th style="padding:10px;text-align:left">Statut</th>
                                 <th style="padding:10px;text-align:left">Ville</th>
                                 <th style="padding:10px;text-align:left">Actions</th>
@@ -3218,7 +3224,7 @@
                 </div>
                 <div style="display:flex; gap:10px;">
                     <button class="btn btn-primary" onclick="saveSupplier()">💾 Enregistrer</button>
-                    <button class="btn btn-outline" onclick="closeSupplierForm()" data-i18n="cancel">Annuler</button>
+                    <button class="btn btn-outline" onclick="closeSupplierForm()" >Annuler</button>
                 </div>
             </div>
 
@@ -3376,7 +3382,7 @@
         <!-- SETTINGS -->
         <section class="section" id="section-settings">
             <div class="section-header flex flex-mobile-column justify-between items-center" style="margin-bottom:24px; gap:15px;">
-                <h1 style="margin:0;" data-i18n="settings">Paramètres</h1>
+                <h1 style="margin:0;" >Paramètres</h1>
                 <div style="display:flex; gap:8px; flex-wrap:wrap; justify-content:center;">
                     <button class="btn btn-sm btn-outline active" id="btn-stab-general"
                         onclick="switchSettingsTab('general')">Général</button>
@@ -5455,41 +5461,74 @@
                         let lowCount = 0;
                         let totalQty = 0;
 
-                        const stockRows = products.map(p => {
-                            const stock = typeof p.stock === 'number' ? p.stock : 0;
-                            const price = parseFloat(p.price) || 0;
-                            totalValue += price * stock;
-                            totalQty += stock;
+                        const stockRows = [];
+                        products.forEach(p => {
+                            const createRow = (name, price, stock, isBase, pkgId) => {
+                                totalValue += price * stock;
+                                totalQty += stock;
+                                
+                                let statusBadge = '';
+                                let progressColor = 'var(--success)';
+                                if (stock <= 0) {
+                                    outCount++;
+                                    statusBadge = '<span style="background:rgba(255,59,48,0.15); color:#ff3b30; padding:3px 8px; border-radius:6px; font-size:11px; font-weight:700;">RUPTURE</span>';
+                                    progressColor = '#ff3b30';
+                                } else if (stock <= 5) {
+                                    lowCount++;
+                                    statusBadge = '<span style="background:rgba(255,149,0,0.15); color:#ff9500; padding:3px 8px; border-radius:6px; font-size:11px; font-weight:700;">FAIBLE</span>';
+                                    progressColor = '#ff9500';
+                                } else {
+                                    statusBadge = '<span style="background:rgba(52,199,89,0.15); color:#34c759; padding:3px 8px; border-radius:6px; font-size:11px; font-weight:700;">CORRECT</span>';
+                                    progressColor = '#34c759';
+                                }
 
-                            let statusBadge = '';
-                            let progressColor = 'var(--success)';
-                            if (stock <= 0) {
-                                outCount++;
-                                statusBadge = '<span style="background:rgba(255,59,48,0.15); color:#ff3b30; padding:3px 8px; border-radius:6px; font-size:11px; font-weight:700;">RUPTURE</span>';
-                                progressColor = '#ff3b30';
-                            } else if (stock <= 5) {
-                                lowCount++;
-                                statusBadge = '<span style="background:rgba(255,149,0,0.15); color:#ff9500; padding:3px 8px; border-radius:6px; font-size:11px; font-weight:700;">FAIBLE</span>';
-                                progressColor = '#ff9500';
-                            } else {
-                                statusBadge = '<span style="background:rgba(52,199,89,0.15); color:#34c759; padding:3px 8px; border-radius:6px; font-size:11px; font-weight:700;">CORRECT</span>';
-                                progressColor = '#34c759';
-                            }
+                                const percent = Math.min(100, Math.max(0, (stock / 30) * 100));
 
-                            const percent = Math.min(100, Math.max(0, (stock / 30) * 100));
+                                let livreurStockHtml = '<div style="font-size:10px; opacity:0.6;">-</div>';
+                                let totalLivreurQty = 0;
+                                if (isBase && window._cachedLivreurs) {
+                                    let details = [];
+                                    window._cachedLivreurs.forEach(l => {
+                                        const qty = (l.data && l.data.inventory && l.data.inventory[p.id]) || 0;
+                                        if (qty > 0) {
+                                            totalLivreurQty += qty;
+                                            details.push(`🚴 ${l.first_name || '?'}: ${qty}`);
+                                        }
+                                    });
+                                    if (details.length > 0) {
+                                        livreurStockHtml = `<div style="font-size:11px; color:var(--accent);">${details.join('<br>')}</div>`;
+                                    }
+                                }
+                                
+                                const displayQty = stock + totalLivreurQty;
 
-                            return {
-                                name: p.name || 'Inconnu',
-                                category: p.category || 'N/A',
-                                price: price.toFixed(2) + '€',
-                                stock,
-                                statusBadge,
-                                progressHtml: `
-                                    <div style="width:100px; height:8px; background:rgba(255,255,255,0.05); border-radius:4px; overflow:hidden; margin:0 auto;">
-                                        <div style="width:${percent}%; height:100%; background:${progressColor}; border-radius:4px;"></div>
-                                    </div>
-                                `
+                                stockRows.push({
+                                    name: name,
+                                    category: p.category || 'N/A',
+                                    price: price.toFixed(2) + '€',
+                                    stock: displayQty,
+                                    livreurStockHtml,
+                                    statusBadge,
+                                    progressHtml: `
+                                        <div style="width:100px; height:8px; background:rgba(255,255,255,0.05); border-radius:4px; overflow:hidden; margin:0 auto;">
+                                            <div style="width:${percent}%; height:100%; background:${progressColor}; border-radius:4px;"></div>
+                                        </div>
+                                    `
+                                });
                             };
+
+                            const baseStock = typeof p.stock === 'number' ? p.stock : 0;
+                            const basePrice = parseFloat(p.price) || 0;
+                            createRow(p.name || 'Inconnu', basePrice, baseStock, true, 0);
+
+                            if (p.has_discounts && Array.isArray(p.discounts_config)) {
+                                p.discounts_config.forEach((d, idx) => {
+                                    const pkgName = `${p.name || 'Inconnu'} (Format x${d.qty})`;
+                                    const pkgPrice = parseFloat(d.total) || 0;
+                                    const pkgStock = parseInt(d.stock) || 0;
+                                    createRow(pkgName, pkgPrice, pkgStock, false, idx + 1);
+                                });
+                            }
                         });
 
                         const stockValEl = document.getElementById('stock-total-value');
@@ -6075,6 +6114,7 @@
                     <td style="text-align:right;">${r.price}</td>
                     <td style="text-align:center; vertical-align:middle;">${r.progressHtml}</td>
                     <td style="text-align:right; font-weight:700;">${r.stock}</td>
+                    <td style="text-align:right; white-space:nowrap;">${r.livreurStockHtml || ''}</td>
                     <td style="text-align:center;">${r.statusBadge}</td>
                 </tr>
             `).join('') || '<tr><td colspan="6" style="text-align:center; padding:20px; opacity:0.5;">Aucun produit.</td></tr>';
@@ -6304,13 +6344,20 @@
                 discounts_config.sort((a, b) => a.qty - b.qty);
             }
 
+            const stock_livreurs = {};
+            document.querySelectorAll('.input-livreur-stock').forEach(inp => {
+                const lId = inp.getAttribute('data-livreur-id');
+                const val = parseInt(inp.value);
+                if (lId && !isNaN(val)) stock_livreurs[lId] = val;
+            });
+
             try {
                 const supplier_id = document.getElementById('prod_supplier_id').value || null;
                 const payload = {
                     name, description, price, unit, unit_value, promo, image_url,
                     is_bundle, bundle_config,
                     has_discounts, discounts_config,
-                    supplier_id, is_active, stock,
+                    supplier_id, is_active, stock, stock_livreurs,
                     is_mp: document.getElementById('edit_prod_is_mp').value === 'true'
                 };
                 if (pid) payload.id = pid;
@@ -6361,6 +6408,28 @@
             if (stockEl) stockEl.value = p.stock || 0;
             const isMpEl = document.getElementById('edit_prod_is_mp');
             if (isMpEl) isMpEl.value = p.is_mp ? 'true' : 'false';
+
+            // Populate livreurs stock
+            const stockContainer = document.getElementById('livreurs_stock_container');
+            const stockList = document.getElementById('livreurs_stock_list');
+            if (stockContainer && stockList) {
+                stockList.innerHTML = '';
+                if (window._cachedLivreurs && window._cachedLivreurs.length > 0) {
+                    stockContainer.style.display = 'block';
+                    window._cachedLivreurs.forEach(l => {
+                        const qty = (l.data && l.data.inventory && l.data.inventory[p.id]) || 0;
+                        const div = document.createElement('div');
+                        div.style = 'display:flex; justify-content:space-between; align-items:center; background:rgba(0,0,0,0.2); padding:6px 10px; border-radius:6px;';
+                        div.innerHTML = `
+                            <span style="font-size:12px;">🚴 ${l.first_name || 'Livreur'}</span>
+                            <input type="number" class="input-livreur-stock" data-livreur-id="${l.id || l.doc_id}" value="${qty}" style="width:70px; height:28px; margin:0; text-align:right; font-size:13px; border-radius:6px; background:rgba(255,255,255,0.05); color:#fff; border:1px solid rgba(255,255,255,0.1);">
+                        `;
+                        stockList.appendChild(div);
+                    });
+                } else {
+                    stockContainer.style.display = 'none';
+                }
+            }
 
             document.getElementById('prod_is_bundle').checked = !!p.is_bundle;
             if (p.bundle_config) {
@@ -6583,6 +6652,27 @@
             document.getElementById('prod_name').value = '';
             document.getElementById('prod_description').value = '';
             if (document.getElementById('edit_prod_stock')) document.getElementById('edit_prod_stock').value = '';
+            
+            const stockContainer = document.getElementById('livreurs_stock_container');
+            const stockList = document.getElementById('livreurs_stock_list');
+            if (stockContainer && stockList) {
+                stockList.innerHTML = '';
+                if (window._cachedLivreurs && window._cachedLivreurs.length > 0) {
+                    stockContainer.style.display = 'block';
+                    window._cachedLivreurs.forEach(l => {
+                        const div = document.createElement('div');
+                        div.style = 'display:flex; justify-content:space-between; align-items:center; background:rgba(0,0,0,0.2); padding:6px 10px; border-radius:6px;';
+                        div.innerHTML = `
+                            <span style="font-size:12px;">🚴 ${l.first_name || 'Livreur'}</span>
+                            <input type="number" class="input-livreur-stock" data-livreur-id="${l.id || l.doc_id}" value="0" style="width:70px; height:28px; margin:0; text-align:right; font-size:13px; border-radius:6px; background:rgba(255,255,255,0.05); color:#fff; border:1px solid rgba(255,255,255,0.1);">
+                        `;
+                        stockList.appendChild(div);
+                    });
+                } else {
+                    stockContainer.style.display = 'none';
+                }
+            }
+
             document.getElementById('prod_price').value = '';
             document.getElementById('prod_unit').value = '';
             document.getElementById('prod_unit_value').value = '';
@@ -8346,6 +8436,11 @@
 
             initCustomTimers();
             const initSection = location.hash.replace('#', '') || 'overview';
+            const target = document.getElementById('section-' + (initSection === 'logistics' ? 'logistique' : initSection)) || document.getElementById('section-overview');
+            if (target) {
+                document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+                target.classList.add('active');
+            }
             
             // 1. Initial essential data
             try {

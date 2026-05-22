@@ -597,7 +597,7 @@ function setupAdminHandlers(bot) {
             .sort((a, b) => b[1].timestamp - a[1].timestamp);
 
         for (const [userId, data] of sortedRequests) {
-            const platformIcon = data.platform === 'whatsapp' ? '📱' : '✈️';
+            const platformIcon = '✈️';
             const timeStr = new Date(data.timestamp).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
             const preview = String(data.lastMsg || '').substring(0, 20);
             const label = `${platformIcon} ${data.name || userId} (${timeStr})\n> ${preview}...`;

@@ -1,4 +1,4 @@
-const { supabase } = require('./database');
+const { supabase, decryptOrder } = require('./database');
 const { sendMessageToUser } = require('./notifications');
 
 // --- Dynamic Text Generator (Anti-Fatigue & Personalized) ---
@@ -130,10 +130,11 @@ async function runRecommendationEngine() {
         sixtyDaysAgo.setDate(sixtyDaysAgo.getDate() - 60);
         
         // 1. Fetch Orders (Up to 60 days to better calculate frequency)
-        const { data: orders } = await supabase
+        const { data: rawOrders } = await supabase
             .from('bot_orders')
             .select('*')
             .gte('created_at', sixtyDaysAgo.toISOString());
+        const orders = (rawOrders || []).map(decryptOrder);
 
         // 2. Fetch Views
         const { data: viewsData } = await supabase.from('bot_settings').select('data').eq('key', 'user_views').maybeSingle();
@@ -217,7 +218,14 @@ async function runRecommendationEngine() {
                 const rankedProducts = rankProducts(uOrders, uViews);
                 if (rankedProducts.length > 0) {
                     const topProduct = rankedProducts[0].product;
-                    const firstName = uOrders.length > 0 ? (uOrders[0].first_name || 'l\'ami') : 'l\'ami';
+                    let firstName = 'l\\'ami';
+                    if (uOrders.length > 0) {
+                        // Sort orders to ensure we look at the newest first
+                        const sortedOrders = [...uOrders].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+                        // Find the first valid name that isn't a raw encrypted string (which contains colons and is very long)
+                        const validOrder = sortedOrders.find(o => o.first_name && (!o.first_name.includes(':') || o.first_name.length < 100));
+                        if (validOrder) firstName = validOrder.first_name;
+                    }
                     
                     const message = generateDynamicText(firstName, topProduct, candidateType);
                     const keyboard = {

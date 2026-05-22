@@ -241,7 +241,6 @@ function setupOrderSystem(bot) {
             `\n💎 <b>Quel conditionnement (format) souhaitez-vous ?</b>\n\n`;
 
         const uv = parseFloat(String(product.unit_value || '1').replace(',','.')) || 1;
-        const unitLabel = (product.unit && product.unit.toLowerCase() !== 'unité') ? product.unit : 'g';
 
         let optionsList = [{ packageIndex: 0, m: 1, pr: product.price, stock: parseInt(product.stock) || 0 }];
         if (product.has_discounts && Array.isArray(product.discounts_config)) {
@@ -838,7 +837,7 @@ function setupOrderSystem(bot) {
         // Step 1: Address Validation -> Suite vers SCHEDULING
         if (addrState && addrState.step === 1) {
             const addr = ctx.message.text.trim();
-            // Sur WhatsApp, un nombre (1, 2, 10, etc.) = raccourci menu numérique → laisser passer
+            // Un nombre (1, 2, 10, etc.) = raccourci menu numérique → laisser passer
             if (/^\d+$/.test(addr)) return next();
 
             const hasNumber = addr.match(/\d/);
@@ -1439,7 +1438,7 @@ function setupOrderSystem(bot) {
                     .replace('{pay_icon}', payIcon)
                     .replace('{pay_label}', payLabel);
 
-                const platformBadge = ctx.platform === 'whatsapp' ? '📱 <b>[ WHATSAPP ]</b>' : '✈️ <b>[ TELEGRAM ]</b>';
+                const platformBadge = '✈️ <b>[ TELEGRAM ]</b>';
                 const badge = (isFirstOrder ? `\n🔥 <b>[ NOUVEAU CLIENT ]</b> 🔥\n` : '') + platformBadge + '\n';
                 const baseNotifAdmin = (dbSettings.msg_order_received_admin || `🚨 <b>NOUVELLE COMMANDE !</b>\n{badge}\n👤 {client_name} (@{username})\n📦 {product_list}\n📍 {address}\n💰 {total}€ ({pay_icon} {pay_label})\n🔑 ID : <code>{order_id}</code>`)
                     .replace('{badge}', badge)
@@ -2141,11 +2140,6 @@ function setupOrderSystem(bot) {
     // Fonction utilitaire pour uploader un média de review
     async function _uploadReviewMedia(ctx, userId, mediaItem, isVideo = false) {
         const ext = isVideo ? '.mp4' : '.jpg';
-        if (ctx.platform === 'whatsapp' && mediaItem.isWa) {
-            try {
-                const { uploadMediaBuffer } = require('../services/database');
-                const buffer = await ctx.channel.downloadMedia(mediaItem.msg);
-                if (buffer) return await uploadMediaBuffer(buffer, `rev_${Date.now()}${ext}`);
             } catch (e) { console.error('[REVIEW-MEDIA-WA]', e.message); }
         } else if (ctx.platform === 'telegram') {
             try {
@@ -2412,11 +2406,6 @@ function setupOrderSystem(bot) {
                 const ext = isVideo ? '.mp4' : '.jpg';
                 const fileName = `rev_${Date.now()}${ext}`;
 
-                if (ctx.platform === 'whatsapp' && media.isWa) {
-                    try {
-                        const { uploadMediaBuffer } = require('../services/database');
-                        const buffer = await ctx.channel.downloadMedia(media.msg);
-                        if (buffer) {
                              const mime = isVideo ? 'video/mp4' : 'image/jpeg';
                             const permanentUrl = await uploadMediaBuffer(buffer, fileName, mime);
                             finalMediaUrls.push(permanentUrl);

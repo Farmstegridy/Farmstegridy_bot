@@ -13,7 +13,7 @@ const translations = {
         'orders': 'Mes Commandes',
         'support': 'Support',
         'address_title': 'Adresse de livraison',
-        'confirm_address': 'Confirmer l\\'adresse',
+        'confirm_address': "Confirmer l'adresse",
         'login': 'Se connecter',
         'dashboard': 'Tableau de bord',
         'settings': 'Paramètres',
