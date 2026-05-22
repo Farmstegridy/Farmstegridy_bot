@@ -1698,51 +1698,52 @@ const database = {
     },
     syncUserCart: async (userId, cart) => {
         try {
-            const { data: settings } = await supabase.from(COL_SETTINGS).select('data').eq('key', 'active_carts').single();
-            const carts = settings ? (settings.data || {}) : {};
-            
+            const stateId = `active_carts:${userId}`;
             if (!cart || cart.length === 0) {
-                delete carts[userId];
+                await supabase.from('bot_state').delete().eq('id', stateId);
             } else {
-                carts[userId] = {
-                    cart: cart,
-                    updated_at: Date.now(),
-                    notified: false
+                const payload = {
+                    id: stateId,
+                    namespace: 'active_carts',
+                    user_key: String(userId),
+                    value: {
+                        cart: cart,
+                        updated_at: Date.now(),
+                        notified: false
+                    }
                 };
+                await supabase.from('bot_state').upsert([payload], { onConflict: 'id' });
             }
-            
-            if (settings) {
-                await supabase.from(COL_SETTINGS).update({ data: carts }).eq('key', 'active_carts');
-            } else {
-                await supabase.from(COL_SETTINGS).insert([{ key: 'active_carts', data: carts }]);
-            }
-        } catch (e) {}
+        } catch (e) {
+            console.error('[syncUserCart] Error:', e.message);
+        }
     },
     trackUserView: async (userId, viewData) => {
         try {
-            const { data: settings } = await supabase.from(COL_SETTINGS).select('data').eq('key', 'user_views').maybeSingle();
-            const views = settings ? (settings.data || {}) : {};
+            const stateId = `user_views:${userId}`;
+            const { data: stateData } = await supabase.from('bot_state').select('value').eq('id', stateId).maybeSingle();
+            let views = stateData ? (stateData.value || []) : [];
             
-            if (!views[userId]) views[userId] = [];
-            views[userId].push(viewData);
+            views.push(viewData);
+            if (views.length > 50) views = views.slice(-50);
             
-            // Keep only the last 50 views per user to prevent bloat
-            if (views[userId].length > 50) {
-                views[userId] = views[userId].slice(-50);
-            }
-            
-            if (settings) {
-                await supabase.from(COL_SETTINGS).update({ data: views }).eq('key', 'user_views');
-            } else {
-                await supabase.from(COL_SETTINGS).insert([{ key: 'user_views', data: views }]);
-            }
-        } catch (e) {}
+            const payload = {
+                id: stateId,
+                namespace: 'user_views',
+                user_key: String(userId),
+                value: views
+            };
+            await supabase.from('bot_state').upsert([payload], { onConflict: 'id' });
+        } catch (e) {
+            console.error('[trackUserView] Error:', e.message);
+        }
     },
     getUserAnalytics: async (userId) => {
         try {
             // Fetch views
-            const { data: settings } = await supabase.from(COL_SETTINGS).select('data').eq('key', 'user_views').maybeSingle();
-            const views = settings ? (settings.data && settings.data[userId] ? settings.data[userId] : []) : [];
+            const stateId = `user_views:${userId}`;
+            const { data: stateData } = await supabase.from('bot_state').select('value').eq('id', stateId).maybeSingle();
+            const views = stateData ? (stateData.value || []) : [];
             
             // Fetch orders
             const { data: orders } = await supabase.from(COL_ORDERS).select('id, created_at, product_id, product_name, status, total_price').eq('user_id', userId).order('created_at', { ascending: false });

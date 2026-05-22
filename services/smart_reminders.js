@@ -98,40 +98,47 @@ async function runSmartAnalysis() {
 async function checkAbandonedCarts() {
     try {
         const { data: carts, error } = await supabase
-            .from('bot_settings')
-            .select('data')
-            .eq('key', 'active_carts')
-            .single();
+            .from('bot_state')
+            .select('*')
+            .eq('namespace', 'active_carts');
 
         if (error || !carts) return;
-        const allCarts = carts.data || {};
         const now = Date.now();
         const bot = getBotInstance();
 
-        for (const userId in allCarts) {
-            const c = allCarts[userId];
-            // Si le panier a plus de 2 heures et n'a pas été notifié
-            if (now - c.updated_at > 2 * 60 * 60 * 1000 && !c.notified) {
-                const itemCount = c.cart.length;
+        for (const cartRow of carts) {
+            const userId = cartRow.user_key;
+            const c = cartRow.value || {};
+            
+            // Si le panier a plus de 30 minutes, on le supprime (expiration)
+            if (now - c.updated_at > 30 * 60 * 1000) {
+                await supabase.from('bot_state').delete().eq('id', cartRow.id);
+                continue;
+            }
+
+            // Si le panier a plus de 15 minutes et n'a pas été notifié
+            if (now - c.updated_at > 15 * 60 * 1000 && !c.notified) {
+                const itemCount = c.cart ? c.cart.length : 0;
+                if (itemCount === 0) continue;
+                
                 const msg = `🛒 <b>PANIER EN ATTENTE</b>\n\nHey ! Vous avez laissé <b>${itemCount} article(s)</b> dans votre panier. 😱\n\nIls vous attendent bien sagement. On valide la commande maintenant ?`;
                 
-                const { data: settingsData } = await supabase.from('bot_settings').select('data').eq('key', 'app_settings').maybeSingle();
-                const settings = settingsData ? (settingsData.data || {}) : {};
                 const baseDomain = process.env.RENDER_EXTERNAL_URL || (process.env.RAILWAY_PUBLIC_DOMAIN ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}` : 'https://farmstegridy-bot.onrender.com');
-                const catalogUrl = (settings.mini_app_url ? `${settings.mini_app_url}/catalog` : `${baseDomain}/catalog`) + `?v=${Date.now()}`;
+                const catalogUrl = `${baseDomain}/catalog?v=${Date.now()}`;
 
                 const keyboard = {
                     inline_keyboard: [[{ text: '✅ Finaliser ma commande', web_app: { url: catalogUrl } }]]
                 };
 
                 bot.telegram.sendMessage(userId.replace('telegram_', ''), msg, { parse_mode: 'HTML', reply_markup: keyboard }).catch(() => {});
-                allCarts[userId].notified = true;
+                
+                c.notified = true;
+                await supabase.from('bot_state').update({ value: c }).eq('id', cartRow.id);
             }
         }
-
-        // Sauvegarder l'état
-        await supabase.from('bot_settings').update({ data: allCarts }).eq('key', 'active_carts');
-    } catch(e) {}
+    } catch(e) {
+        console.error('[checkAbandonedCarts] Error:', e.message);
+    }
 }
 
 module.exports = { runSmartAnalysis, checkAbandonedCarts };

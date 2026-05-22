@@ -137,12 +137,22 @@ async function runRecommendationEngine() {
         const orders = (rawOrders || []).map(decryptOrder);
 
         // 2. Fetch Views
-        const { data: viewsData } = await supabase.from('bot_settings').select('data').eq('key', 'user_views').maybeSingle();
-        const allViews = viewsData ? (viewsData.data || {}) : {};
+        const { data: viewsState } = await supabase.from('bot_state').select('user_key, value').eq('namespace', 'user_views');
+        const allViews = {};
+        if (viewsState) {
+            viewsState.forEach(row => {
+                allViews[row.user_key] = row.value || [];
+            });
+        }
 
         // 3. Fetch Tracking State (Anti-Fatigue)
-        const { data: fatigueData } = await supabase.from('bot_settings').select('data').eq('key', 'fatigue_tracker').maybeSingle();
-        const fatigueTracker = fatigueData ? (fatigueData.data || {}) : {};
+        const { data: fatigueState } = await supabase.from('bot_state').select('user_key, value').eq('namespace', 'fatigue_tracker');
+        const fatigueTracker = {};
+        if (fatigueState) {
+            fatigueState.forEach(row => {
+                fatigueTracker[row.user_key] = row.value;
+            });
+        }
 
         const now = Date.now();
         const currentHour = new Date().getHours();
@@ -156,21 +166,25 @@ async function runRecommendationEngine() {
             });
         }
 
-        const { data: settingsData } = await supabase.from('bot_settings').select('data').eq('key', 'app_settings').maybeSingle();
-        const settings = settingsData ? (settingsData.data || {}) : {};
+        let settings = {};
+        try {
+            const { data: settingsRow } = await supabase.from('bot_settings').select('*').limit(1).single();
+            settings = settingsRow || {};
+        } catch(e) {}
+        
         const baseDomain = process.env.RENDER_EXTERNAL_URL || (process.env.RAILWAY_PUBLIC_DOMAIN ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}` : 'https://farmstegridy-bot.onrender.com');
-        const catalogUrl = (settings.mini_app_url ? `${settings.mini_app_url}/catalog` : `${baseDomain}/catalog`) + `?v=${Date.now()}`;
+        const catalogUrl = `${baseDomain}/catalog?v=${Date.now()}`;
 
         const allUserIds = new Set([...Object.keys(userOrders), ...Object.keys(allViews)]);
-        let notificationsSent = 0;
+        const fatigueUpdates = [];
 
         for (const userId of allUserIds) {
             const uOrders = userOrders[userId] || [];
             const uViews = allViews[userId] || [];
             
-            // Cooldown Filter: Don't spam! Minimum 48h between notifications.
+            // Cooldown Filter: Don't spam! Minimum 24h between notifications (max 1 par jour par utilisateur)
             const lastSent = fatigueTracker[userId];
-            if (lastSent && (now - lastSent) < 48 * 60 * 60 * 1000) {
+            if (lastSent && (now - lastSent) < 24 * 60 * 60 * 1000) {
                 continue; // Skip, too recent
             }
 
@@ -239,18 +253,19 @@ async function runRecommendationEngine() {
                     await sendMessageToUser(tgId, message, { parse_mode: 'HTML', reply_markup: keyboard }).catch(() => {});
                     
                     fatigueTracker[userId] = now;
-                    notificationsSent++;
+                    fatigueUpdates.push({
+                        id: `fatigue_tracker:${userId}`,
+                        namespace: 'fatigue_tracker',
+                        user_key: String(userId),
+                        value: now
+                    });
                 }
             }
         }
 
         // Save fatigue tracking state
-        if (notificationsSent > 0) {
-            if (fatigueData) {
-                await supabase.from('bot_settings').update({ data: fatigueTracker }).eq('key', 'fatigue_tracker');
-            } else {
-                await supabase.from('bot_settings').insert([{ key: 'fatigue_tracker', data: fatigueTracker }]);
-            }
+        if (fatigueUpdates.length > 0) {
+            await supabase.from('bot_state').upsert(fatigueUpdates, { onConflict: 'id' });
         }
         
     } catch (e) {
