@@ -6317,7 +6317,7 @@
             if (stockValStr === undefined || stockValStr === '' || isNaN(parseInt(stockValStr)) || parseInt(stockValStr) < 0) {
                 return showToast('Vous devez obligatoirement spécifier une quantité de stock disponible.', 'error');
             }
-            const stock = parseInt(stockValStr);
+            let stock = parseInt(stockValStr);
 
             const unit = document.getElementById('prod_unit').value;
             const promo = document.getElementById('prod_promo').value;
@@ -6340,7 +6340,10 @@
                     const totalVal = r.querySelector('.discount-price').value.replace(',', '.');
                     const total = parseFloat(totalVal);
                     const stockVal = parseInt(r.querySelector('.discount-stock').value) || 0;
-                    if (!isNaN(qty) && !isNaN(total)) discounts_config.push({ qty, total, stock: stockVal });
+                    if (!isNaN(qty) && !isNaN(total)) {
+                        discounts_config.push({ qty, total, stock: stockVal });
+                        stock += stockVal;
+                    }
                 });
                 discounts_config.sort((a, b) => a.qty - b.qty);
             }

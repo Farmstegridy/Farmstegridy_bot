@@ -1111,6 +1111,9 @@ async function adjustOrderStock(orderId, action) {
                     pkg.stock = Math.max(0, oldStock + qty);
                     newStock = pkg.stock;
                     
+                    // On déduit également du stock global du produit
+                    const newGlobalStock = Math.max(0, (p.stock || 0) + qty);
+                    
                     let alertMsg = null;
                     if (action === 'decrement') {
                         if (newStock <= 0 && oldStock > 0) {
@@ -1120,7 +1123,7 @@ async function adjustOrderStock(orderId, action) {
                         }
                     }
                     
-                    await supabase.from(COL_PRODUCTS).update({ discounts_config: dc }).eq('id', productId);
+                    await supabase.from(COL_PRODUCTS).update({ discounts_config: dc, stock: newGlobalStock }).eq('id', productId);
                     if (alertMsg) {
                         try {
                             const { notifyAdmins } = require('./notifications');
