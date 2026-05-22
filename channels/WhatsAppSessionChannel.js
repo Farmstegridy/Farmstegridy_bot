@@ -1,5 +1,5 @@
 // Dynamic import wrapper for ESM-only @whiskeysockets/baileys (Node 22+)
-let Baileys, makeWASocket, DisconnectReason, jidDecode, fetchLatestBaileysVersion, makeCacheableSignalKeyStore, downloadMediaMessage;
+let Baileys, makeWASocket, DisconnectReason, jidDecode, fetchLatestBaileysVersion, makeCacheableSignalKeyStore, downloadMediaMessage, Browsers, proto, jidNormalizedUser;
 
 async function loadBaileys() {
     if (Baileys) return;
@@ -7,9 +7,12 @@ async function loadBaileys() {
     makeWASocket = Baileys.default?.default || Baileys.default || Baileys;
     DisconnectReason = Baileys.DisconnectReason;
     jidDecode = Baileys.jidDecode;
+    jidNormalizedUser = Baileys.jidNormalizedUser;
     fetchLatestBaileysVersion = Baileys.fetchLatestBaileysVersion;
     makeCacheableSignalKeyStore = Baileys.makeCacheableSignalKeyStore;
     downloadMediaMessage = Baileys.downloadMediaMessage;
+    Browsers = Baileys.Browsers;
+    proto = Baileys.proto;
 }
 
 const { Channel } = require('./Channel');
@@ -20,9 +23,27 @@ const fs = require('fs');
 const qrcodeTerminal = require('qrcode-terminal');
 const qrcodeImage = require('qrcode');
 
-
-
 const { waLogs, waLog } = require('../services/wa_log_shared');
+
+// [🛡️ STABILITÉ] Enregistrement unique des signaux au niveau module
+// Évite l'accumulation de listeners process.once à chaque reconnexion WA
+let _moduleReleaseLock = null;
+let _moduleInstanceId = null;
+let _signalHandlersRegistered = false;
+
+function _registerSignalHandlersOnce() {
+    if (_signalHandlersRegistered) return;
+    _signalHandlersRegistered = true;
+    const shutdown = async (signal) => {
+        if (_moduleReleaseLock && _moduleInstanceId) {
+            waLog(`[WA-EXIT] Releasing lock for ${_moduleInstanceId}...`);
+            await _moduleReleaseLock(_moduleInstanceId).catch(() => {});
+        }
+        // Ne pas appeler process.exit ici — laisser le gracefulShutdown de index.js prendre la main
+    };
+    process.on('SIGTERM', () => shutdown('SIGTERM'));
+    process.on('SIGINT',  () => shutdown('SIGINT'));
+}
 
 class WhatsAppSessionChannel extends Channel {
     constructor(config) {
@@ -32,10 +53,13 @@ class WhatsAppSessionChannel extends Channel {
         this.messageHandler = null;
         this.store = null;
         this._restarting = false;
+        this._decryptionFailures = 0;
         this._clearSession = null; // Sera défini dans start()
         this._conflictBackoff = 5000; // Backoff initial pour code 440 (ms)
-        this.pairingPhone = null;  // Numéro pour le jumelage sans QR
-        this.pairingCode = null;   // Code à 8 caractères généré
+        this._failureCount = 0; // Compteur pour éviter les boucles infinies
+        this.lastQR = null; // Stocke le dernier QR en Base64
+        this.pairingPhone = null;
+        this.pairingCode = null;
     }
 
     static getLogs() { return waLogs; }
@@ -52,44 +76,56 @@ class WhatsAppSessionChannel extends Channel {
             this.pairingCode = null;
             waLog(`[WA-Pairing] Mode jumelage activé pour : ${this.pairingPhone}`);
         }
-        const { state, saveCreds, clearSession, claimLock, checkLock } = await useSupabaseAuthState(this.sessionId);
+        const { state, saveCreds, clearSession, claimLock, checkLock, releaseLock } = await useSupabaseAuthState(this.sessionId).catch(err => {
+            waLog(`[WA-START-ERR] DB Initialize failed: ${err.message}. Retrying in 10s...`);
+            setTimeout(() => this.start(options), 10000);
+            throw err;
+        });
         this._clearSession = clearSession;
+        this._releaseLock = releaseLock;
 
         // --- LOCK SYSTEM (PREVENTS CONFLICT 440) ---
         const myInstanceId = `${process.env.RAILWAY_SERVICE_NAME || 'local'}-${process.env.RAILWAY_REPLICA_INDEX || '0'}-${process.pid}`;
-        const activeLock = await checkLock();
+        let activeLock;
+        try {
+            activeLock = await checkLock();
+        } catch (e) {
+            waLog(`[WA-LOCK-ERR] Could not check lock: ${e.message}. Retrying...`);
+            setTimeout(() => this.start(options), 5000);
+            return;
+        }
         
         if (activeLock && activeLock.owner !== myInstanceId) {
             const now = Date.now();
             const updatedAt = activeLock.updatedAt || 0;
             const diff = now - updatedAt;
 
-            // Si le lock existe et qu'il a été mis à jour il y a moins de 5 minutes, il est ACTIF
-            if (activeLock.owner && diff < 300000) {
-                const waitTime = 30000;
+            // Si le lock existe et qu'il a été mis à jour il y a moins de 60 secondes, il est ACTIF
+            if (activeLock.owner && diff < 60000) {
+                const waitTime = 10000;
                 waLog(`[WA-LOCK] Session busy (owned by ${activeLock.owner}, updated ${Math.round(diff/1000)}s ago). Waiting ${waitTime}ms to avoid conflict 440...`);
                 this.isActive = false;
-                setTimeout(() => this.start(), waitTime);
+                setTimeout(() => this.start(options), waitTime);
                 return;
             }
         }
         
         // Prendre le lock
-        await claimLock(myInstanceId);
+        await claimLock(myInstanceId).catch(e => waLog(`[WA-LOCK-ERR] Claim failed: ${e.message}`));
         waLog(`[WA-LOCK] Session locked for our instance: ${myInstanceId}`);
-        this.isActive = true; // Marquer comme actif pour le heartbeat dès maintenant
 
         // [🛡️ REDONDANCE] Heartbeat pour garder le lock vivant
-        // On le lance immédiatement pour éviter tout timeout pendant la connexion Baileys
         if (this._lockHeartbeat) clearInterval(this._lockHeartbeat);
         this._lockHeartbeat = setInterval(async () => {
-             // Met à jour le timestamp 'updatedAt' dans Supabase
-             await claimLock(myInstanceId).catch(err => {
-                 waLog(`[WA-LOCK] Heartbeat failed: ${err.message}`);
-             });
-        }, 60000); // 1 minute (plus agressif pour être sûr)
+             await claimLock(myInstanceId).catch(() => {});
+        }, 15000);
 
-        let version = [2, 3000, 1015901307];
+        // [🛡️ STABILITÉ] Mise à jour de la référence globale du lock (handler enregistré une seule fois au module)
+        _moduleReleaseLock = releaseLock;
+        _moduleInstanceId = myInstanceId;
+        _registerSignalHandlersOnce();
+
+        let version = [2, 3000, 1015901307]; // Fallback 
         let isLatest = false;
         try {
             const latest = await Promise.race([
@@ -105,26 +141,38 @@ class WhatsAppSessionChannel extends Channel {
         }
         console.log(`[WA] Using version v${version.join('.')}, isLatest: ${isLatest}`);
 
+        this._pairingRequestedTimer = false;
+        this._pairingRequestedDirectly = false;
+
         const logger = pino({ level: 'silent' });
         this.sock = makeWASocket({
             version,
             auth: {
                 creds: state.creds,
-                keys: makeCacheableSignalKeyStore(state.keys, logger)
+                keys: makeCacheableSignalKeyStore({
+                    get: async (type, ids) => {
+                        const data = await state.keys.get(type, ids);
+                        for (const id in data) {
+                            if (type === 'app-state-sync-key' && data[id]) {
+                                data[id] = proto.Message.AppStateSyncKeyData.fromObject(data[id]);
+                            }
+                        }
+                        return data;
+                    },
+                    set: (data) => state.keys.set(data)
+                }, logger)
             },
             logger,
-            browser: ['Mac OS', 'Safari', '17.0'],
+            browser: ["macOS", "Chrome", "115.0.0.0"],
             syncFullHistory: false,
+            shouldSyncHistory: false,
+            markOnlineOnConnect: true,
+            linkPreviewImageThumbnailWidth: 192,
             generateHighQualityLinkPreview: false,
-            getMessage: async (key) => {
-                // Nécessaire pour que Baileys puisse décrypter les messages retry
-                return { conversation: '' };
-            }
+            getMessage: async () => ({ conversation: '' })
         });
 
-
-        // this.store.bind(this.sock.ev); // Removed store bind
-
+        this._saveCreds = saveCreds;
         this.sock.ev.on('creds.update', saveCreds);
 
         this.sock.ev.on('connection.update', async (update) => {
@@ -132,38 +180,27 @@ class WhatsAppSessionChannel extends Channel {
             waLog(`[WA] Connection Update: ${JSON.stringify(update, null, 2)}`);
 
             if (qr) {
-                console.log('--------------------------------------------------');
-                console.log('👉 SCANNEZ CE QR CODE POUR CONNECTER WHATSAPP :');
-                qrcodeTerminal.generate(qr, { small: true });
-                console.log('--------------------------------------------------');
-
-                // Sauvegarder en image pour le web endpoint /whatsapp-qr
                 try {
-                    const artifactPath = path.join(process.cwd(), 'whatsapp_qr.png');
-                    await qrcodeImage.toFile(artifactPath, qr, {
-                        color: { dark: '#000000', light: '#ffffff' },
-                        width: 256
-                    });
-                    console.log(`✅ QR Image générée: ${artifactPath}`);
+                    this.lastQR = await qrcodeImage.toDataURL(qr);
                 } catch (err) {
                     console.error('❌ Erreur génération image QR:', err);
                 }
             }
 
             // --- PAIRING CODE LOGIC ---
-            if (this.pairingPhone && !this.sock.authState.creds.registered && !this.pairingCode) {
-                // On attend que la socket soit bien stable (10s) avant de demander le code
-                // Cela évite les rejets "401 Unauthorized" trop précoces sur certains réseaux
+            if (this.pairingPhone && !this.sock.authState.creds.registered && !this.pairingCode && !this._pairingRequestedTimer) {
+                this._pairingRequestedTimer = true;
                 waLog(`[WA-Pairing] Demande de code pour ${this.pairingPhone} dans 10 secondes...`);
                 setTimeout(async () => {
                     try {
+                        if (this.pairingCode) return; // Ne pas redemander si obtenu directement
                         const cleanPhone = this.pairingPhone.replace(/\D/g, '');
-                        waLog(`📡 [WA-Pairing] Envoi de la requête de code pour +${cleanPhone}...`);
+                        waLog(`📡 [WA-Pairing] Envoi de la requête de code par timer pour +${cleanPhone}...`);
                         const code = await this.sock.requestPairingCode(cleanPhone);
                         this.pairingCode = code;
                         waLog(`✅ [WA-Pairing] CODE REÇU : ${this.pairingCode}`);
                     } catch (err) {
-                        waLog(`❌ [WA-Pairing] Échec demande de code : ${err.message}`);
+                        waLog(`❌ [WA-Pairing] Échec demande de code par timer : ${err.message}`);
                         this.pairingCode = "ERROR: " + err.message;
                     }
                 }, 10000);
@@ -174,43 +211,56 @@ class WhatsAppSessionChannel extends Channel {
                 const statusCode = error?.output?.statusCode;
                 waLog(`[WA] Connexion fermée. Code: ${statusCode}, Msg: ${error?.message}, Payload: ${JSON.stringify(error?.output?.payload)}`);
 
-                // Si on est en restart, ne pas reconnecter (restart() s'en charge)
                 if (this._restarting) {
                     waLog('[WA] Restart en cours, pas de reconnexion auto.');
                     return;
                 }
 
-                // Codes qui nécessitent une session fraîche (nouveau QR)
                 const needsFreshSession = [
-                    DisconnectReason.loggedOut,   // 401 - déconnecté par l'utilisateur
-                    DisconnectReason.forbidden,    // 403 - compte banni/bloqué
-                    DisconnectReason.badSession,   // 500 - session corrompue
-                    DisconnectReason.multideviceMismatch, // 411 - conflit appareils
+                    DisconnectReason.loggedOut,   // 401 - déconnecté MANUELLEMENT par l'utilisateur
                 ].includes(statusCode);
 
                 if (needsFreshSession) {
-                    waLog(`[WA] Session invalide (code ${statusCode}) — effacement Supabase. Attente de 3s avant nouveau QR...`);
+                    waLog(`[WA] Session rejetée (401) par WhatsApp — Nettoyage complet (Principal + Backup).`);
                     if (this._clearSession) await this._clearSession();
                     this.isActive = false;
-                    setTimeout(() => this.start(), 3000); // Délai de 3s pour garantir le nettoyage DB avant de repartir 🔄
-                } else if (statusCode === 440) {
-                    // Conflit : une autre instance a pris la session.
-                    // Backoff exponentiel pour éviter la boucle infinie de conflits.
-                    const delay = this._conflictBackoff;
-                    this._conflictBackoff = Math.min(this._conflictBackoff * 2, 60000); // max 60s
-                    waLog(`[WA] Conflit 440 (replaced) — attente ${delay}ms avant reconnexion (backoff=${this._conflictBackoff}ms)...`);
+                    setTimeout(() => this.start({ pairingPhone: this.pairingPhone }), 5000);
+                } else if (statusCode === 440 || statusCode === 515 || statusCode === 503) {
+                    const delay = (statusCode === 440) ? this._conflictBackoff : 5000;
+                    if (statusCode === 440) this._conflictBackoff = Math.min(this._conflictBackoff * 2, 60000);
+                    
+                    waLog(`[WA] Erreur temporaire ${statusCode} — attente ${delay}ms avant reconnexion...`);
                     this.isActive = false;
-                    setTimeout(() => this.start(), delay);
+                    setTimeout(() => this.start({ pairingPhone: this.pairingPhone }), delay);
                 } else {
-                    // Reconnexion simple (timeout, perte réseau, etc.)
-                    this._conflictBackoff = 5000; // reset backoff sur reconnexion normale
-                    waLog(`[WA] Reconnexion simple (code ${statusCode})...`);
-                    this.start();
+                    this._conflictBackoff = 5000;
+                    const isTimeout = statusCode === 408;
+                    const delay = isTimeout ? 5000 : 2000;
+                    waLog(`[WA] Reconnexion auto (code ${statusCode})${isTimeout ? ' [TIMEOUT]' : ''} dans ${delay}ms...`);
+                    this.isActive = false;
+                    setTimeout(() => this.start({ pairingPhone: this.pairingPhone }), delay);
                 }
             } else if (connection === 'open') {
                 waLog('✅ [WA] WhatsApp connecté avec succès !');
                 this.isActive = true;
-                this._conflictBackoff = 5000; // reset backoff sur connexion réussie
+                this._conflictBackoff = 5000;
+                this.lastQR = null;
+                
+                if (this._saveCreds) {
+                    waLog('[WA-DB] Alimentation forcée du backup de session...');
+                    this._saveCreds();
+                }
+
+                if (this.sock.user && !this.sock.user.name) {
+                    try {
+                        const pp = await this.sock.profilePictureUrl(this.sock.user.id, 'image').catch(() => null);
+                        this.sock.user.imgUrl = pp;
+                    } catch (e) {}
+                }
+
+                if (this._saveCreds) {
+                    this._saveCreds();
+                }
             }
         });
 
@@ -225,23 +275,79 @@ class WhatsAppSessionChannel extends Channel {
             waLog(`[WA-MSG] selfJid=${selfJid}`);
 
             for (const msg of m.messages) {
-                const remoteJid = msg.key.remoteJid;
+                let remoteJid = msg.key.remoteJid;
                 const isMe = msg.key.fromMe;
+                
+                // [🔍 DIAGNOSTIC] Log détaillé pour CHAQUE message reçu
+                waLog(`[WA-MSG-RAW] id=${msg.key.id?.substring(0,12)}, fromMe=${isMe}, remoteJid=${remoteJid}, hasMessage=${!!msg.message}, stubType=${msg.messageStubType || 'none'}, msgKeys=${msg.message ? Object.keys(msg.message).join(',') : 'EMPTY'}`);
+                
+                // [🛡️ RÉSOLUTION LID -> PN]
+                // On essaie de convertir le LID en numéro de téléphone si possible via le store ou contacts
+                if (remoteJid?.includes('@lid')) {
+                    const normalized = jidNormalizedUser ? jidNormalizedUser(remoteJid) : null;
+                    if (normalized && !normalized.includes('@lid')) {
+                        remoteJid = normalized;
+                    } else if (isMe) {
+                        const selfJidClean = selfJid?.split(':')[0]?.split('@')[0];
+                        remoteJid = selfJidClean + '@s.whatsapp.net';
+                    }
+                    // Si on n'a pas pu résoudre, on garde le LID mais on ne le transforme pas en FAUX numéro
+                }
 
-                // Ignorer les messages de protocole sans contenu utile
-                if (!msg.message || msg.message?.protocolMessage || msg.message?.senderKeyDistributionMessage) {
-                    waLog(`[WA-MSG] SKIP protocol/empty from ${remoteJid}`);
+                // [🛡️ DÉTECTION ÉCHEC DÉCHIFFREMENT]
+                if (!msg.message || msg.message?.protocolMessage) {
+                    // Ne compter que les messages NON-fromMe comme des vrais échecs de déchiffrement
+                    // Les messages fromMe vides sont des ACK/protocol normaux
+                    // stubType=2 (CIPHERTEXT) = Le message n'a pas pu être déchiffré
+                    const isRealDecryptionFailure = !msg.message && !isMe && (!msg.messageStubType || msg.messageStubType === 2);
+                    if (isRealDecryptionFailure) {
+                        // [🛡️ STABILITÉ] Compteur par MESSAGE UNIQUE (pas par retry)
+                        // Baileys retente le même message plusieurs fois — on ne compte qu'une fois par ID
+                        if (!this._seenFailedMsgIds) this._seenFailedMsgIds = new Set();
+                        const msgId = msg.key.id;
+                        if (!this._seenFailedMsgIds.has(msgId)) {
+                            this._seenFailedMsgIds.add(msgId);
+                            if (!this._decryptionFailuresMap) this._decryptionFailuresMap = new Map();
+                            const fails = (this._decryptionFailuresMap.get(remoteJid) || 0) + 1;
+                            this._decryptionFailuresMap.set(remoteJid, fails);
+                            waLog(`[WA-WARN] ⚠️ Échec déchiffrement #${fails} de ${remoteJid} (id=${msgId?.substring(0,12)})`);
+
+                            // [🛡️ AUTO-RÉPARATION SIGNAL] Forcer l'établissement de session
+                            // En envoyant un message, Baileys va chercher les pre-keys sur le serveur
+                            // et établir une session Signal propre avec l'expéditeur
+                            if (fails === 1) {
+                                waLog(`[WA-FIX] Force établissement session Signal pour ${remoteJid}...`);
+                                try {
+                                    await this.sock.sendMessage(remoteJid, { 
+                                        text: "⏳ Session de sécurité en cours de synchronisation. Veuillez renvoyer votre message." 
+                                    });
+                                    waLog(`[WA-FIX] ✅ Message de session envoyé à ${remoteJid}`);
+                                } catch (e) {
+                                    waLog(`[WA-FIX] ❌ Échec envoi session fix à ${remoteJid}: ${e.message}`);
+                                }
+                            }
+                        }
+                        // [🛡️ STABILITÉ] PAS d'auto-purge — les échecs LID sont normaux en multi-device
+                        // L'ancienne logique d'auto-purge à 10 échecs détruisait la session inutilement
+                    }
+                    waLog(`[WA-MSG] SKIP ${isMe ? 'fromMe-' : ''}${msg.messageStubType ? 'stub-' : ''}protocol/empty from ${remoteJid}`);
                     continue;
                 }
 
-                const selfJidClean = selfJid?.split(':')[0];
+                // Succès : on remet le compteur à zéro pour ce JID
+                if (this._decryptionFailuresMap) this._decryptionFailuresMap.delete(remoteJid);
+
+                const selfJidClean = selfJid?.split(':')[0]?.split('@')[0];
                 const remoteJidClean = remoteJid?.split('@')[0].split(':')[0];
-                const isMessageToSelf = remoteJidClean === selfJidClean || remoteJid?.endsWith('@lid');
+                // [🛡️ CRITIQUE] Ne PAS traiter tous les @lid comme des self-messages !
+                // Les messages d'utilisateurs externes arrivent souvent via LID en multi-device
+                const isMessageToSelf = remoteJidClean === selfJidClean || remoteJid === selfJidClean + '@s.whatsapp.net';
 
                 // Détecter si le message vient d'un BOT (Baileys ou autre bot instance)
-                const isBotId = msg.key.id.startsWith('BAE5') || msg.key.id.startsWith('3EB0') || msg.key.id.length > 20;
+                // NOTE: Ne PAS utiliser id.length > 20 — les IDs WhatsApp normaux font souvent plus de 20 chars
+                const isBotId = msg.key.id.startsWith('BAE5') || msg.key.id.startsWith('3EB0');
 
-                waLog(`[WA-MSG] fromMe=${isMe}, isBotId=${isBotId}, remoteJid=${remoteJid}, toSelf=${isMessageToSelf}, msgKeys=${Object.keys(msg.message || {}).join(',')}`);
+                waLog(`[WA-MSG] fromMe=${isMe}, isBotId=${isBotId}, remoteJid=${remoteJid}, toSelf=${isMessageToSelf}`);
 
                 // Empêcher les boucles : on ignore tout ce qui est marqué fromMe SAUF si c'est nous qui écrivons manuellement (pas un ID de bot)
                 if (isMe && isBotId) { waLog(`[WA-MSG] SKIP: fromMe+botId`); continue; }
@@ -290,6 +396,51 @@ class WhatsAppSessionChannel extends Channel {
 
     }
 
+    async requestPairingCode(phoneNumber) {
+        if (this.isActive && this.sock?.authState?.creds?.registered) {
+            waLog(`[WA-Pairing] BLOQUÉ: Déjà connecté et enregistré, pas de code nécessaire.`);
+            return this.pairingCode || 'CONNECTED';
+        }
+
+        if (phoneNumber) {
+            this.pairingPhone = phoneNumber;
+        }
+
+        if (this.pairingCode) return this.pairingCode;
+        if (this._pairingRequestInProgress) return null;
+        this._pairingRequestInProgress = true;
+
+        try {
+            if (!this.sock) {
+                waLog(`[WA-Pairing] Socket non actif, tentative de démarrage...`);
+                await this.initialize();
+                await this.start({ pairingPhone: phoneNumber });
+            } else if (!this._pairingRequestedDirectly && !this._pairingRequestedTimer) {
+                this._pairingRequestedDirectly = true;
+                try {
+                    const cleanPhone = this.pairingPhone.replace(/\D/g, '');
+                    waLog(`📡 [WA-Pairing] Envoi direct unique de la requête de code pour +${cleanPhone}...`);
+                    const code = await this.sock.requestPairingCode(cleanPhone);
+                    this.pairingCode = code;
+                    waLog(`✅ [WA-Pairing] CODE REÇU : ${this.pairingCode}`);
+                } catch (err) {
+                    waLog(`❌ [WA-Pairing] Échec demande de code directe : ${err.message}`);
+                    this.pairingCode = "ERROR: " + err.message;
+                }
+            }
+            
+            let attempts = 0;
+            while (!this.pairingCode && attempts < 45) {
+                await new Promise(resolve => setTimeout(resolve, 1000));
+                attempts++;
+            }
+
+            return this.pairingCode;
+        } finally {
+            this._pairingRequestInProgress = false;
+        }
+    }
+
     async stop() {
         if (this.sock) this.sock.end();
         this.isActive = false;
@@ -306,15 +457,19 @@ class WhatsAppSessionChannel extends Channel {
         this.isActive = false;
         this.pairingCode = null;
         this.pairingPhone = options.pairingPhone || null;
-        
-        // 2. Supprimer la session Supabase pour forcer un nouveau QR/Code
+        this._pairingRequestedTimer = false;
+        this._pairingRequestedDirectly = false;
+
+        // 2. Supprimer la session Supabase pour forcer un nouveau QR
         if (this._clearSession) {
             await this._clearSession();
             waLog('[WA] Session Supabase supprimée.');
         }
+        
         // 3. Supprimer l'ancien QR image
         const qrPath = path.join(process.cwd(), 'whatsapp_qr.png');
         if (fs.existsSync(qrPath)) fs.unlinkSync(qrPath);
+
         // 4. Redémarrer
         this._restarting = false;
         await this.start(options);
@@ -347,6 +502,7 @@ class WhatsAppSessionChannel extends Channel {
         const cleanText = this._stripHTML(text);
 
         try {
+            // [🛡️ STABILITÉ] Suppression du PresenceUpdate qui peut fragiliser les nouvelles sessions
             let result;
             if (options.source || options.media_url) {
                 let mediaSource = options.source;
@@ -381,6 +537,11 @@ class WhatsAppSessionChannel extends Channel {
     async deleteMessage(jid, messageId) {
         if (!this.sock || !this.isActive || !messageId) return;
         try {
+            // Normaliser le JID : ajouter @s.whatsapp.net si absent
+            if (jid && !jid.includes('@')) {
+                jid = jid + '@s.whatsapp.net';
+            }
+
             await this.sock.sendMessage(jid, {
                 delete: {
                     remoteJid: jid,
@@ -402,7 +563,9 @@ class WhatsAppSessionChannel extends Channel {
             return { success: false, sentIds: [], error: 'Not connected' };
         }
 
-        const jid = (userId.includes('@')) ? userId : `${userId}@s.whatsapp.net`;
+        // [🛡️ NORMALISATION] Utiliser le normaliseur centralisé qui gère correctement les @lid
+        const jid = this._normalizeId(userId);
+        
         const sentIds = [];
         console.log(`[WA-Interactive] To: ${jid}, Buttons: ${buttons.length}, HasMedia: ${!!options.media_url}`);
 
@@ -455,13 +618,32 @@ class WhatsAppSessionChannel extends Channel {
             if (result?.key?.id) sentIds.push(result.key.id);
             return { success: true, sentIds };
         } catch (e) {
+            if (e.message.includes('SessionError') || e.message.includes('No sessions')) {
+                waLog(`[WA-Session-Fix] Tentative de réparation de session pour ${jid}...`);
+                // Sur SessionError, on tente un envoi ultra-basique pour "réveiller" Signal
+                try {
+                    await this.sock.sendMessage(jid, { text: "." }); 
+                    const result = await this.sock.sendMessage(jid, { text: textMenu || "Choisissez une option :" });
+                    if (result?.key?.id) sentIds.push(result.key.id);
+                    return { success: true, sentIds };
+                } catch (e2) {
+                    waLog(`[WA-Interactive] Échec critique après fix session: ${e2.message}`);
+                }
+            }
             console.error('[WA-Interactive] Échec envoi texte:', e);
-            return { success: false, sentIds };
+            return { success: false, sentIds, error: e.message };
         }
     }
 
     _extractText(msg) {
-        const m = msg.message;
+        let m = msg.message;
+        // Déballage des messages spécifiques Baileys/WhatsApp
+        if (m?.deviceSentMessage?.message) m = m.deviceSentMessage.message;
+        if (m?.ephemeralMessage?.message) m = m.ephemeralMessage.message;
+        if (m?.viewOnceMessageV2?.message) m = m.viewOnceMessageV2.message;
+        if (m?.viewOnceMessageV2Extension?.message) m = m.viewOnceMessageV2Extension.message;
+        if (m?.documentWithCaptionMessage?.message) m = m.documentWithCaptionMessage.message;
+
         const text = m?.listResponseMessage?.singleSelectReply?.selectedRowId ||
                      m?.buttonsResponseMessage?.selectedButtonId ||
                      m?.conversation ||
@@ -480,7 +662,7 @@ class WhatsAppSessionChannel extends Channel {
                 'buffer',
                 {},
                 {
-                    logger: pino({ level: 'silent' }),
+                    logger: pino({ level: 'info' }),
                     reuploadRequest: this.sock.updateMediaMessage
                 }
             );
