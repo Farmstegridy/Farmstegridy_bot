@@ -64,7 +64,9 @@ async function cleanupExpiredReservations() {
             
             // Log expiration for each item
             for (const item of expiredItems) {
-                await logStockMovement(item.productId, item.qty, 'reservation_expiry', userId);
+                const id = item.productId || item.id;
+                const qty = parseFloat(item.qty) || ((item.n || 1) * (item.m || 1));
+                await logStockMovement(id, qty, 'reservation_expiry', userId);
             }
             
             // Save updated cart (or delete if empty)
@@ -88,8 +90,10 @@ async function getReservedStock(productId, packageIndex = 0) {
         if (!Array.isArray(cart)) return;
         cart.forEach(item => {
             const itemPkgIdx = item.packageIndex || 0;
-            if (String(item.productId) === String(productId) && itemPkgIdx === packageIndex) {
-                reserved += parseFloat(item.qty) || 0;
+            const id = String(item.productId || item.id);
+            if (id === String(productId) && itemPkgIdx === packageIndex) {
+                const qty = parseFloat(item.qty) || ((item.n || 1) * (item.m || 1));
+                reserved += qty;
             }
         });
     });

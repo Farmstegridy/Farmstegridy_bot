@@ -378,30 +378,41 @@ async function getProducts(onlyActive = false) {
 
     // Deduct active carts stock
     try {
-        const { data: settingsData } = await supabase.from(COL_SETTINGS).select('data').eq('key', 'active_carts').maybeSingle();
-        if (settingsData && settingsData.data) {
-            const allCarts = settingsData.data;
-            const lockedStock = {};
-            const now = Date.now();
-            
-            for (const userId in allCarts) {
-                const c = allCarts[userId];
-                // Lock for 30 mins max
-                if (c && c.cart && (now - c.updated_at < 30 * 60 * 1000)) {
-                    c.cart.forEach(item => {
-                        const qty = (item.n || 1) * (item.m || 1);
-                        lockedStock[item.id] = (lockedStock[item.id] || 0) + qty;
+        const { createPersistentMap } = require('./persistent_map');
+        const userCarts = createPersistentMap('userCarts');
+        const lockedStock = {};
+        const now = Date.now();
+        
+        userCarts.forEach(cart => {
+            if (!Array.isArray(cart)) return;
+            cart.forEach(item => {
+                // Check if reservation hasn't expired (15 mins)
+                if (item.addedAt && (now - item.addedAt < 15 * 60 * 1000)) {
+                    // Extract qty (handle both old MiniApp format and new bot format)
+                    const qty = parseFloat(item.qty) || ((item.n || 1) * (item.m || 1));
+                    const productId = item.productId || item.id;
+                    const pkgIdx = item.packageIndex || 0;
+                    
+                    if (!lockedStock[productId]) lockedStock[productId] = { total: 0, pkgs: {} };
+                    lockedStock[productId].total += qty;
+                    lockedStock[productId].pkgs[pkgIdx] = (lockedStock[productId].pkgs[pkgIdx] || 0) + qty;
+                }
+            });
+        });
+
+        products = products.map(p => {
+            if (lockedStock[p.id]) {
+                p.stock = Math.max(0, p.stock - lockedStock[p.id].total);
+                
+                if (Array.isArray(p.discounts_config)) {
+                    p.discounts_config = p.discounts_config.map((pkg, idx) => {
+                        const pkgLocked = lockedStock[p.id].pkgs[idx + 1] || 0;
+                        return { ...pkg, stock: Math.max(0, (pkg.stock || 0) - pkgLocked) };
                     });
                 }
             }
-
-            products = products.map(p => {
-                if (lockedStock[p.id]) {
-                    p.stock = Math.max(0, p.stock - lockedStock[p.id]);
-                }
-                return p;
-            });
-        }
+            return p;
+        });
     } catch(e) {
         console.error('[DB] Error calculating locked stock:', e.message);
     }
@@ -1698,21 +1709,12 @@ const database = {
     },
     syncUserCart: async (userId, cart) => {
         try {
-            const stateId = `active_carts:${userId}`;
+            const { createPersistentMap } = require('./persistent_map');
+            const userCarts = createPersistentMap('userCarts');
             if (!cart || cart.length === 0) {
-                await supabase.from('bot_state').delete().eq('id', stateId);
+                userCarts.delete(userId);
             } else {
-                const payload = {
-                    id: stateId,
-                    namespace: 'active_carts',
-                    user_key: String(userId),
-                    value: {
-                        cart: cart,
-                        updated_at: Date.now(),
-                        notified: false
-                    }
-                };
-                await supabase.from('bot_state').upsert([payload], { onConflict: 'id' });
+                userCarts.set(userId, cart);
             }
         } catch (e) {
             console.error('[syncUserCart] Error:', e.message);
