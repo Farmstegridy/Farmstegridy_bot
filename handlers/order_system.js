@@ -337,12 +337,6 @@ function setupOrderSystem(bot) {
         await safeEdit(ctx, text, Markup.inlineKeyboard(qtyRows));
     });
 
-    // Ancien format pour la retro-compatibilité
-    bot.action(/^qty_(.+)_(.+)$/, async (ctx) => {
-        await ctx.answerCbQuery();
-        await safeEdit(ctx, "⚠️ Menu expiré. Veuillez relancer le catalogue.", Markup.inlineKeyboard([[Markup.button.callback('◀️ Retour', 'view_catalog')]]));
-    });
-
     // Nouveau format
     bot.action(/^qty_([a-zA-Z0-9-]+)_(\d+)_(\d+)$/, async (ctx) => {
         await ctx.answerCbQuery();
