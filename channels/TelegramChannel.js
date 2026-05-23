@@ -10,6 +10,12 @@ async function downloadToBuffer(url) {
         const mod = url.startsWith('https') ? https : http;
         mod.get(url, { timeout: 30000 }, (res) => {
             if (res.statusCode !== 200) return resolve(null);
+            const size = parseInt(res.headers['content-length'] || '0');
+            if (size > 15 * 1024 * 1024) {
+                console.log(`[downloadToBuffer] Media too large (${size} bytes). Aborting.`);
+                res.destroy();
+                return resolve(null);
+            }
             const chunks = [];
             res.on('data', chunk => chunks.push(chunk));
             res.on('end', () => {
