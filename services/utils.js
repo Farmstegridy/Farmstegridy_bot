@@ -248,7 +248,11 @@ async function safeEdit(ctx, text, opts = {}) {
                     newMsg = await ctx.replyWithHTML(text, extra);
                 }
             } catch (err) {
-                newMsg = await ctx.replyWithHTML(text, extra);
+                let fallbackText = text;
+                if (origPhoto || origVideo) {
+                    fallbackText += `\n\n<a href="${origPhoto || origVideo}">🔗 Voir le média (${origVideo ? 'Vidéo' : 'Image'})</a>`;
+                }
+                newMsg = await ctx.replyWithHTML(fallbackText, extra);
             }
 
             const newMsgId = newMsg?.message_id || newMsg?.messageId;
@@ -281,7 +285,11 @@ async function safeEdit(ctx, text, opts = {}) {
                         } else throw err;
                 }
             } catch (err) {
-                newMsg = await ctx.replyWithHTML(text, extra);
+                let fallbackText = text;
+                if (origPhoto || origVideo) {
+                    fallbackText += `\n\n<a href="${origPhoto || origVideo}">🔗 Voir le média (${origVideo ? 'Vidéo' : 'Image'})</a>`;
+                }
+                newMsg = await ctx.replyWithHTML(fallbackText, extra);
             }
         } else {
             newMsg = await ctx.replyWithHTML(text, extra);
