@@ -2770,7 +2770,10 @@ function setupOrderSystem(bot) {
 
             buttons.push([Markup.button.callback('📞 Parler à l\'Admin', 'help_chat_admin')]);
             if (settings.admin_telegram_id) {
-                buttons.push([Markup.button.url('💬 Contacter l\'Admin', `tg://user?id=${settings.admin_telegram_id}`)]);
+                const adminIds = String(settings.admin_telegram_id).split(/[\s,]+/).map(id => id.trim().replace('telegram_', '')).filter(Boolean);
+                if (adminIds.length > 0) {
+                    buttons.push([Markup.button.url('💬 Contacter l\'Admin', `tg://user?id=${adminIds[0]}`)]);
+                }
             }
             buttons.push([Markup.button.callback(settings.btn_back_quick_menu || '◀️ Retour Menu', 'main_menu')]);
 
