@@ -47,6 +47,13 @@ const _trackedCache = new Map();
 const _editLocks = new Map();
 const _activeMediaGroup = new Map();
 const _activeEdits = new Set();
+const _fileIdCache = new Map();
+
+function cacheFileId(origUrl, msg) {
+    if (!origUrl || !msg) return;
+    if (msg.video && msg.video.file_id) _fileIdCache.set(origUrl, msg.video.file_id);
+    else if (msg.photo && Array.isArray(msg.photo) && msg.photo.length > 0) _fileIdCache.set(origUrl, msg.photo[msg.photo.length - 1].file_id);
+}
 
 function setActiveMediaGroup(userId, msgIds) {
     _activeMediaGroup.set(userId, msgIds);
@@ -124,6 +131,11 @@ async function safeEdit(ctx, text, opts = {}) {
         video = photo;
         photo = null;
     }
+    
+    const origPhoto = photo;
+    const origVideo = video;
+    if (photo && _fileIdCache.has(photo)) photo = _fileIdCache.get(photo);
+    if (video && _fileIdCache.has(video)) video = _fileIdCache.get(video);
     let reply_markup = opts.reply_markup || (opts.inline_keyboard ? opts : (Array.isArray(opts) ? { inline_keyboard: opts } : null));
     if (reply_markup && reply_markup.reply_markup) reply_markup = reply_markup.reply_markup;
     const extra = { parse_mode: 'HTML', disable_web_page_preview: true, reply_markup };
@@ -178,17 +190,19 @@ async function safeEdit(ctx, text, opts = {}) {
                                 caption: text,
                                 parse_mode: 'HTML'
                             };
-                            await ctx.telegram.editMessageMedia(chatId, currentMsgId, null, mediaObj, { reply_markup });
+                            let eMsg = await ctx.telegram.editMessageMedia(chatId, currentMsgId, null, mediaObj, { reply_markup });
+                            cacheFileId(origPhoto || origVideo, eMsg);
                             } catch (mediaErr) {
                                 console.log('[SAFE-EDIT] Retry media edit with buffer (url failure)...');
                                 const buf = await downloadToBuffer(photo || video);
                                 if (buf) {
-                                    await ctx.telegram.editMessageMedia(chatId, currentMsgId, null, {
+                                    let eMsg = await ctx.telegram.editMessageMedia(chatId, currentMsgId, null, {
                                         type: photo ? 'photo' : 'video',
                                         media: { source: buf },
                                         caption: text,
                                         parse_mode: 'HTML'
                                     }, { reply_markup });
+                                    cacheFileId(origPhoto || origVideo, eMsg);
                                 } else throw mediaErr;
                             }
                     } else {
@@ -212,6 +226,7 @@ async function safeEdit(ctx, text, opts = {}) {
                         else newMsg = await ctx.replyWithVideo(video, { caption: text, ...extra });
                         
                         if (newMsg && newMsg.success === false) throw new Error('Media reply failed: ' + newMsg.error);
+                        cacheFileId(origPhoto || origVideo, newMsg);
                     } catch (replyErr) {
                             console.log('[SAFE-EDIT] Retry media reply with buffer...', replyErr.message);
                             const buf = await downloadToBuffer(photo || video);
@@ -220,6 +235,7 @@ async function safeEdit(ctx, text, opts = {}) {
                                 else newMsg = await ctx.replyWithVideo({ source: buf }, { caption: text, ...extra });
                                 
                                 if (newMsg && newMsg.success === false) throw new Error('Media reply with buffer failed');
+                                cacheFileId(origPhoto || origVideo, newMsg);
                             } else throw replyErr;
                     }
                 } else {
@@ -246,6 +262,7 @@ async function safeEdit(ctx, text, opts = {}) {
                     else newMsg = await ctx.replyWithVideo(video, { caption: text, ...extra });
                     
                     if (newMsg && newMsg.success === false) throw new Error('Media reply failed: ' + newMsg.error);
+                    cacheFileId(origPhoto || origVideo, newMsg);
                 } catch (err) {
                         console.log('[SAFE-EDIT] Retry media reply with buffer (no msg match)...', err.message);
                         const buf = await downloadToBuffer(photo || video);
@@ -254,6 +271,7 @@ async function safeEdit(ctx, text, opts = {}) {
                             else newMsg = await ctx.replyWithVideo({ source: buf }, { caption: text, ...extra });
                             
                             if (newMsg && newMsg.success === false) throw new Error('Media reply with buffer failed');
+                            cacheFileId(origPhoto || origVideo, newMsg);
                         } else throw err;
                 }
             } catch (err) {
