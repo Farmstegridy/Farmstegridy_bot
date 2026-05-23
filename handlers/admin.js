@@ -675,7 +675,17 @@ function setupAdminHandlers(bot) {
         await ctx.answerCbQuery();
         await cleanupUserChat(ctx);
         
-        return ctx.reply(`💬 <b>CONVERSATION ACTIVE</b>\n\nVous discutez avec <code>${targetIdString}</code>.\n\nTous vos prochains messages (texte, photo, vidéo) lui seront transmis.\n\nCliquez sur le bouton ci-dessous pour <b>TERMINER</b> et reprendre le comportement normal.`,
+        const { getUser } = require('../services/database');
+        const { sendTelegramMessage } = require('../services/notifications');
+        const user = await getUser(targetIdString);
+        const name = user ? user.first_name : 'Inconnu';
+        const username = user?.username ? `@${user.username}` : '';
+        const address = user?.data?.delivery_address || 'Non renseignée';
+        
+        // Avertir le client
+        await sendTelegramMessage(targetIdString, `✅ <b>Un membre de l'équipe a rejoint la discussion !</b>\n\nTous vos messages (texte, photos) nous seront directement transmis ici.`).catch(() => {});
+        
+        return ctx.reply(`💬 <b>CONVERSATION ACTIVE</b>\n\nVous discutez avec <b>${name}</b> ${username}\n🆔 <code>${targetIdString}</code>\n📍 Adresse : <i>${address}</i>\n\nTous vos prochains messages (texte, photo, vidéo) lui seront transmis.\n\nCliquez sur le bouton ci-dessous pour <b>TERMINER</b> et reprendre le comportement normal.`,
             Markup.inlineKeyboard([
                 [Markup.button.callback('🛑 TERMINER LA CONVERSATION', `admin_chat_end_${targetIdString}`)],
                 [Markup.button.callback('◀️ Retour au Menu / File', 'admin_menu')]
