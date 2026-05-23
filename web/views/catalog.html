@@ -1161,7 +1161,7 @@
                 let optionsList = [{ packageIndex: 0, m: 1, pr: activeProduct.price, stock: parseInt(activeProduct.stock) || 0 }];
                 if (activeProduct.has_discounts && Array.isArray(activeProduct.discounts_config)) {
                     activeProduct.discounts_config.forEach((d, idx) => {
-                        optionsList.push({ packageIndex: idx + 1, m: d.qty, pr: parseFloat(d.total || d.total_price), stock: parseInt(d.stock) || 0 });
+                        optionsList.push({ packageIndex: idx + 1, m: d.qty, pr: parseFloat(d.total || d.total_price), stock: parseInt(d.stock) || 0, is_absolute: d.is_absolute !== false, unit: d.unit || activeProduct.unit || 'g' });
                     });
                 }
 
@@ -1190,7 +1190,11 @@
                         };
                     }
                     
-                    d.innerHTML = `<div style="font-weight:800; font-size:15px;">${opt.m*uv}${activeProduct.unit || 'g'}</div><div style="font-weight:900; color:var(--accent);">${opt.pr.toFixed(0)}€</div><div style="font-size:10px; opacity:0.6; margin-top:4px;">Stock : ${opt.stock}</div>${isOOS ? '<div style="position:absolute; top:-8px; right:-8px; background:#ff0050; color:#fff; font-size:9px; padding:2px 6px; border-radius:10px; font-weight:800;">RUPTURE</div>' : ''}`;
+                    let label = `${opt.m * uv}${activeProduct.unit || 'g'}`;
+                    if (opt.packageIndex > 0 && opt.is_absolute) {
+                        label = `${opt.m}${opt.unit}`;
+                    }
+                    d.innerHTML = `<div style="font-weight:800; font-size:15px;">${label}</div><div style="font-weight:900; color:var(--accent);">${opt.pr.toFixed(0)}€</div><div style="font-size:10px; opacity:0.6; margin-top:4px;">Stock : ${opt.stock}</div>${isOOS ? '<div style="position:absolute; top:-8px; right:-8px; background:#ff0050; color:#fff; font-size:9px; padding:2px 6px; border-radius:10px; font-weight:800;">RUPTURE</div>' : ''}`;
                     cont.appendChild(d);
                     
                     if (firstAvailable === opt) {

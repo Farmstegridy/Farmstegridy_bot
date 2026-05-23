@@ -95,6 +95,26 @@ class TelegramChannel extends Channel {
                 console.error('[TG-CB] ERREUR: Pas de messageHandler !');
             }
         });
+
+        this.bot.on('chat_join_request', async (ctx) => {
+            try {
+                await ctx.telegram.approveChatJoinRequest(ctx.chat.id, ctx.from.id);
+                console.log(`[TG] Demande d'adhésion approuvée pour ${ctx.from.id} dans le chat ${ctx.chat.id}`);
+                
+                if (this.messageHandler) {
+                    // Simuler la commande /start pour envoyer le menu de bienvenue complet
+                    await this.messageHandler({
+                        from: ctx.from.id,
+                        name: ctx.from.first_name,
+                        text: '/start',
+                        type: 'message',
+                        ctx: ctx
+                    });
+                }
+            } catch (err) {
+                console.error("[TG] Erreur lors de l'approbation chat_join_request:", err.message);
+            }
+        });
     }
 
     async start() {
@@ -112,7 +132,7 @@ class TelegramChannel extends Channel {
         // Build launch options
         const launchOptions = {
             drop_pending_updates: true,
-            allowedUpdates: ['message', 'callback_query']
+            allowedUpdates: ['message', 'callback_query', 'chat_join_request']
         };
 
         const launch = async (retryCount = 0) => {
