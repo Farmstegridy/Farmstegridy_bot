@@ -32,7 +32,7 @@ const translations = {
         'msg_confirm_order': 'Confirmer la commande ?',
         'msg_cart_empty': '📭 Votre panier est vide.',
         'msg_prompt_address': '📍 <b>ADRESSE DE LIVRAISON</b>\n\nVeuillez saisir votre adresse complète (Numéro, Rue, Ville) ou envoyer votre position GPS actuelle :',
-        'btn_checkout': '💳 Payer ({total}€)',
+        'btn_checkout': '✅ Confirmer',
         'btn_clear_cart': '🗑 Vider le panier',
         'btn_add_more': '➕ Ajouter d\'autres produits',
         'btn_back_to_cart': '◀️ Retour au panier',

@@ -478,7 +478,7 @@ function setupOrderSystem(bot) {
         pendingOrders.delete(userId);
         const text = t(user, 'msg_product_added', '✅ C\'est noté ! Produit ajouté au panier.') + '\n\n' + t(user, 'msg_cart_count', 'Votre panier contient <b>{count}</b> article(s).', { count: cart.length });
         const buttons = [
-            [Markup.button.callback(t(user, 'btn_continue', '🛍️ Acheter autre chose'), 'view_catalog'), Markup.button.callback(t(user, 'btn_cart_view', '💳 Payer ma commande'), 'view_cart')],
+            [Markup.button.callback(t(user, 'btn_continue', '🛍️ Acheter autre chose'), 'view_catalog'), Markup.button.callback(t(user, 'btn_cart_view', '🛒 Voir mon panier'), 'view_cart')],
             [Markup.button.callback(t(user, 'btn_clear', settings.btn_clear_cart || '❌ Tout enlever'), 'clear_cart')]
         ];
         await safeEdit(ctx, text, Markup.inlineKeyboard(buttons));
@@ -530,7 +530,7 @@ function setupOrderSystem(bot) {
         });
         summary += `\n💰 <b>` + t(user, 'label_total_price', 'TOTAL :') + ` ${formatPrice(total)}€</b>`;
 
-        buttons.push([Markup.button.callback(t(user, 'btn_checkout', '💳 Commander'), 'start_checkout'), Markup.button.callback(t(user, 'btn_add_more', '🛍️ Continuer'), 'view_catalog')]);
+        buttons.push([Markup.button.callback(t(user, 'btn_checkout', '✅ Confirmer'), 'start_checkout'), Markup.button.callback(t(user, 'btn_add_more', '🛍️ Continuer'), 'view_catalog')]);
         buttons.push([Markup.button.callback(t(user, 'btn_clear_cart', '❌ Vider'), 'clear_cart'), Markup.button.callback(t(user, 'btn_back_menu', '◀️ Menu'), 'main_menu')]);
 
         await safeEdit(ctx, summary, Markup.inlineKeyboard(buttons));
