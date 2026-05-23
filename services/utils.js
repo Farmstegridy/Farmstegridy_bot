@@ -31,7 +31,7 @@ async function downloadToBuffer(url) {
             res.on('error', () => resolve(null));
         });
         req.on('error', () => resolve(null));
-        req.setTimeout(5000, () => {
+        req.setTimeout(30000, () => {
             req.destroy();
             resolve(null);
         });
@@ -46,6 +46,7 @@ async function downloadToBuffer(url) {
 const _trackedCache = new Map();
 const _editLocks = new Map();
 const _activeMediaGroup = new Map();
+const _activeEdits = new Set();
 
 function setActiveMediaGroup(userId, msgIds) {
     _activeMediaGroup.set(userId, msgIds);
@@ -73,12 +74,20 @@ async function safeEdit(ctx, text, opts = {}) {
         console.error('[SAFE-EDIT] No chat ID available');
         return;
     }
+    
+    if (_activeEdits.has(userId)) {
+        if (ctx.callbackQuery) {
+            return ctx.answerCbQuery("⏳ Chargement du média en cours, veuillez patienter...", { show_alert: false }).catch(()=>{});
+        }
+        return;
+    }
 
     const now = Date.now();
     const lastEdit = _editLocks.get(userId);
     if (lastEdit && (now - lastEdit < 500)) return;
     _editLocks.set(userId, now);
-
+    _activeEdits.add(userId);
+    
     let photo = opts.photo || null;
     if (photo === '') photo = null;
     let isDetectedVideo = false;
@@ -261,16 +270,20 @@ async function safeEdit(ctx, text, opts = {}) {
                 addMessageToTrack(userId, newMsgId).catch(() => { });
             }
         }
-
     } catch (e) {
         console.error('❌ safeEdit Fatal:', e.message);
         try {
             const fb = await ctx.replyWithHTML(text, extra);
             if (fb) {
                 const fbId = fb.message_id || fb.messageId;
-                if (fbId) addMessageToTrack(userId, fbId).catch(() => { });
+                cleanupOrphans(fbId);
+                addMessageToTrack(userId, fbId).catch(() => { });
             }
-        } catch (err) { }
+        } catch (fbErr) {
+            console.error('❌ Fallback failed:', fbErr.message);
+        }
+    } finally {
+        _activeEdits.delete(userId);
     }
 }
 

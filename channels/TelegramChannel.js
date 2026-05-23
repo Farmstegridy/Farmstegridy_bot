@@ -8,7 +8,7 @@ async function downloadToBuffer(url) {
     if (typeof url !== 'string' || !url.startsWith('http')) return null;
     return new Promise((resolve) => {
         const mod = url.startsWith('https') ? https : http;
-        mod.get(url, { timeout: 10000 }, (res) => {
+        mod.get(url, { timeout: 30000 }, (res) => {
             if (res.statusCode !== 200) return resolve(null);
             const chunks = [];
             res.on('data', chunk => chunks.push(chunk));
