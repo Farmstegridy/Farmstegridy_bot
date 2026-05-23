@@ -2769,6 +2769,9 @@ function setupOrderSystem(bot) {
             }
 
             buttons.push([Markup.button.callback('📞 Parler à l\'Admin', 'help_chat_admin')]);
+            if (settings.admin_telegram_id) {
+                buttons.push([Markup.button.url('💬 Contacter l\'Admin', `tg://user?id=${settings.admin_telegram_id}`)]);
+            }
             buttons.push([Markup.button.callback(settings.btn_back_quick_menu || '◀️ Retour Menu', 'main_menu')]);
 
             await safeEdit(ctx, text, Markup.inlineKeyboard(buttons));
