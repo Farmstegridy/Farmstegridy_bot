@@ -12,26 +12,25 @@ async function getMarketingTemplates() {
         return settings.marketing_templates;
     }
     return [
-        // PROSPECTS (Curieux / Présentation Bot)
         {
             segment: "prospect",
-            title: "🚀 CRÉEZ VOTRE BOT PROFESSIONNEL",
-            message: "Bonjour {first_name}, sublimez votre activité avec un bot sur-mesure de présentation ou de vente automatisée sur Telegram et WhatsApp.\n\n✨ <b>De 10€ à 50€ de réduction immédiate</b> sur nos formules grâce à votre code parrainage ou code promo !\n\n👇 Découvrez nos solutions BaaS :",
-            action: "DÉCOUVRIR LES SOLUTIONS",
+            title: "🔥 OFFRES EXCLUSIVES",
+            message: "Bonjour {first_name}, bienvenue sur notre boutique !\n\n✨ Découvrez nos nouveautés et profitez de nos meilleures offres.\n\n👇 Accédez au catalogue :",
+            action: "DÉCOUVRIR LES PRODUITS",
             type: "catalog"
         },
-        // CLIENTS (Déjà possesseurs d'un bot / Intéressés par les modules)
+        // CLIENTS
         {
             segment: "client",
-            title: "⚙️ BOOSTEZ VOTRE BOT EXISTANT",
-            message: "Bonjour {first_name}, optimisez la rentabilité et la fidélisation de votre bot avec nos nouvelles fonctionnalités avancées (Mini-App native, relances automatiques, multi-vendeurs, paiements intégrés).\n\n👇 Découvrir les modules additionnels :",
-            action: "VOIR LES MODULES",
+            title: "⭐ VOS PRODUITS FAVORIS SONT LÀ",
+            message: "Bonjour {first_name}, merci pour votre fidélité ! Vos produits préférés et nos nouveautés exclusives vous attendent.\n\n👇 Parcourir le catalogue :",
+            action: "VOIR LES NOUVEAUTÉS",
             type: "catalog"
         },
         {
             segment: "prospect",
             title: "🤝 PARRAINEZ ET GAGNEZ GROS",
-            message: "Partagez votre excellence ! Recommandez nos bots à votre réseau et offrez-leur une réduction immédiate de <b>10€ à 50€</b> sur leur formule de lancement.\n\nEn retour, touchez des commissions élevées pour chaque bot activé !\n\n👇 Obtenir mon code parrainage :",
+            message: "Partagez votre excellence ! Recommandez notre boutique à vos amis et offrez-leur une réduction sur leur première commande.\n\nEn retour, touchez des récompenses pour chaque ami parrainé !\n\n👇 Obtenir mon code parrainage :",
             action: "MON CODE PARRAIN",
             type: "referral"
         },

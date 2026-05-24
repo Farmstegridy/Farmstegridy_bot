@@ -240,7 +240,7 @@ async function runRecommendationEngine() {
                     
                     const message = generateDynamicText(firstName, topProduct, candidateType);
                     const keyboard = {
-                        inline_keyboard: [[{ text: '🛍️ Ouvrir la Mini App', web_app: { url: (process.env.RENDER_EXTERNAL_URL || (process.env.RAILWAY_PUBLIC_DOMAIN ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}/catalog` : 'https://monshopbot-production.up.railway.app/catalog')) } }]]
+                        inline_keyboard: [[{ text: '🛍️ Ouvrir la Mini App', web_app: { url: (process.env.RENDER_EXTERNAL_URL || (process.env.RAILWAY_PUBLIC_DOMAIN ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}/catalog?v=${Date.now()}` : `https://monshopbot-production.up.railway.app/catalog?v=${Date.now()}`)) } }]]
                     };
 
                     const tgId = userId.replace('telegram_', '');

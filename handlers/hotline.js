@@ -23,8 +23,7 @@ function setupHotlineHandlers(bot) {
         const text = `🎧 <b>SUPPORT TECHNIQUE</b>\n\nSélectionnez le type de problème rencontré :`;
         const keyboard = Markup.inlineKeyboard([
             [Markup.button.callback('Mon bot Telegram ne fonctionne plus', 'hotline_issue_tg_down')],
-            [Markup.button.callback('Mon bot WhatsApp ne fonctionne plus', 'hotline_issue_wa_down')],
-            [Markup.button.callback('Mes bots TG et WA ne fonctionnent plus', 'hotline_issue_both_down')],
+                        [Markup.button.callback('Mes bots TG et WA ne fonctionnent plus', 'hotline_issue_both_down')],
             [Markup.button.callback('J\'ai un projet / Nouvelle fonctionnalité', 'hotline_issue_feature')],
             [Markup.button.callback('Mon problème n\'est pas listé', 'hotline_issue_other')],
             [Markup.button.callback('◀️ Retour', 'hotline_menu')]
@@ -39,8 +38,7 @@ function setupHotlineHandlers(bot) {
 
         const issueMap = {
             'tg_down': 'Mon bot Telegram ne fonctionne plus',
-            'wa_down': 'Mon bot WhatsApp ne fonctionne plus',
-            'both_down': 'Mes bots TG et WA ne fonctionnent plus',
+                        'both_down': 'Mes bots TG et WA ne fonctionnent plus',
             'feature': 'J\'ai un projet / Nouvelle fonctionnalité',
             'other': 'Mon problème n\'est pas listé'
         };
@@ -103,8 +101,7 @@ function setupHotlineHandlers(bot) {
         
         const keyboard = Markup.inlineKeyboard([
             [Markup.button.callback('🥉 Pack Standard (450€)', 'pack_select_standard')],
-            [Markup.button.callback('🥈 Pack WhatsApp Plus (550€)', 'pack_select_wa')],
-            [Markup.button.callback('🥇 Pack Premium (650€)', 'pack_select_premium')],
+                        [Markup.button.callback('🥇 Pack Premium (650€)', 'pack_select_premium')],
             [Markup.button.callback('🚀 Pack Enterprise (950€)', 'pack_select_enterprise')],
             [Markup.button.callback('🏗 À la carte (Sur mesure)', 'config_start')],
             [Markup.button.callback('📊 Comparer les solutions', 'show_comparison')],
@@ -355,7 +352,6 @@ const BASE_FEATURES = ['catalogue_pro', 'stock_mgmt', 'dashboard_pro', 'hotline_
         
         const packs = {
             'standard': { name: 'Standard (Telegram)', price: 450 },
-            'wa': { name: 'WhatsApp Plus', price: 550 },
             'premium': { name: 'Premium (Fonctions Avancées)', price: 650 },
             'enterprise': { name: 'Enterprise (SaaS Intégral)', price: 950 }
         };
@@ -423,7 +419,7 @@ const BASE_FEATURES = ['catalogue_pro', 'stock_mgmt', 'dashboard_pro', 'hotline_
             `👇 <i>Sélectionnez votre formule pour démarrer :</i>`;
 
         const keyboard = Markup.inlineKeyboard([
-            [Markup.button.callback('🥉 Bronze (TG)', 'select_plan_bronze'), Markup.button.callback('🟧 WhatsApp', 'select_plan_wa')],
+            [Markup.button.callback('🥉 Bronze (TG)', 'select_plan_bronze')],
             [Markup.button.callback('🥈 Standard (TG+WA)', 'select_plan_standard')],
             [Markup.button.callback('🥇 PREMIUM (Recommandé)', 'select_plan_premium')],
             [Markup.button.callback('◀️ Retour', 'sales_menu_start')]
@@ -438,7 +434,6 @@ const BASE_FEATURES = ['catalogue_pro', 'stock_mgmt', 'dashboard_pro', 'hotline_
 
         const planMap = {
             'bronze': { name: '🥉 Bronze 350€ (TG)', discount: 10 },
-            'wa': { name: '🟧 WhatsApp 450€', discount: 20 },
             'standard': { name: '🥈 Standard 550€ (TG+WA)', discount: 30 },
             'premium': { name: '🥇 Premium 650€', discount: 50 }
         };
@@ -482,7 +477,7 @@ const BASE_FEATURES = ['catalogue_pro', 'stock_mgmt', 'dashboard_pro', 'hotline_
         if (!ticketData) return safeEdit(ctx, "❌ Session expirée.", Markup.inlineKeyboard([[Markup.button.callback('◀️ Retour', 'show_pricing')]]));
 
         const text = `💎 Formule choisie : <b>${ticketData.applied_discount ? ticketData.reason_with_discount : ticketData.reason}</b>\n\n` +
-                     `⚠️ <b>Obligatoire :</b> Afin que notre équipe puisse finaliser votre commande et vous contacter, veuillez envoyer votre <b>@username Telegram</b> ou numéro WhatsApp ci-dessous :`;
+                     `⚠️ <b>Obligatoire :</b> Afin que notre équipe puisse finaliser votre commande et vous contacter, veuillez envoyer votre <b>@username Telegram</b> ci-dessous :`;
         const keyboard = Markup.inlineKeyboard([
             [Markup.button.callback('◀️ Annuler', 'show_pricing')]
         ]);
@@ -581,11 +576,10 @@ const BASE_FEATURES = ['catalogue_pro', 'stock_mgmt', 'dashboard_pro', 'hotline_
                 
                 // NOTIFICATION SALES
                 const { notifyAdmins } = require('../services/notifications');
-                const adminMsg = `💰 <b>NOUVEAU TICKET VENTE (BaaS)</b>\n\n` +
-                    `👤 Client : ${ctx.from.first_name} (@${ctx.from.username || 'N/A'})\n` +
-                    `🆔 ID : <code>${userId}</code>\n` +
-                    `🏗 Intérêt : <b>${ticketData.applied_discount ? ticketData.reason_with_discount : ticketData.reason}</b>\n` +
-                    `📱 Contact : <b>${usernameInput}</b>`;
+                const adminMsg = `💰 <b>NOUVEAU TICKET</b>
+
+` + `Client: ${ctx.from.first_name}
+Sujet: ${action}`;
                 
                 await notifyAdmins(ctx.bot || bot, adminMsg, {
                     reply_markup: {

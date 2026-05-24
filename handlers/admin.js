@@ -432,11 +432,11 @@ function setupAdminHandlers(bot) {
         if (!(await hasAccess(ctx))) return ctx.answerCbQuery(t(ctx, 'msg_acc_s_refus', "❌ Accès refusé."));
         const adminKey = String(ctx.from.id).match(/\d+/g)?.[0] || String(ctx.from.id);
         if (await isAdmin(ctx) || await isModerator(ctx)) {
-            await ctx.answerCbQuery();
+            await ctx.answerCbQuery().catch(() => {});
             return showAdminMenu(ctx, true);
         }
         pendingAdminLogins.add(adminKey);
-        await ctx.answerCbQuery();
+        await ctx.answerCbQuery().catch(() => {});
         return ctx.reply(t(ctx, 'msg_veuillez_entrer_le', "🔐 Veuillez entrer le mot de passe administrateur :"));
     });
 
@@ -444,20 +444,20 @@ function setupAdminHandlers(bot) {
         if (!(await isAdmin(ctx))) return ctx.answerCbQuery(t(ctx, 'msg_acc_s_r_serv', "❌ Accès réservé."));
         const userId = String(ctx.from.id);
         pendingBroadcasts.add(userId);
-        await ctx.answerCbQuery();
+        await ctx.answerCbQuery().catch(() => {});
         return safeEdit(ctx, '🔔 <b>MODE DIFFUSION</b>\n\nEnvoyez maintenant le message que vous souhaitez diffuser à <b>TOUS</b> les utilisateurs du bot.\n\nVous pouvez inclure une <b>image</b> ou une <b>vidéo</b> avec votre message.', { parse_mode: 'HTML', ...Markup.inlineKeyboard([[Markup.button.callback('❌ Annuler', 'admin_menu')]]) });
     });
 
     bot.action('admin_trigger_password_reset', async (ctx) => {
         if (!(await isAdmin(ctx))) return ctx.answerCbQuery(t(ctx, 'msg_acc_s_r_serv', "❌ Accès réservé."));
         pendingPasswordReset.add(String(ctx.from.id).match(/\d+/g)?.[0] || String(ctx.from.id));
-        await ctx.answerCbQuery();
+        await ctx.answerCbQuery().catch(() => {});
         return ctx.reply(t(ctx, 'msg_b_r_initialisation', "🆕 <b>RÉINITIALISATION MOT DE PASSE</b>\n\nVeuillez envoyer le nouveau mot de passe d\'administration souhaité :"), { parse_mode: 'HTML' });
     });
 
     bot.action(/^admin_user_edit_(balance|points)_(.+)$/, async (ctx) => {
         if (!(await isAdmin(ctx))) return ctx.answerCbQuery(t(ctx, 'msg_acc_s_r_serv_aux_ad', "❌ Accès réservé aux Admins"));
-        await ctx.answerCbQuery();
+        await ctx.answerCbQuery().catch(() => {});
         const stats = await getStatsOverview();
         const msg = `📊 <b>Statistiques Globales</b>\n\n` +
             `• Chiffre d'Affaire : <b>${stats.totalCA || 0}€</b>\n` +
@@ -471,7 +471,7 @@ function setupAdminHandlers(bot) {
 
     bot.action('admin_users', async (ctx) => {
         if (!(await isAdmin(ctx))) return ctx.answerCbQuery(t(ctx, 'msg_acc_s_r_serv_aux_ad', "❌ Accès réservé aux Admins"));
-        await ctx.answerCbQuery();
+        await ctx.answerCbQuery().catch(() => {});
         const users = await getRecentUsers(15);
         if (users.length === 0) return safeEdit(ctx, '👥 Aucun utilisateur.', Markup.inlineKeyboard([[Markup.button.callback('◀️ Retour', 'admin_menu')]]));
 
@@ -487,7 +487,7 @@ function setupAdminHandlers(bot) {
 
     bot.action('admin_orders', async (ctx) => {
         if (!(await isAdmin(ctx))) return ctx.answerCbQuery(t(ctx, 'msg_acc_s_r_serv_aux_ad', "❌ Accès réservé aux Admins"));
-        await ctx.answerCbQuery();
+        await ctx.answerCbQuery().catch(() => {});
         const orders = await getAllOrders(15);
         if (orders.length === 0) return safeEdit(ctx, '📭 Aucune commande.', Markup.inlineKeyboard([[Markup.button.callback('◀️ Retour', 'admin_menu')]]));
 
@@ -505,7 +505,7 @@ function setupAdminHandlers(bot) {
         const orderId = ctx.match[1];
         const order = await getOrder(orderId);
         if (!order) return ctx.answerCbQuery(t(ctx, 'msg_introuvable', "❌ Introuvable"));
-        await ctx.answerCbQuery();
+        await ctx.answerCbQuery().catch(() => {});
 
         const msg = `📑 <b>Commande #${orderId.slice(-8)}</b>\n\n` +
             `👤 Client : ${order.first_name} (@${order.username})\n` +
@@ -526,7 +526,7 @@ function setupAdminHandlers(bot) {
 
     bot.action(/^ao_al_(.+)$/, async (ctx) => {
         const orderId = ctx.match[1];
-        await ctx.answerCbQuery();
+        await ctx.answerCbQuery().catch(() => {});
         const livreurs = await searchLivreurs('');
 
         if (livreurs.length === 0) return safeEdit(ctx, '❌ Aucun livreur enregistré.', Markup.inlineKeyboard([[Markup.button.callback('◀️ Retour', `ao_v_${orderId}`)]]));
@@ -565,7 +565,7 @@ function setupAdminHandlers(bot) {
         const fullAdmin = await isAdmin(ctx);
         if (!(await hasAccess(ctx))) return ctx.answerCbQuery(t(ctx, 'msg_acc_s_refus', "❌ Accès refusé"));
         
-        await ctx.answerCbQuery();
+        await ctx.answerCbQuery().catch(() => {});
         const { getPendingUsers } = require('../services/database');
         const pending = await getPendingUsers();
         
@@ -585,7 +585,7 @@ function setupAdminHandlers(bot) {
     // Support Queue Interface
     bot.action('admin_support_queue', async (ctx) => {
         if (!(await isAdmin(ctx))) return ctx.answerCbQuery(t(ctx, 'msg_acc_s_r_serv', "❌ Accès réservé."));
-        await ctx.answerCbQuery();
+        await ctx.answerCbQuery().catch(() => {});
         
         if (pendingSupportRequests.size === 0) {
             return safeEdit(ctx, `✅ <b>Aucun message de support en attente.</b>\n\nTous vos clients ont reçu une réponse.`,
@@ -598,7 +598,7 @@ function setupAdminHandlers(bot) {
             .sort((a, b) => b[1].timestamp - a[1].timestamp);
 
         for (const [userId, data] of sortedRequests) {
-            const platformIcon = data.platform === 'whatsapp' ? '📱' : '✈️';
+            const platformIcon = '✈️';
             const timeStr = new Date(data.timestamp).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
             const preview = String(data.lastMsg || '').substring(0, 20);
             const label = `${platformIcon} ${data.name || userId} (${timeStr})\n> ${preview}...`;
@@ -613,7 +613,7 @@ function setupAdminHandlers(bot) {
     });
 
     bot.action('admin_user_search', async (ctx) => {
-        await ctx.answerCbQuery();
+        await ctx.answerCbQuery().catch(() => {});
         adminSearchState.set(ctx.from.id, true);
         await safeEdit(ctx, `🔍 <b>Recherche Utilisateur</b>\n\nEnvoyez le nom ou le @username de la personne :`,
             Markup.inlineKeyboard([[Markup.button.callback('◀️ Annuler', 'admin_users')]]));
@@ -656,7 +656,7 @@ function setupAdminHandlers(bot) {
 
     bot.action(/^admin_user_view_(.+)$/, async (ctx) => {
         const uid = ctx.match[1];
-        await ctx.answerCbQuery();
+        await ctx.answerCbQuery().catch(() => {});
         return renderUserView(ctx, uid);
     });
     
@@ -673,7 +673,7 @@ function setupAdminHandlers(bot) {
             pendingSupportRequests.delete(targetIdString);
         }
         
-        await ctx.answerCbQuery();
+        await ctx.answerCbQuery().catch(() => {});
         await cleanupUserChat(ctx);
         
         return ctx.reply(`💬 <b>CONVERSATION ACTIVE</b>\n\nVous discutez avec <code>${targetIdString}</code>.\n\nTous vos prochains messages (texte, photo, vidéo) lui seront transmis.\n\nCliquez sur le bouton ci-dessous pour <b>TERMINER</b> et reprendre le comportement normal.`,
@@ -701,7 +701,7 @@ function setupAdminHandlers(bot) {
         const userId = String(ctx.from.id);
         const userKey = `telegram_${userId}`;
         awaitingUserSupportReply.set(userKey, true);
-        await ctx.answerCbQuery();
+        await ctx.answerCbQuery().catch(() => {});
         return ctx.reply(`✍️ <b>RÉPONSE À L'ADMIN</b>\n\nEnvoyez votre message ci-dessous (texte, photo ou vidéo).\nChaque message sera transmis à l'administration.\n\n<i>Tapez /end pour quitter le mode discussion.</i>`, 
             { parse_mode: 'HTML', reply_markup: { inline_keyboard: [[{ text: '🛑 Arrêter la discussion', callback_data: 'cancel_user_support' }]] } }
         );
@@ -718,7 +718,7 @@ function setupAdminHandlers(bot) {
     });
 
     bot.action('help_chat_admin', async (ctx) => {
-        await ctx.answerCbQuery();
+        await ctx.answerCbQuery().catch(() => {});
         const settings = await getAppSettings();
         const userId = `telegram_${ctx.from.id}`;
         
@@ -755,7 +755,7 @@ function setupAdminHandlers(bot) {
 
     bot.action(/^admin_user_edit_(balance|points)_(.+)$/, async (ctx) => {
         const [field, uid] = ctx.match.slice(1);
-        await ctx.answerCbQuery();
+        await ctx.answerCbQuery().catch(() => {});
         pendingUserEdit.set(ctx.from.id, { field, uid });
         const label = field === 'balance' ? 'le nouveau solde (€)' : 'le nouveau nombre de points';
         await safeEdit(ctx, `✏️ <b>Modification ${field}</b>\n\nEntrez ${label} pour cet utilisateur :`,
@@ -793,7 +793,7 @@ function setupAdminHandlers(bot) {
                     }).catch(() => {});
                 } else {
                     const langCode = u?.language_code || 'fr';
-                    const catalogUrl = (settings.mini_app_url ? `${settings.mini_app_url}/catalog` : `${baseDomain}/catalog`) + `?lang=${langCode}`;
+                    const catalogUrl = (settings.mini_app_url ? `${settings.mini_app_url}/catalog` : `${baseDomain}/catalog`) + `?lang=${langCode}&v=${Date.now()}`;
                     await ctx.telegram.setChatMenuButton(targetChatId, {
                         type: 'web_app',
                         text: `${settings.ui_icon_catalog || '🛍️'} Catalogue`,
@@ -809,7 +809,7 @@ function setupAdminHandlers(bot) {
     });
 
     bot.action('admin_livreurs', async (ctx) => {
-        await ctx.answerCbQuery();
+        await ctx.answerCbQuery().catch(() => {});
         const livreurs = await getAllLivreurs();
         if (livreurs.length === 0) return safeEdit(ctx, '🚴 Aucun livreur.', Markup.inlineKeyboard([[Markup.button.callback('◀️ Retour', 'admin_menu')]]));
 
@@ -826,7 +826,7 @@ function setupAdminHandlers(bot) {
         const lid = ctx.match[1];
         const l = await getUser(lid);
         if (!l) return ctx.answerCbQuery(t(ctx, 'msg_introuvable', "❌ Introuvable"));
-        await ctx.answerCbQuery();
+        await ctx.answerCbQuery().catch(() => {});
 
         const msg = `🚴 <b>${l.first_name}</b> (@${l.username || '?'})\n\n` +
             `🆔 <code>${l.platform_id}</code>\n` +
@@ -852,7 +852,7 @@ function setupAdminHandlers(bot) {
     });
 
     bot.action('admin_products', async (ctx) => {
-        await ctx.answerCbQuery();
+        await ctx.answerCbQuery().catch(() => {});
         const products = await getProducts();
         const buttons = products.map(p => {
             return [Markup.button.callback(`${p.is_active ? '🟢' : '🔴'} ${p.name} - ${p.price}€`, `admin_prod_toggle_${p.id}`)];
@@ -931,7 +931,7 @@ function setupAdminHandlers(bot) {
                     }).catch(() => {});
                 } else {
                     const langCode = u?.language_code || 'fr';
-                    const catalogUrl = (settings.mini_app_url ? `${settings.mini_app_url}/catalog` : `${baseDomain}/catalog`) + `?lang=${langCode}`;
+                    const catalogUrl = (settings.mini_app_url ? `${settings.mini_app_url}/catalog` : `${baseDomain}/catalog`) + `?lang=${langCode}&v=${Date.now()}`;
                     await ctx.telegram.setChatMenuButton(targetChatId, {
                         type: 'web_app',
                         text: `${settings.ui_icon_catalog || '🛍️'} Catalogue`,
@@ -956,7 +956,7 @@ function setupAdminHandlers(bot) {
 
     bot.action('admin_settings', async (ctx) => {
         if (!(await isAdmin(ctx))) return ctx.answerCbQuery(t(ctx, 'msg_r_serv_aux_admins', "❌ Réservé aux Admins"));
-        await ctx.answerCbQuery();
+        await ctx.answerCbQuery().catch(() => {});
         const settings = await getAppSettings();
         const msg = `⚙️ <b>Paramétrage du Bot</b>\n\n` +
             `• Nom : <b>${settings.bot_name || 'Non défini'}</b>\n` +
@@ -993,7 +993,7 @@ function setupAdminHandlers(bot) {
 
     bot.action(/admin_set_(bot_name|contact_url)/, async (ctx) => {
         const field = ctx.match[1];
-        await ctx.answerCbQuery();
+        await ctx.answerCbQuery().catch(() => {});
         pendingSettingEdit.set(ctx.from.id, field);
         await safeEdit(ctx, `✍️ <b>Modification paramètre</b>\n\nVeuillez envoyer la nouvelle valeur pour <code>${field}</code> :`,
             Markup.inlineKeyboard([[Markup.button.callback('◀️ Annuler', 'admin_settings')]]));
@@ -1001,7 +1001,7 @@ function setupAdminHandlers(bot) {
 
     // Gestion list_admins (+/-)
     bot.action('admin_manage_list', async (ctx) => {
-        await ctx.answerCbQuery();
+        await ctx.answerCbQuery().catch(() => {});
         const s = await getAppSettings();
         const admins = Array.isArray(s.list_admins) ? s.list_admins : [];
 
@@ -1020,7 +1020,7 @@ function setupAdminHandlers(bot) {
     });
 
     bot.action('admin_add_prompt', async (ctx) => {
-        await ctx.answerCbQuery();
+        await ctx.answerCbQuery().catch(() => {});
         pendingAdminAdd.set(ctx.from.id, true);
         await safeEdit(ctx, `📌 <b>Ajout Administrateur</b>\n\nEnvoyez l'ID Telegram de la personne (ex: 12345678) :`,
             Markup.inlineKeyboard([[Markup.button.callback('◀️ Annuler', 'admin_manage_list')]]));
@@ -1040,7 +1040,7 @@ function setupAdminHandlers(bot) {
 
     // On-onglet des fonctionnalités (Menu principal)
     bot.action('admin_features', async (ctx) => {
-        await ctx.answerCbQuery();
+        await ctx.answerCbQuery().catch(() => {});
         const msg = `✨ <b>GUIDE DES FONCTIONNALITÉS</b>\n\n` +
             `Explorez chaque section du bot en détail.\nCliquez sur un onglet pour en savoir plus :`;
 
@@ -1057,7 +1057,7 @@ function setupAdminHandlers(bot) {
 
     // --- Sous-pages Fonctionnalités ---
     bot.action('feat_catalog', async (ctx) => {
-        await ctx.answerCbQuery();
+        await ctx.answerCbQuery().catch(() => {});
         await safeEdit(ctx,
             `🛒 <b>EXPÉRIENCE CLIENT & BOUTIQUE</b>\n\n` +
             `<b>Côté Client :</b>\n` +
@@ -1073,7 +1073,7 @@ function setupAdminHandlers(bot) {
     });
 
     bot.action('feat_livreur', async (ctx) => {
-        await ctx.answerCbQuery();
+        await ctx.answerCbQuery().catch(() => {});
         await safeEdit(ctx,
             `🚴 <b>GESTION DE L'ÉQUIPE LOGISTIQUE</b>\n\n` +
             `<b>L'Interface Livreur :</b>\n` +
@@ -1089,7 +1089,7 @@ function setupAdminHandlers(bot) {
     });
 
     bot.action('feat_chat', async (ctx) => {
-        await ctx.answerCbQuery();
+        await ctx.answerCbQuery().catch(() => {});
         await safeEdit(ctx,
             `💬 <b>CHANNELS DE COMMUNICATION</b>\n\n` +
             `<b>Liaison Client ↔ Livreur :</b>\n` +
@@ -1103,7 +1103,7 @@ function setupAdminHandlers(bot) {
     });
 
     bot.action('feat_fidelity', async (ctx) => {
-        await ctx.answerCbQuery();
+        await ctx.answerCbQuery().catch(() => {});
         await safeEdit(ctx,
             `🎁 <b>FIDÉLISATION & PARRAINAGE D'ÉLITE</b>\n\n` +
             `<b>Programme de Points :</b>\n` +
@@ -1117,7 +1117,7 @@ function setupAdminHandlers(bot) {
     });
 
     bot.action('feat_broadcast', async (ctx) => {
-        await ctx.answerCbQuery();
+        await ctx.answerCbQuery().catch(() => {});
         await safeEdit(ctx,
             `📣 <b>DIFFUSION & ANALYTICS</b>\n\n` +
             `<b>Campagnes de Diffusion :</b>\n` +
@@ -1131,7 +1131,7 @@ function setupAdminHandlers(bot) {
     });
 
     bot.action('feat_stats', async (ctx) => {
-        await ctx.answerCbQuery();
+        await ctx.answerCbQuery().catch(() => {});
         await safeEdit(ctx,
             `📊 <b>STATISTIQUES & DASHBOARD</b>\n\n` +
             `<b>Onglet Statistiques (Bot) :</b>\n` +
@@ -1155,7 +1155,7 @@ function setupAdminHandlers(bot) {
     });
 
     bot.action('feat_users', async (ctx) => {
-        await ctx.answerCbQuery();
+        await ctx.answerCbQuery().catch(() => {});
         await safeEdit(ctx,
             `👥 <b>GESTION UTILISATEURS</b>\n\n` +
             `<b>Depuis le Bot :</b>\n` +
@@ -1175,7 +1175,7 @@ function setupAdminHandlers(bot) {
     });
 
     bot.action('feat_settings', async (ctx) => {
-        await ctx.answerCbQuery();
+        await ctx.answerCbQuery().catch(() => {});
         await safeEdit(ctx,
             `⚙️ <b>PARAMÈTRES DU BOT</b>\n\n` +
             `<b>Personnalisation visuelle :</b>\n` +
@@ -1201,7 +1201,7 @@ function setupAdminHandlers(bot) {
 
     // Analytics rapide
     bot.action('admin_analytics', async (ctx) => {
-        await ctx.answerCbQuery();
+        await ctx.answerCbQuery().catch(() => {});
         const analytics = await getOrderAnalytics();
 
         const topProducts = Object.entries(analytics.byProduct || {})
@@ -1219,7 +1219,7 @@ function setupAdminHandlers(bot) {
 
     // === MENU DES MODULES & SÉCURITÉ ===
     bot.action('admin_modules_menu', async (ctx) => {
-        await ctx.answerCbQuery();
+        await ctx.answerCbQuery().catch(() => {});
         const s = await getAppSettings();
         
         let msg = `🛠️ <b>Gestion des Modules & Sécurité</b>\n\n` +

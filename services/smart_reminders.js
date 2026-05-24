@@ -42,7 +42,7 @@ async function runSmartAnalysis() {
                 bot.telegram.sendMessage(tgId, message, {
                     parse_mode: 'HTML',
                     reply_markup: {
-                        inline_keyboard: [[{ text: '🚀 Ouvrir la Mini App', web_app: { url: (process.env.RENDER_EXTERNAL_URL || (process.env.RAILWAY_PUBLIC_DOMAIN ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}/catalog` : 'https://monshopbot-production.up.railway.app/catalog')) } }]]
+                        inline_keyboard: [[{ text: '🚀 Ouvrir la Mini App', web_app: { url: (process.env.RENDER_EXTERNAL_URL || (process.env.RAILWAY_PUBLIC_DOMAIN ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}/catalog?v=${Date.now()}` : `https://monshopbot-production.up.railway.app/catalog?v=${Date.now()}`)) } }]]
                     }
                 }).catch(() => {});
 
@@ -88,7 +88,7 @@ async function checkAbandonedCarts() {
                 } catch(e) {}
                 
                 const keyboard = {
-                    inline_keyboard: [[{ text: '✅ Finaliser ma commande', web_app: { url: (process.env.RENDER_EXTERNAL_URL || (process.env.RAILWAY_PUBLIC_DOMAIN ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}/catalog` : 'https://monshopbot-production.up.railway.app/catalog')) } }]]
+                    inline_keyboard: [[{ text: '✅ Finaliser ma commande', web_app: { url: (process.env.RENDER_EXTERNAL_URL || (process.env.RAILWAY_PUBLIC_DOMAIN ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}/catalog?v=${Date.now()}` : `https://monshopbot-production.up.railway.app/catalog?v=${Date.now()}`)) } }]]
                 };
 
                 bot.telegram.sendMessage(userId.replace('telegram_', ''), msg, { parse_mode: 'HTML', reply_markup: keyboard }).catch(() => {});

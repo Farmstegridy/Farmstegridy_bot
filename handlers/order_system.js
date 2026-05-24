@@ -124,7 +124,7 @@ function setupOrderSystem(bot) {
 
     // ========== CATALOGUE & COMMANDE ==========
 
-    async function displayCatalog(ctx, isBaas = false) {
+    async function displayCatalog(ctx) {
         const [productsByCategory, settings] = await Promise.all([
             getProductsByCategory(true),
             ctx.state?.settings ? Promise.resolve(ctx.state.settings) : getAppSettings()
@@ -137,7 +137,7 @@ function setupOrderSystem(bot) {
             return isBaas ? isCatBaas : !isCatBaas;
         });
 
-        if (categories.length === 0 && !isBaas) {
+        if (categories.length === 0) {
             return safeEdit(ctx, t(user, 'msg_catalog_empty', settings.msg_catalog_empty || '📭 Le catalogue est actuellement vide.'), Markup.inlineKeyboard([[Markup.button.callback(settings.btn_back_generic || '◀️ Retour', 'main_menu')]]));
         }
 
@@ -169,11 +169,8 @@ function setupOrderSystem(bot) {
             }
         }
 
-                if (!isBaas) {
-            const hasBaas = Object.keys(productsByCategory).some(cat => baasKeywords.some(kw => cat.toUpperCase().includes(kw)));
-            if (hasBaas) {
-                buttons.push([Markup.button.callback(t(user, 'btn_view_baas', '🤖 Packs Bot & Modules'), 'view_catalog_baas')]);
-            }
+                if (true) {
+            
         } else {
             buttons.push([Markup.button.callback(t(user, 'btn_view_classic', '🛍️ Retour au Catalogue Classique'), 'view_catalog')]);
         }
@@ -183,10 +180,7 @@ function setupOrderSystem(bot) {
         await safeEdit(ctx, text, Markup.inlineKeyboard(buttons));
     }
 
-    bot.action('view_catalog_baas', async (ctx) => {
-        try { await ctx.answerCbQuery().catch(() => {}); } catch(e) {}
-        await displayCatalog(ctx, true);
-    });
+
 
     bot.action(/^cat_header_(.+)$/, async (ctx) => {
         try {
@@ -205,7 +199,7 @@ function setupOrderSystem(bot) {
     };
 
     bot.action('view_catalog', async (ctx) => {
-        await ctx.answerCbQuery();
+        await ctx.answerCbQuery().catch(() => {});
         // Nettoyer les états marketplace pour éviter l'interception des messages
         clearAllAwaitingMaps(ctx.from.id);
         // Quitter le contexte produit → libérer le media group pour le cleanup
@@ -214,7 +208,7 @@ function setupOrderSystem(bot) {
     });
 
     bot.action(/^product_(.+)$/, async (ctx) => {
-        await ctx.answerCbQuery();
+        await ctx.answerCbQuery().catch(() => {});
         // Nettoyer les états marketplace pour éviter l'interception des messages
         clearAllAwaitingMaps(ctx.from.id);
         const productId = ctx.match[1];
@@ -297,7 +291,7 @@ function setupOrderSystem(bot) {
     });
 
     bot.action(/^qty_(.+)_(.+)$/, async (ctx) => {
-        await ctx.answerCbQuery();
+        await ctx.answerCbQuery().catch(() => {});
         const userId = `${ctx.platform}_${ctx.from.id}`;
         const productId = ctx.match[1];
         const qty = parseFloat(ctx.match[2]);
@@ -491,7 +485,7 @@ function setupOrderSystem(bot) {
     });
 
     bot.action('checkout_now', async (ctx) => {
-        await ctx.answerCbQuery();
+        await ctx.answerCbQuery().catch(() => {});
         const userId = `${ctx.platform}_${ctx.from.id}`;
         clearActiveMediaGroup(userId); // Quitter le contexte produit
         const pending = pendingOrders.get(userId);
@@ -543,7 +537,7 @@ function setupOrderSystem(bot) {
     }
 
     bot.action('view_cart', async (ctx) => {
-        await ctx.answerCbQuery();
+        await ctx.answerCbQuery().catch(() => {});
         await displayCart(ctx);
     });
 
@@ -573,7 +567,7 @@ function setupOrderSystem(bot) {
     });
 
     bot.action('start_checkout', async (ctx) => {
-        await ctx.answerCbQuery();
+        await ctx.answerCbQuery().catch(() => {});
         await startCheckout(ctx);
     });
 
@@ -721,7 +715,7 @@ function setupOrderSystem(bot) {
     }
 
     bot.action(/^unitselect_(.+)_(.+)_(.+)$/, async (ctx) => {
-        await ctx.answerCbQuery();
+        await ctx.answerCbQuery().catch(() => {});
         const settings = ctx.state?.settings || await getAppSettings();
         const [pId, qtyStr, amountStr] = ctx.match.slice(1);
         const qty = parseInt(qtyStr);
@@ -899,7 +893,7 @@ function setupOrderSystem(bot) {
     });
 
     bot.action('address_details_skip', async (ctx) => {
-        await ctx.answerCbQuery();
+        await ctx.answerCbQuery().catch(() => {});
         const userId = `${ctx.platform}_${ctx.from.id}`;
         const data = awaitingAddressDetails.get(userId);
         if (!data) return;
@@ -992,7 +986,7 @@ function setupOrderSystem(bot) {
     }
 
     bot.action('scheduling_now', async (ctx) => {
-        await ctx.answerCbQuery();
+        await ctx.answerCbQuery().catch(() => {});
         const userId = `${ctx.platform}_${ctx.from.id}`;
         const pending = pendingOrders.get(userId);
         if (!pending) return ctx.reply(t(ctx, 'msg_session_expir_e', "Session expirée."));
@@ -1006,7 +1000,7 @@ function setupOrderSystem(bot) {
     });
 
     bot.action('scheduling_priority', async (ctx) => {
-        await ctx.answerCbQuery();
+        await ctx.answerCbQuery().catch(() => {});
         const settings = ctx.state?.settings || await getAppSettings();
         const userId = `${ctx.platform}_${ctx.from.id}`;
         const pending = pendingOrders.get(userId);
@@ -1040,7 +1034,7 @@ function setupOrderSystem(bot) {
     }
 
     bot.action('scheduling_plan', async (ctx) => {
-        await ctx.answerCbQuery();
+        await ctx.answerCbQuery().catch(() => {});
         const settings = ctx.state?.settings || await getAppSettings();
         const text = `📅 <b>Choisissez le moment de livraison :</b>`;
         const buttons = [];
@@ -1074,7 +1068,7 @@ function setupOrderSystem(bot) {
     bot.action(/^sched_date_(.+)$/, async (ctx) => {
         const date = ctx.match[1];
         const settings = ctx.state?.settings || await getAppSettings();
-        await ctx.answerCbQuery();
+        await ctx.answerCbQuery().catch(() => {});
         const text = `🕒 <b>À quelle heure ?</b>\n\nSélectionnez un créneau horaire :`;
 
         // Génération automatique des créneaux (de 00h à 23h, heures pleines uniquement)
@@ -1095,7 +1089,7 @@ function setupOrderSystem(bot) {
     bot.action(/^sched_final_(.+)_(.+)$/, async (ctx) => {
         const [date, hour] = [ctx.match[1], ctx.match[2]];
         const settings = ctx.state?.settings || await getAppSettings();
-        await ctx.answerCbQuery();
+        await ctx.answerCbQuery().catch(() => {});
         const userId = `${ctx.platform}_${ctx.from.id}`;
         const pending = pendingOrders.get(userId);
         if (!pending) return ctx.reply(settings.msg_session_expired || "Session expirée.");
@@ -1108,19 +1102,19 @@ function setupOrderSystem(bot) {
     });
 
     bot.action('back_to_address', async (ctx) => {
-        await ctx.answerCbQuery();
+        await ctx.answerCbQuery().catch(() => {});
         await startCheckout(ctx);
     });
 
     bot.action('back_to_scheduling', async (ctx) => {
-        await ctx.answerCbQuery();
+        await ctx.answerCbQuery().catch(() => {});
         await askScheduling(ctx);
     });
 
 
 
     bot.action('confirm_order_use_credit_yes', async (ctx) => {
-        await ctx.answerCbQuery();
+        await ctx.answerCbQuery().catch(() => {});
         const settings = ctx.state?.settings || await getAppSettings();
         const userId = `${ctx.platform}_${ctx.from.id}`;
         const pending = pendingOrderConfirmation.get(userId);
@@ -1131,7 +1125,7 @@ function setupOrderSystem(bot) {
     });
 
     bot.action('confirm_order_use_credit_no', async (ctx) => {
-        await ctx.answerCbQuery();
+        await ctx.answerCbQuery().catch(() => {});
         const settings = ctx.state?.settings || await getAppSettings();
         const userId = `${ctx.platform}_${ctx.from.id}`;
         const pending = pendingOrderConfirmation.get(userId);
@@ -1454,7 +1448,7 @@ function setupOrderSystem(bot) {
                     .replace('{pay_icon}', payIcon)
                     .replace('{pay_label}', payLabel);
 
-                const platformBadge = ctx.platform === 'whatsapp' ? '📱 <b>[ WHATSAPP ]</b>' : '✈️ <b>[ TELEGRAM ]</b>';
+                const platformBadge = '✈️ <b>[ TELEGRAM ]</b>';
                 const badge = (isFirstOrder ? `\n🔥 <b>[ NOUVEAU CLIENT ]</b> 🔥\n` : '') + platformBadge + '\n';
                 const baseNotifAdmin = (dbSettings.msg_order_received_admin || `🚨 <b>NOUVELLE COMMANDE !</b>\n{badge}\n👤 {client_name} (@{username})\n📦 {product_list}\n📍 {address}\n💰 {total}€ ({pay_icon} {pay_label})\n🔑 ID : <code>{order_id}</code>`)
                     .replace('{badge}', badge)
@@ -1526,7 +1520,7 @@ function setupOrderSystem(bot) {
 
     // Helper menu livreur additionnel si besoin
     bot.action('tracking_info', async (ctx) => {
-        await ctx.answerCbQuery();
+        await ctx.answerCbQuery().catch(() => {});
         const userId = `${ctx.platform}_${ctx.from.id}`;
         const user = ctx.state?.user || await getUser(userId);
         const settings = ctx.state?.settings || await getAppSettings();
@@ -1597,7 +1591,7 @@ function setupOrderSystem(bot) {
 
     // --- QUITTER L'ÉQUIPE ---
     bot.action('quit_livreur_confirm', async (ctx) => {
-        await ctx.answerCbQuery();
+        await ctx.answerCbQuery().catch(() => {});
         const userId = `${ctx.platform}_${ctx.from.id}`;
         const user = ctx.state?.user || await getUser(userId);
         await safeEdit(ctx, t(user, 'msg_quit_livreur_confirm_text', '⚠️ <b>Êtes-vous sûr ?</b>\n\nVous ne recevrez plus les alertes de commande et votre profil de livreur sera désactivé.'), Markup.inlineKeyboard([
@@ -1634,7 +1628,7 @@ function setupOrderSystem(bot) {
 
     bot.action('change_city', async (ctx) => {
         const settings = ctx.state?.settings || await getAppSettings();
-        await ctx.answerCbQuery();
+        await ctx.answerCbQuery().catch(() => {});
         const sectors = [
             ['📍 Paris / IDF', 'sector_paris_idf'],
             ['📍 Marseille / PACA', 'sector_marseille_paca'],
@@ -1657,7 +1651,7 @@ function setupOrderSystem(bot) {
     bot.action(/^sector_(.+)$/, async (ctx) => {
         const choice = ctx.match[1];
         if (choice === 'manual') {
-            await ctx.answerCbQuery();
+            await ctx.answerCbQuery().catch(() => {});
             await safeEdit(ctx,
                 '⌨️ <b>Saisie manuelle</b>\n\nVeuillez envoyer le nom de votre ville ou secteur (ex: Bordeaux, Nice...) :',
                 Markup.inlineKeyboard([[Markup.button.callback('◀️ Annuler', 'change_city')]])
@@ -1697,7 +1691,7 @@ function setupOrderSystem(bot) {
     });
 
     bot.action('show_available_orders', async (ctx) => {
-        await ctx.answerCbQuery();
+        await ctx.answerCbQuery().catch(() => {});
         const orders = await getAvailableOrders();
         const settings = await getAppSettings();
 
@@ -1724,7 +1718,7 @@ function setupOrderSystem(bot) {
 
     bot.action('show_planned_orders', async (ctx) => {
         const settings = ctx.state?.settings || await getAppSettings();
-        await ctx.answerCbQuery();
+        await ctx.answerCbQuery().catch(() => {});
         const orders = await getAvailableOrders();
 
         const planned = orders.filter(o => o.scheduled_at);
@@ -1762,7 +1756,7 @@ function setupOrderSystem(bot) {
         console.log(`[ViewOrder] User ${userId} is_livreur=${isLivreurRole}, order status=${order.status}`);
         
         if (isLivreurRole && (order.status === 'pending' || order.status === 'supplier_pending')) {
-            await ctx.answerCbQuery();
+            await ctx.answerCbQuery().catch(() => {});
             const text = `📦 <b>Mission disponible #${orderId.slice(-5)}</b>\n\n` +
                 `🛒 Produit : <b>${order.product_name}</b>\n` +
                 `📍 Adresse : <code>${order.address || 'Non spécifiée'}</code>\n` +
@@ -1778,7 +1772,7 @@ function setupOrderSystem(bot) {
         }
 
         // Sinon, c'est la vue CLIENT (suivi de commande)
-        await ctx.answerCbQuery();
+        await ctx.answerCbQuery().catch(() => {});
         let statusEmoji = o => (o.status === 'pending' || o.status === 'supplier_pending') ? '⏳' : (o.status === 'taken' ? '🚚' : (o.status === 'delivered' ? '✅' : '❌'));
         let statusLabel = o => (o.status === 'pending' || o.status === 'supplier_pending') ? t(user, 'label_pending', 'En attente') : (o.status === 'taken' ? t(user, 'label_taken', 'En cours') : (o.status === 'delivered' ? t(user, 'label_delivered', 'Livrée') : t(user, 'label_cancelled', 'Annulée')));
 
@@ -1808,7 +1802,7 @@ function setupOrderSystem(bot) {
     bot.action(/^take_order_(.+)$/, async (ctx) => {
         const orderId = ctx.match[1];
         console.log(`[TakeOrder] Recu pour #${orderId} par ${ctx.from.id}`);
-        await ctx.answerCbQuery();
+        await ctx.answerCbQuery().catch(() => {});
         const settings = ctx.state?.settings || await getAppSettings();
         const order = await getOrder(orderId);
 
@@ -1900,7 +1894,7 @@ function setupOrderSystem(bot) {
 
     bot.action(/^delay_report_(.+)$/, async (ctx) => {
         const orderId = ctx.match[1];
-        await ctx.answerCbQuery();
+        await ctx.answerCbQuery().catch(() => {});
         const userId = `${ctx.platform}_${ctx.from.id}`;
 
         const order = await getOrder(orderId);
@@ -1920,7 +1914,7 @@ function setupOrderSystem(bot) {
 
     bot.action(/^chat_livreur_(.+)$/, async (ctx) => {
         const orderId = ctx.match[1];
-        await ctx.answerCbQuery();
+        await ctx.answerCbQuery().catch(() => {});
         const userId = `${ctx.platform}_${ctx.from.id}`;
 
         const order = await getOrder(orderId);
@@ -1958,7 +1952,7 @@ function setupOrderSystem(bot) {
     });
 
     bot.action(/^abandon_(.+)$/, async (ctx) => {
-        await ctx.answerCbQuery();
+        await ctx.answerCbQuery().catch(() => {});
         const orderId = ctx.match[1];
         const order = await getOrder(orderId);
         const settings = ctx.state?.settings || await getAppSettings();
@@ -1973,7 +1967,7 @@ function setupOrderSystem(bot) {
     });
 
     bot.action(/^finish_(.+)$/, async (ctx) => {
-        await ctx.answerCbQuery();
+        await ctx.answerCbQuery().catch(() => {});
         const orderId = ctx.match[1];
         const settings = ctx.state?.settings || await getAppSettings();
         const order = await getOrder(orderId);
@@ -2077,7 +2071,7 @@ function setupOrderSystem(bot) {
     bot.action(/^feedback_start_(.+)$/, async (ctx) => {
         const orderId = ctx.match[1];
         const settings = ctx.state?.settings || await getAppSettings();
-        await ctx.answerCbQuery();
+        await ctx.answerCbQuery().catch(() => {});
         await safeEdit(ctx,
             `🌟 <b>Donnez votre avis !</b>\n\n` +
             `Votre satisfaction est notre priorité. Comment s'est passée votre commande ?\n\n` +
@@ -2094,7 +2088,7 @@ function setupOrderSystem(bot) {
 
     bot.action(/^feedback_skip_(.+)$/, async (ctx) => {
         const orderId = ctx.match[1];
-        await ctx.answerCbQuery();
+        await ctx.answerCbQuery().catch(() => {});
         const pending = await getAndClearPendingFeedback(`${ctx.platform}_${ctx.from.id}`);
         if (pending) {
             const comment = "Note envoyée sans commentaire";
@@ -2107,7 +2101,7 @@ function setupOrderSystem(bot) {
 
     bot.action(/^feedback_rate_(.+)_(.+)$/, async (ctx) => {
         const [, orderId, rate] = ctx.match;
-        await ctx.answerCbQuery();
+        await ctx.answerCbQuery().catch(() => {});
 
         const { setPendingFeedback } = require('../services/database');
         await setPendingFeedback(`${ctx.platform}_${ctx.from.id}`, orderId, rate);
@@ -2124,7 +2118,7 @@ function setupOrderSystem(bot) {
     // --- New Review System ---
     bot.action('leave_review', async (ctx) => {
         const settings = ctx.state?.settings || await getAppSettings();
-        await ctx.answerCbQuery();
+        await ctx.answerCbQuery().catch(() => {});
         await safeEdit(ctx,
             `🏮 <b>Laissez votre avis !</b>\n\nNotez votre expérience globale avec nous :`,
             Markup.inlineKeyboard([
@@ -2140,7 +2134,7 @@ function setupOrderSystem(bot) {
     bot.action(/^review_rate_(.+)$/, async (ctx) => {
         const rate = parseInt(ctx.match[1]);
         const settings = ctx.state?.settings || await getAppSettings();
-        await ctx.answerCbQuery();
+        await ctx.answerCbQuery().catch(() => {});
         const userId = `${ctx.platform}_${ctx.from.id}`;
         awaitingReviewText.set(userId, { rate, photos: [], step: 'text' });
 
@@ -2156,13 +2150,7 @@ function setupOrderSystem(bot) {
     // Fonction utilitaire pour uploader un média de review
     async function _uploadReviewMedia(ctx, userId, mediaItem, isVideo = false) {
         const ext = isVideo ? '.mp4' : '.jpg';
-        if (ctx.platform === 'whatsapp' && mediaItem.isWa) {
-            try {
-                const { uploadMediaBuffer } = require('../services/database');
-                const buffer = await ctx.channel.downloadMedia(mediaItem.msg);
-                if (buffer) return await uploadMediaBuffer(buffer, `rev_${Date.now()}${ext}`);
-            } catch (e) { console.error('[REVIEW-MEDIA-WA]', e.message); }
-        } else if (ctx.platform === 'telegram') {
+        if (ctx.platform === 'telegram') {
             try {
                 const fileId = isVideo
                     ? (Array.isArray(mediaItem) ? mediaItem[0]?.file_id : mediaItem?.file_id)
@@ -2181,7 +2169,7 @@ function setupOrderSystem(bot) {
     }
 
     bot.action('review_skip', async (ctx) => {
-        await ctx.answerCbQuery();
+        await ctx.answerCbQuery().catch(() => {});
         const userId = `${ctx.platform}_${ctx.from.id}`;
         const data = awaitingReviewText.get(userId);
 
@@ -2220,7 +2208,7 @@ function setupOrderSystem(bot) {
 
     // Finaliser l'avis après avoir ajouté les médias
     bot.action('review_submit', async (ctx) => {
-        await ctx.answerCbQuery();
+        await ctx.answerCbQuery().catch(() => {});
         const userId = `${ctx.platform}_${ctx.from.id}`;
         const data = awaitingReviewText.get(userId);
 
@@ -2256,7 +2244,7 @@ function setupOrderSystem(bot) {
     const reviewPagination = new Map();
 
     bot.action(/^view_reviews(?:_(\d+))?$/, async (ctx) => {
-        await ctx.answerCbQuery();
+        await ctx.answerCbQuery().catch(() => {});
         const settings = ctx.state?.settings || await getAppSettings();
         const { getPublicReviews } = require('../services/database');
         const { esc } = require('../services/utils');
@@ -2311,7 +2299,7 @@ function setupOrderSystem(bot) {
     });
 
     bot.action(/^view_broadcasts(?:_(\d+))?$/, async (ctx) => {
-        await ctx.answerCbQuery();
+        await ctx.answerCbQuery().catch(() => {});
         const { getBroadcastHistory } = require('../services/database');
         const settings = ctx.state?.settings || await getAppSettings();
         const index = parseInt(ctx.match[1] || 0);
@@ -2686,7 +2674,7 @@ function setupOrderSystem(bot) {
     });
 
     bot.action('livreur_menu', async (ctx) => {
-        await ctx.answerCbQuery();
+        await ctx.answerCbQuery().catch(() => {});
         // Nettoyage des états en attente pour éviter les motifs fantômes
         const uid = `${ctx.platform}_${ctx.from.id}`;
         awaitingDelayReason.delete(uid);
@@ -2723,7 +2711,7 @@ function setupOrderSystem(bot) {
     });
 
     bot.action('active_deliveries', async (ctx) => {
-        await ctx.answerCbQuery();
+        await ctx.answerCbQuery().catch(() => {});
         const settings = ctx.state?.settings || await getAppSettings();
         const { getLivreurOrders } = require('../services/database');
         const orders = await getLivreurOrders(`${ctx.platform}_${ctx.from.id}`);
@@ -2740,7 +2728,7 @@ function setupOrderSystem(bot) {
     });
 
     bot.action(/^view_active_(.+)$/, async (ctx) => {
-        await ctx.answerCbQuery();
+        await ctx.answerCbQuery().catch(() => {});
         const settings = ctx.state?.settings || await getAppSettings();
         const orderId = ctx.match[1];
         const order = await getOrder(orderId);
@@ -2778,7 +2766,7 @@ function setupOrderSystem(bot) {
     // --- COMMANDES TG ---
     bot.command('menu', async (ctx) => displayCatalog(ctx));
     bot.command('orders', async (ctx) => {
-        if (ctx.callbackQuery) await ctx.answerCbQuery();
+        if (ctx.callbackQuery) await ctx.answerCbQuery().catch(() => {});
         const settings = ctx.state?.settings || await getAppSettings();
         const activeOrders = await getClientActiveOrders(`${ctx.platform}_${ctx.from.id}`);
         if (activeOrders.length === 0) return safeEdit(ctx, settings.msg_no_active_orders || '📭 Vous n\'avez aucune commande active.', Markup.inlineKeyboard([[Markup.button.callback(settings.btn_back_generic || '◀️ Retour', 'main_menu')]]));
@@ -2819,7 +2807,7 @@ function setupOrderSystem(bot) {
     });
 
     bot.action('help_where_is_my_order', async (ctx) => {
-        await ctx.answerCbQuery();
+        await ctx.answerCbQuery().catch(() => {});
         const orders = await getClientActiveOrders(`${ctx.platform}_${ctx.from.id}`);
         if (orders.length === 0) {
             return safeEdit(ctx, "📭 <b>Vous n'avez pas de commande en cours.</b>\n\nSi vous venez de commander, attendez que l'admin valide votre commande.",
@@ -2857,7 +2845,7 @@ function setupOrderSystem(bot) {
     // Mode client pour les livreurs
     bot.action('client_menu', async (ctx) => {
         try {
-            await ctx.answerCbQuery();
+            await ctx.answerCbQuery().catch(() => {});
             const { getMainMenuKeyboard } = require('./start');
 
             // Récupérer explicitement les settings et user
@@ -2885,7 +2873,7 @@ function setupOrderSystem(bot) {
     });
 
     bot.action('my_deliveries', async (ctx) => {
-        await ctx.answerCbQuery();
+        await ctx.answerCbQuery().catch(() => {});
         const settings = ctx.state?.settings || await getAppSettings();
         const userId = `${ctx.platform}_${ctx.from.id}`;
         const { getLivreurHistory } = require('../services/database');
@@ -2986,7 +2974,7 @@ function setupOrderSystem(bot) {
     // ========== SYSTEME FOURNISSEUR ==========
 
     bot.action('supplier_menu', async (ctx) => {
-        await ctx.answerCbQuery();
+        await ctx.answerCbQuery().catch(() => {});
         const settings = ctx.state?.settings || await getAppSettings();
         const supplier = await getSupplierByTelegramId(String(ctx.from.id));
         if (!supplier) return safeEdit(ctx, '❌ Vous n\'êtes pas enregistré comme fournisseur.', Markup.inlineKeyboard([[Markup.button.callback('◀️ Menu', 'main_menu')]]));
@@ -3011,7 +2999,7 @@ function setupOrderSystem(bot) {
     });
 
     bot.action('supplier_guide', async (ctx) => {
-        await ctx.answerCbQuery();
+        await ctx.answerCbQuery().catch(() => {});
         const text = `📘 <b>Guide Fournisseur</b>\n\n` +
             `Voici comment gérer votre activité sur le bot :\n\n` +
             `1️⃣ <b>Commandes :</b> Dès qu'un client commande un de vos produits, vous recevez une notification ici.\n\n` +
@@ -3026,7 +3014,7 @@ function setupOrderSystem(bot) {
     });
 
     bot.action('supplier_orders', async (ctx) => {
-        await ctx.answerCbQuery();
+        await ctx.answerCbQuery().catch(() => {});
         const settings = ctx.state?.settings || await getAppSettings();
         const supplier = await getSupplierByTelegramId(String(ctx.from.id));
         if (!supplier) return safeEdit(ctx, '❌ Accès refusé.', Markup.inlineKeyboard([[Markup.button.callback('◀️ Menu', 'main_menu')]]));
@@ -3088,7 +3076,7 @@ function setupOrderSystem(bot) {
     });
 
     bot.action('supplier_products', async (ctx) => {
-        await ctx.answerCbQuery();
+        await ctx.answerCbQuery().catch(() => {});
         const supplier = await getSupplierByTelegramId(String(ctx.from.id));
         if (!supplier) return safeEdit(ctx, '❌ Accès refusé.', Markup.inlineKeyboard([[Markup.button.callback('◀️ Menu', 'main_menu')]]));
 
@@ -3111,7 +3099,7 @@ function setupOrderSystem(bot) {
     });
 
     bot.action('supplier_sales', async (ctx) => {
-        await ctx.answerCbQuery();
+        await ctx.answerCbQuery().catch(() => {});
         const supplier = await getSupplierByTelegramId(String(ctx.from.id));
         if (!supplier) return safeEdit(ctx, '❌ Accès refusé.', Markup.inlineKeyboard([[Markup.button.callback('◀️ Menu', 'main_menu')]]));
 

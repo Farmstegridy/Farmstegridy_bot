@@ -4,7 +4,7 @@ const { notifyAdmins } = require('./notifications');
 const { createPersistentMap } = require('./persistent_map');
 
 // Logger générique
-const waLog = (msg, data = '') => console.log(`[Dispatcher] ${msg}`, data);
+const sysLog = (msg, data = '') => console.log(`[Dispatcher] ${msg}`, data);
 
 class Dispatcher {
     constructor() {
@@ -23,24 +23,24 @@ class Dispatcher {
             const { registry } = require('../channels/ChannelRegistry');
             registry.register(channel);
         } catch (e) {
-            waLog(`[WARNING] Échec enregistrement registry pour ${name}: ${e.message}`);
+            sysLog(`[WARNING] Échec enregistrement registry pour ${name}: ${e.message}`);
         }
         if (channel.onMessage) {
             channel.onMessage((msg) => this.handleUpdate(channel, msg));
         }
-        waLog(`[DISPATCHER] Registration ${name} OK`);
+        sysLog(`[DISPATCHER] Registration ${name} OK`);
     }
 
     async initChannels() {
-        waLog(`[DISPATCHER] Initialisation de ${this.channels.size} canaux...`);
+        sysLog(`[DISPATCHER] Initialisation de ${this.channels.size} canaux...`);
         const results = {};
         for (const [name, channel] of this.channels) {
             try {
                 await channel.initialize();
                 results[name] = channel;
-                waLog(`[DISPATCHER] Canal ${name} prêt`);
+                sysLog(`[DISPATCHER] Canal ${name} prêt`);
             } catch (e) {
-                waLog(`[DISPATCHER] Canal ${name} erreur: ${e.message}`);
+                sysLog(`[DISPATCHER] Canal ${name} erreur: ${e.message}`);
             }
         }
         return results;
@@ -54,7 +54,7 @@ class Dispatcher {
 
     async init() {
         await this.userLastMessageIds.load();
-        waLog("Dispatcher initialisé.");
+        sysLog("Dispatcher initialisé.");
     }
 
     // --- Interface pour simuler Telegraf ---
@@ -98,7 +98,7 @@ class Dispatcher {
         // -------------------------------------------------------------
 
         if (!channel) {
-            waLog(`[ERROR] Canal introuvable pour l'update: ${channelSource}`);
+            sysLog(`[ERROR] Canal introuvable pour l'update: ${channelSource}`);
             return;
         }
 
@@ -462,7 +462,7 @@ class Dispatcher {
                 try {
                     await fn(ctx);
                 } catch(e) {
-                    waLog(`[ROUTE-ERROR] Handler "${data}" a planté: ${e.message}`);
+                    sysLog(`[ROUTE-ERROR] Handler "${data}" a planté: ${e.message}`);
                 }
                 return true;
             } else if (trigger instanceof RegExp) {
@@ -472,7 +472,7 @@ class Dispatcher {
                     try {
                         await fn(ctx);
                     } catch(e) {
-                        waLog(`[ROUTE-ERROR] Handler regex "${trigger}" a planté: ${e.message}`);
+                        sysLog(`[ROUTE-ERROR] Handler regex "${trigger}" a planté: ${e.message}`);
                     }
                     return true;
                 }

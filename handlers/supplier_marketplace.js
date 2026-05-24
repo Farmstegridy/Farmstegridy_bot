@@ -68,7 +68,7 @@ function setupMarketplaceHandlers(bot) {
 
     // Menu principal magasin fournisseur
     bot.action('mp_my_shop', async (ctx) => {
-        await ctx.answerCbQuery();
+        await ctx.answerCbQuery().catch(() => {});
         const userId = `telegram_${ctx.from.id}`;
         const user = await require('../services/database').getUser(userId);
         const supplier = await getSupplierByTelegramId(String(ctx.from.id));
@@ -115,7 +115,7 @@ function setupMarketplaceHandlers(bot) {
     });
 
     bot.action('mp_shop_guide', async (ctx) => {
-        await ctx.answerCbQuery();
+        await ctx.answerCbQuery().catch(() => {});
         return showShopGuide(ctx);
     });
 
@@ -136,7 +136,7 @@ function setupMarketplaceHandlers(bot) {
     }
 
     bot.action('mp_quit_confirm', async (ctx) => {
-        await ctx.answerCbQuery();
+        await ctx.answerCbQuery().catch(() => {});
         const userId = `telegram_${ctx.from.id}`;
         const user = await require('../services/database').getUser(userId);
         await safeEdit(ctx, t(user, 'msg_quit_shop_confirm_text', '⚠️ <b>Êtes-vous sûr ?</b>\n\nVotre boutique ne sera plus visible et vous ne recevrez plus de commandes.'), Markup.inlineKeyboard([
@@ -160,7 +160,7 @@ function setupMarketplaceHandlers(bot) {
 
     // Liste des produits du fournisseur
     bot.action('mp_my_products', async (ctx) => {
-        await ctx.answerCbQuery();
+        await ctx.answerCbQuery().catch(() => {});
         const userId = `telegram_${ctx.from.id}`;
         const user = await require('../services/database').getUser(userId);
         const supplier = await getSupplierByTelegramId(String(ctx.from.id));
@@ -190,7 +190,7 @@ function setupMarketplaceHandlers(bot) {
 
     // Liste des produits RETAIL (bot client) assignés au fournisseur
     bot.action('mp_retail_products', async (ctx) => {
-        await ctx.answerCbQuery();
+        await ctx.answerCbQuery().catch(() => {});
         const supplier = await getSupplierByTelegramId(String(ctx.from.id));
         if (!supplier) return safeEdit(ctx, '❌ Accès refusé.');
 
@@ -217,7 +217,7 @@ function setupMarketplaceHandlers(bot) {
 
     // Vue simplifiée d'un produit retail
     bot.action(/^mp_retail_view_(.+)$/, async (ctx) => {
-        await ctx.answerCbQuery();
+        await ctx.answerCbQuery().catch(() => {});
         const userId = `telegram_${ctx.from.id}`;
         const user = await require('../services/database').getUser(userId);
         const pId = ctx.match[1];
@@ -262,7 +262,7 @@ function setupMarketplaceHandlers(bot) {
 
     // Réglages boutique fournisseur
     bot.action('mp_shop_settings', async (ctx) => {
-        await ctx.answerCbQuery();
+        await ctx.answerCbQuery().catch(() => {});
         const supplier = await getSupplierByTelegramId(String(ctx.from.id));
         if (!supplier) return;
 
@@ -307,7 +307,7 @@ function setupMarketplaceHandlers(bot) {
 
     // Détail + édition d'un produit fournisseur
     bot.action(/^mp_edit_(.+)$/, async (ctx) => {
-        await ctx.answerCbQuery();
+        await ctx.answerCbQuery().catch(() => {});
         const productId = ctx.match[1];
         const product = await getMarketplaceProduct(productId);
         if (!product) return safeEdit(ctx, '❌ Produit introuvable.');
@@ -335,7 +335,7 @@ function setupMarketplaceHandlers(bot) {
 
     // Toggle disponibilité
     bot.action(/^mp_toggle_(.+)$/, async (ctx) => {
-        await ctx.answerCbQuery();
+        await ctx.answerCbQuery().catch(() => {});
         const product = await getMarketplaceProduct(ctx.match[1]);
         if (!product) return;
         await saveMarketplaceProduct({ id: product.id, is_available: !product.is_available });
@@ -351,7 +351,7 @@ function setupMarketplaceHandlers(bot) {
 
     // Supprimer un produit
     bot.action(/^mp_delete_(.+)$/, async (ctx) => {
-        await ctx.answerCbQuery();
+        await ctx.answerCbQuery().catch(() => {});
         const product = await getMarketplaceProduct(ctx.match[1]);
         if (!product) return;
         await safeEdit(ctx, `⚠️ Supprimer <b>${esc(product.name)}</b> ?\nCette action est irréversible.`, Markup.inlineKeyboard([
@@ -370,7 +370,7 @@ function setupMarketplaceHandlers(bot) {
 
     // --- MODIFIER PRIX ---
     bot.action(/^mp_chprice_(.+)$/, async (ctx) => {
-        await ctx.answerCbQuery();
+        await ctx.answerCbQuery().catch(() => {});
         awaitingProductEdit.set(String(ctx.from.id), { field: 'price', productId: ctx.match[1] });
         await safeEdit(ctx, '💰 Envoyez le nouveau prix (ex: <b>15.50</b>) :', Markup.inlineKeyboard([
             [Markup.button.callback('❌ Annuler', `mp_edit_${ctx.match[1]}`)]
@@ -379,7 +379,7 @@ function setupMarketplaceHandlers(bot) {
 
     // --- MODIFIER STOCK ---
     bot.action(/^mp_chstock_(.+)$/, async (ctx) => {
-        await ctx.answerCbQuery();
+        await ctx.answerCbQuery().catch(() => {});
         awaitingProductEdit.set(String(ctx.from.id), { field: 'stock', productId: ctx.match[1] });
         await safeEdit(ctx, '📦 Envoyez la nouvelle quantité en stock (ex: <b>25</b>) :', Markup.inlineKeyboard([
             [Markup.button.callback('❌ Annuler', `mp_edit_${ctx.match[1]}`)]
@@ -388,7 +388,7 @@ function setupMarketplaceHandlers(bot) {
 
     // --- MODIFIER DESCRIPTION ---
     bot.action(/^mp_chdesc_(.+)$/, async (ctx) => {
-        await ctx.answerCbQuery();
+        await ctx.answerCbQuery().catch(() => {});
         awaitingProductEdit.set(String(ctx.from.id), { field: 'description', productId: ctx.match[1] });
         await safeEdit(ctx, '📝 Envoyez la nouvelle description :', Markup.inlineKeyboard([
             [Markup.button.callback('❌ Annuler', `mp_edit_${ctx.match[1]}`)]
@@ -397,7 +397,7 @@ function setupMarketplaceHandlers(bot) {
 
     // --- MODIFIER CATÉGORIE ---
     bot.action(/^mp_chcat_(.+)$/, async (ctx) => {
-        await ctx.answerCbQuery();
+        await ctx.answerCbQuery().catch(() => {});
         awaitingProductEdit.set(String(ctx.from.id), { field: 'category', productId: ctx.match[1] });
         await safeEdit(ctx, '🏷 Envoyez la catégorie (ex: <b>Sneakers</b>, <b>Vêtements</b>, <b>Accessoires</b>) :', Markup.inlineKeyboard([
             [Markup.button.callback('❌ Annuler', `mp_edit_${ctx.match[1]}`)]
@@ -406,7 +406,7 @@ function setupMarketplaceHandlers(bot) {
 
     // --- CHANGER PHOTO ---
     bot.action(/^mp_chphoto_(.+)$/, async (ctx) => {
-        await ctx.answerCbQuery();
+        await ctx.answerCbQuery().catch(() => {});
         awaitingProductEdit.set(String(ctx.from.id), { field: 'photo', productId: ctx.match[1] });
         await safeEdit(ctx, '📸 Envoyez une photo du produit :', Markup.inlineKeyboard([
             [Markup.button.callback('❌ Annuler', `mp_edit_${ctx.match[1]}`)]
@@ -416,7 +416,7 @@ function setupMarketplaceHandlers(bot) {
     // ======= FLOW AJOUT PRODUIT =======
 
     bot.action(['mp_add_product', 'mp_add_retail_product'], async (ctx) => {
-        await ctx.answerCbQuery();
+        await ctx.answerCbQuery().catch(() => {});
         const supplier = await getSupplierByTelegramId(String(ctx.from.id));
         if (!supplier) return safeEdit(ctx, '❌ Accès refusé.');
 
@@ -436,7 +436,7 @@ function setupMarketplaceHandlers(bot) {
     // ======= COMMANDES REÇUES (côté fournisseur) =======
 
     bot.action('mp_my_orders', async (ctx) => {
-        await ctx.answerCbQuery();
+        await ctx.answerCbQuery().catch(() => {});
         const supplier = await getSupplierByTelegramId(String(ctx.from.id));
         if (!supplier) return safeEdit(ctx, '❌ Accès refusé.');
 
@@ -506,7 +506,7 @@ function setupMarketplaceHandlers(bot) {
 
     // Vue d'une commande client pour le fournisseur
     bot.action(/^mp_client_order_view_(.+)$/, async (ctx) => {
-        await ctx.answerCbQuery();
+        await ctx.answerCbQuery().catch(() => {});
         const oId = ctx.match[1];
         const { getOrder } = require('../services/database');
         const order = await getOrder(oId);
@@ -655,7 +655,7 @@ function setupMarketplaceHandlers(bot) {
 
     // Rejeter une commande (Marketplace)
     bot.action(/^mp_reject_(.+)$/, async (ctx) => {
-        await ctx.answerCbQuery();
+        await ctx.answerCbQuery().catch(() => {});
         const orderId = ctx.match[1];
         await safeEdit(ctx, `⚠️ Refuser la commande <b>#${orderId.slice(-6)}</b> ?`, Markup.inlineKeyboard([
             [Markup.button.callback('✅ Oui, refuser', `mp_confirmreject_${orderId}`)],
@@ -676,7 +676,7 @@ function setupMarketplaceHandlers(bot) {
 
     // Historique commandes fournisseur
     bot.action('mp_orders_history', async (ctx) => {
-        await ctx.answerCbQuery();
+        await ctx.answerCbQuery().catch(() => {});
         const supplier = await getSupplierByTelegramId(String(ctx.from.id));
         if (!supplier) return;
 
@@ -703,7 +703,7 @@ function setupMarketplaceHandlers(bot) {
 
     // Statistiques fournisseur marketplace
     bot.action('mp_my_stats', async (ctx) => {
-        await ctx.answerCbQuery();
+        await ctx.answerCbQuery().catch(() => {});
         const supplier = await getSupplierByTelegramId(String(ctx.from.id));
         if (!supplier) return;
 
@@ -736,7 +736,7 @@ function setupMarketplaceHandlers(bot) {
 
     // Liste des magasins
     bot.action('mp_browse', async (ctx) => {
-        await ctx.answerCbQuery();
+        await ctx.answerCbQuery().catch(() => {});
         const suppliers = await getSuppliers();
         const activeSuppliers = suppliers.filter(s => s.is_active);
 
@@ -771,7 +771,7 @@ function setupMarketplaceHandlers(bot) {
 
     // Voir un magasin spécifique
     bot.action(/^mp_shop_(.+)$/, async (ctx) => {
-        await ctx.answerCbQuery();
+        await ctx.answerCbQuery().catch(() => {});
         const supplierId = ctx.match[1];
         const supplier = await getSupplier(supplierId);
         if (!supplier) return safeEdit(ctx, '❌ Magasin introuvable.');
@@ -848,7 +848,7 @@ function setupMarketplaceHandlers(bot) {
 
     // Diminuer quantité
     bot.action(/^mp_cartminus_(.+)$/, async (ctx) => {
-        await ctx.answerCbQuery();
+        await ctx.answerCbQuery().catch(() => {});
         const productId = ctx.match[1];
         const userId = String(ctx.from.id);
         const cart = adminMarketCart.get(userId) || {};
@@ -880,11 +880,11 @@ function setupMarketplaceHandlers(bot) {
     });
 
     // Noop button
-    bot.action('noop', async (ctx) => { await ctx.answerCbQuery(); });
+    bot.action('noop', async (ctx) => { await ctx.answerCbQuery().catch(() => {}); });
 
     // Voir panier admin
     bot.action('mp_admin_cart', async (ctx) => {
-        await ctx.answerCbQuery();
+        await ctx.answerCbQuery().catch(() => {});
         const userId = String(ctx.from.id);
         const cart = adminMarketCart.get(userId) || {};
         const items = Object.values(cart);
@@ -945,7 +945,7 @@ function setupMarketplaceHandlers(bot) {
 
     // Commander chez un fournisseur spécifique
     bot.action(/^mp_order_(.+)$/, async (ctx) => {
-        await ctx.answerCbQuery();
+        await ctx.answerCbQuery().catch(() => {});
         const supplierId = ctx.match[1];
         const userId = String(ctx.from.id);
         const cart = adminMarketCart.get(userId) || {};
@@ -1025,7 +1025,7 @@ function setupMarketplaceHandlers(bot) {
 
     // Commandes admin (historique)
     bot.action('mp_admin_orders', async (ctx) => {
-        await ctx.answerCbQuery();
+        await ctx.answerCbQuery().catch(() => {});
         const orders = await getMarketplaceOrders(null, 30);
 
         if (orders.length === 0) {
@@ -1063,7 +1063,7 @@ function setupMarketplaceHandlers(bot) {
 
     // --- CHAT FOURNISSEUR -> ADMIN (Marketplace) ---
     bot.action(/^mp_chat_admin_(.+)$/, async (ctx) => {
-        await ctx.answerCbQuery();
+        await ctx.answerCbQuery().catch(() => {});
         const orderId = ctx.match[1];
         awaitingSupplierAdminChat.set(String(ctx.from.id), orderId);
         return safeEdit(ctx, `💬 <b>Discussion avec l'Admin</b>\n\nEnvoyez votre message pour la commande <b>#${orderId.slice(-6)}</b>.\n\nL'admin recevra votre message et pourra vous répondre.`, Markup.inlineKeyboard([
@@ -1367,7 +1367,7 @@ function setupMarketplaceHandlers(bot) {
 
     // Skip description dans le flow d'ajout
     bot.action(/^mp_skipdesc_(.+)$/, async (ctx) => {
-        await ctx.answerCbQuery();
+        await ctx.answerCbQuery().catch(() => {});
         const userId = ctx.match[1];
         const data = awaitingProductDesc.get(userId);
         if (!data) return;
@@ -1381,7 +1381,7 @@ function setupMarketplaceHandlers(bot) {
 
     // Skip photo dans le flow d'ajout
     bot.action(/^mp_skipphoto_(.+)$/, async (ctx) => {
-        await ctx.answerCbQuery();
+        await ctx.answerCbQuery().catch(() => {});
         const userId = ctx.match[1];
         const data = awaitingProductPhoto.get(userId);
         if (!data) return;
@@ -1395,7 +1395,7 @@ function setupMarketplaceHandlers(bot) {
 
     // Skip catégorie dans le flow d'ajout
     bot.action(/^mp_skipcat_(.+)$/, async (ctx) => {
-        await ctx.answerCbQuery();
+        await ctx.answerCbQuery().catch(() => {});
         const userId = ctx.match[1];
         const data = awaitingProductCategory.get(userId);
         if (!data) return;

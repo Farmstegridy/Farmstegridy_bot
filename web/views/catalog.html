@@ -267,8 +267,7 @@
     <div id="page-bots" class="page" style="display:none;">
         <div class="app-header">
             <div>
-                <div class="logo">Offres<span data-i18n="BaaS">BaaS</span></div>
-                <div style="font-size:10px; font-weight:800; opacity:0.5; margin-top:2px;">
+                                <div style="font-size:10px; font-weight:800; opacity:0.5; margin-top:2px;">
                     <span data-i18n="✨ SOLUTIONS CLÉS EN MAIN & SUR MESURE">✨ SOLUTIONS CLÉS EN MAIN & SUR MESURE</span>
                 </div>
             </div>
@@ -385,8 +384,7 @@
 
     <div class="bottom-nav">
         <div class="nav-item active" onclick="switchPage('shop', this)"><div class="nav-icon"><i class="ph-fill ph-diamond"></i></div><div class="nav-label" data-i18n="nav_shop">Shop</div></div>
-        <div class="nav-item" onclick="switchPage('bots', this)"><div class="nav-icon" style="color:var(--secondary);"><i class="ph-fill ph-rocket"></i></div><div class="nav-label" data-i18n="nav_baas">BaaS</div></div>
-
+        
         <div class="nav-item" onclick="switchPage('orders', this)"><div class="nav-icon"><i class="ph-fill ph-package"></i></div><div class="nav-label" data-i18n="nav_tracking">Suivi</div></div>
         <div class="nav-item" onclick="switchPage('profile', this)"><div class="nav-icon"><i class="ph-fill ph-user"></i></div><div class="nav-label" data-i18n="nav_profile">Profil</div></div>
     </div>
@@ -943,7 +941,7 @@ let mediaHtml = `<img src="${img}" class="card-img" onerror="this.onerror=null;t
                     }
                 });
 
-                cont.innerHTML = orders.length ? statsHtml : '<div class="empty-state">Vous n\'avez pas encore de commandes.</div>';
+                cont.innerHTML = orders.length ? statsHtml : `<div class="empty-state">${t('no_orders', {default: "Vous n\\'avez pas encore de commandes."})}</div>`;
                 
                 orders.forEach(o => {
                     let color = '#ffaa00', icon = '<i class="notranslate ph-fill ph-clock"></i>', text = t('status_pending');
@@ -974,7 +972,7 @@ let mediaHtml = `<img src="${img}" class="card-img" onerror="this.onerror=null;t
                         chatSection = `
                             <div class="chat-history-box" id="chat-box-${o.id}">
                                 <span style="opacity:0.4; font-size:10px;">Dernier échange (${count}/6) :</span><br>
-                                <b style="color:${h.senderRole === 'client' ? 'var(--accent)' : '#00ff88'}">${h.senderRole === 'client' ? 'Vous' : 'Livreur'} :</b> <i>${h.lastMessage}</i>
+                                <b style="color:${h.senderRole === 'client' ? 'var(--accent)' : '#00ff88'}">${h.senderRole === 'client' ? t('you', {default: 'Vous'}) : t('courier', {default: 'Livreur'})} :</b> <i>${h.lastMessage}</i>
                             </div>
                         `;
                     } else if (count > 0) {
@@ -990,7 +988,7 @@ let mediaHtml = `<img src="${img}" class="card-img" onerror="this.onerror=null;t
                     }
 
                     const btnContact = (!['delivered', 'cancelled', 'refused'].includes(o.status) && o.livreur_id) ? `<button class="btn-primary" style="margin-top:10px; background:rgba(0,255,255,0.1); border:1px solid var(--secondary); color:var(--secondary); height:40px;" onclick="toggleChatModule('${o.id}')"><i class="notranslate ph-fill ph-chat-circle-dots"></i> CHAT LIVREUR (${count}/6)</button>` : '';
-                    const btnNoter = ['delivered'].includes(o.status) && !o.feedback_rating ? `<button class="btn-primary" style="margin-top:10px; background:var(--card); border:1px solid var(--accent); color:var(--accent); height:40px;" onclick="openRating('${o.id}')"><i class="notranslate ph-fill ph-star"></i> NOTER</button>` : '';
+                    const btnNoter = ['delivered'].includes(o.status) && !o.feedback_rating ? `<button class="btn-primary" style="margin-top:10px; background:var(--card); border:1px solid var(--accent); color:var(--accent); height:40px;" onclick="openRating('${o.id}')"><i class="notranslate ph-fill ph-star"></i> ${t('rate_btn', {default: 'NOTER'})}</button>` : '';
                     const btnReorder = `<button class="btn-primary" style="margin-top:10px; background:none; border:1px solid var(--border); color:#fff; height:40px;" onclick="reorder('${o.id}')"><i class="notranslate ph-fill ph-arrows-clockwise"></i> ${t('btn_reorder')}</button>`;
                     const btnCancel = (o.status === 'pending') ? `<button class="btn-primary" style="margin-top:10px; background:rgba(255,0,80,0.1); border:1px solid rgba(255,0,80,0.5); color:#ff0050; height:40px;" onclick="cancelOrder('${o.id}')"><i class="notranslate ph-bold ph-x"></i> ${t('btn_cancel')}</button>` : '';
 
@@ -1020,7 +1018,7 @@ let mediaHtml = `<img src="${img}" class="card-img" onerror="this.onerror=null;t
                             ${chatSection}
                             <div class="chat-input-group">
                                 <input type="text" class="chat-input" id="chat-input-${o.id}" value="${safeQuote(prevState.text)}" placeholder="Votre message..." data-i18n-placeholder="your_message" onkeydown="if(event.key==='Enter') sendChatMessage('${o.id}')">
-                                <button class="btn-send" onclick="sendChatMessage('${o.id}')">ENVOYER</button>
+                                <button class="btn-send" onclick="sendChatMessage('${o.id}')">${t('send_btn', {default: 'ENVOYER'})}</button>
                             </div>
                             <div style="font-size:9px; opacity:0.3; margin-top:6px; text-align:center;">Échange direct avec l'équipe de livraison.</div>
                         </div>
@@ -1230,7 +1228,7 @@ let mediaHtml = `<img src="${img}" class="card-img" onerror="this.onerror=null;t
                     <div id="review-media-preview" style="font-size:11px; opacity:0.6; margin-top:5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;"></div>
                 </div>
 
-                <button class="btn-primary" id="btn-submit-review" style="background:var(--accent); color:#fff;" onclick="submitProductReview('${pid}')">ENVOYER L'AVIS</button>
+                <button class="btn-primary" id="btn-submit-review" style="background:var(--accent); color:#fff;" onclick="submitProductReview('${pid}')">${t('send_review_btn', {default: "ENVOYER L'AVIS"})}</button>
             `;
             openCustomModal('VOTRE AVIS', html);
             window.currentReviewRating = 5;
@@ -1279,7 +1277,7 @@ let mediaHtml = `<img src="${img}" class="card-img" onerror="this.onerror=null;t
                 loadProductReviews(pid);
             } catch(e) {
                 btn.disabled = false;
-                btn.innerText = "ENVOYER L'AVIS";
+                btn.innerText = t('send_review_btn', {default: "ENVOYER L'AVIS"});
                 tg.showAlert(t('msg_une_erreur_est_surve', "Une erreur est survenue."));
             }
         }
@@ -1304,7 +1302,7 @@ let mediaHtml = `<img src="${img}" class="card-img" onerror="this.onerror=null;t
                     
                     const d = document.createElement('div');
                     d.style = 'background:var(--card); border:1px solid var(--border); border-radius:18px; padding:15px; margin-bottom:12px;';
-                    d.innerHTML = `<div style="display:flex; justify-content:space-between; margin-bottom:5px;"><div style="font-weight:800; font-size:12px;">Client ShopTonBot</div><div style="color:#ffaa00;">${'⭐'.repeat(r.rating)}</div></div><div style="font-size:12px; opacity:0.7;">${r.text}</div>${mediaHtml}`;
+                    d.innerHTML = `<div style="display:flex; justify-content:space-between; margin-bottom:5px;"><div style="font-weight:800; font-size:12px;">${t('client_bot_name', {default: 'Client ShopTonBot'})}</div><div style="color:#ffaa00;">${'⭐'.repeat(r.rating)}</div></div><div style="font-size:12px; opacity:0.7;">${r.text}</div>${mediaHtml}`;
                     cont.appendChild(d);
                 });
             } catch(e) {}
@@ -1318,7 +1316,7 @@ let mediaHtml = `<img src="${img}" class="card-img" onerror="this.onerror=null;t
                 const res = await fetch(`/api/user/reviews?userId=telegram_${uid}`);
                 const reviews = await res.json();
                 
-                let contentHTML = reviews.length ? '' : '<div class="empty-state">Vous n\'avez laissé aucun avis.</div>';
+                let contentHTML = reviews.length ? '' : `<div class="empty-state">${t('no_reviews_left', {default: "Vous n\\'avez laissé aucun avis."})}</div>`;
                 
                 reviews.forEach(r => {
                     const p = allProducts.find(x => String(x.id) === String(r.product_id));
@@ -1343,7 +1341,7 @@ let mediaHtml = `<img src="${img}" class="card-img" onerror="this.onerror=null;t
                             <div style="font-size:12px; opacity:0.8;">${r.text}</div>
                             ${mediaHtml}
                             <div style="margin-top:10px; text-align:right;">
-                                <button class="btn-primary" style="background:rgba(255,0,80,0.1); border:1px solid rgba(255,0,80,0.5); color:#ff0050; padding:5px 10px; height:auto; font-size:11px; display:inline-block; width:auto;" onclick="deleteUserReview('${r.id}')"><i class="notranslate ph-bold ph-trash"></i> SUPPRIMER</button>
+                                <button class="btn-primary" style="background:rgba(255,0,80,0.1); border:1px solid rgba(255,0,80,0.5); color:#ff0050; padding:5px 10px; height:auto; font-size:11px; display:inline-block; width:auto;" onclick="deleteUserReview('${r.id}')"><i class="notranslate ph-bold ph-trash"></i> ${t('delete_btn', {default: 'SUPPRIMER'})}</button>
                             </div>
                         </div>
                     `;
@@ -1408,7 +1406,7 @@ let mediaHtml = `<img src="${img}" class="card-img" onerror="this.onerror=null;t
                     <button class="btn-primary" style="background:var(--card); border:1px solid var(--border)" onclick="submitRating('${orderId}', 3)"><i class="notranslate ph-fill ph-star" style="color:#ffaa00"></i><i class="notranslate ph-fill ph-star" style="color:#ffaa00"></i><i class="notranslate ph-fill ph-star" style="color:#ffaa00"></i> (Moyen)</button>
                 </div>
             `;
-            openCustomModal('NOTER', html);
+            openCustomModal(t('rate_btn', {default: 'NOTER'}), html);
         }
 
         async function submitRating(orderId, rating) {
@@ -1524,7 +1522,7 @@ let mediaHtml = `<img src="${img}" class="card-img" onerror="this.onerror=null;t
             let discountVal = 10;
             if (code.includes('20')) discountVal = 20;
             else if (code.includes('30')) discountVal = 30;
-            else if (code.includes('50') || code.startsWith('BAAS') || code.startsWith('BOT') || code.startsWith('PARRAIN')) discountVal = 50;
+            else if (code.includes('50') || code.startsWith('PARRAIN')) discountVal = 50;
             
             const tot = cart.reduce((s, i) => s + (i.pr * i.n), 0);
             if (tot <= discountVal) {
@@ -1899,7 +1897,7 @@ let mediaHtml = `<img src="${img}" class="card-img" onerror="this.onerror=null;t
                 <div style="background:var(--card); border:1px solid ${idx === 0 ? 'var(--accent)' : 'var(--border)'}; border-radius:15px; padding:15px; margin-bottom:10px; display:flex; justify-content:space-between; align-items:center;">
                     <div style="flex:1; cursor:pointer;" onclick="showAddressActions('${a.id}')">
                         <div style="font-weight:900; font-size:14px; margin-bottom:2px; display:flex; align-items:center; gap:5px;">
-                            ${a.name} ${idx === 0 ? '<span style="font-size:9px; background:var(--accent); color:#fff; padding:2px 5px; border-radius:4px;">PAR DÉFAUT</span>' : ''}
+                            ${a.name} ${idx === 0 ? `<span style="font-size:9px; background:var(--accent); color:#fff; padding:2px 5px; border-radius:4px;">${t('default_badge', {default: 'PAR DÉFAUT'})}</span>` : ''}
                         </div>
                         <div style="font-size:12px; opacity:0.7;">${a.address}</div>
                         ${a.digicode ? `<div style="font-size:11px; opacity:0.5; margin-top:2px;">Infos: ${a.digicode}</div>` : ''}
@@ -1926,9 +1924,9 @@ let mediaHtml = `<img src="${img}" class="card-img" onerror="this.onerror=null;t
             const html = `
                 <div style="font-size:14px; font-weight:800; margin-bottom:15px; color:var(--accent); text-align:center;">${addr.name}</div>
                 <button class="btn-primary" style="background:var(--card); border:1px solid var(--border); color:#fff; margin-bottom:10px; font-weight:800;" onclick="editAddress('${addr.id}')"><i class="notranslate ph-bold ph-pencil"></i> ÉDITER L'ADRESSE</button>
-                <button class="btn-primary" style="background:var(--card); border:1px solid var(--accent); color:var(--accent); margin-bottom:10px; font-weight:800;" onclick="setAddressDefault('${addr.id}')"><i class="notranslate ph-bold ph-star"></i> DÉFINIR PAR DÉFAUT</button>
-                <button class="btn-primary" style="background:rgba(255,0,80,0.1); border:1px solid rgba(255,0,80,0.3); color:#ff0050; margin-bottom:10px; font-weight:800;" onclick="removeAddress('${addr.id}')"><i class="notranslate ph-bold ph-trash"></i> SUPPRIMER</button>
-                <button class="btn-primary" style="background:none; border:none; color:#fff; opacity:0.5; margin-top:5px;" onclick="renderAddressModal()">ANNULER</button>
+                <button class="btn-primary" style="background:var(--card); border:1px solid var(--accent); color:var(--accent); margin-bottom:10px; font-weight:800;" onclick="setAddressDefault('${addr.id}')"><i class="notranslate ph-bold ph-star"></i> ${t('set_default_btn', {default: 'DÉFINIR PAR DÉFAUT'})}</button>
+                <button class="btn-primary" style="background:rgba(255,0,80,0.1); border:1px solid rgba(255,0,80,0.3); color:#ff0050; margin-bottom:10px; font-weight:800;" onclick="removeAddress('${addr.id}')"><i class="notranslate ph-bold ph-trash"></i> ${t('delete_btn', {default: 'SUPPRIMER'})}</button>
+                <button class="btn-primary" style="background:none; border:none; color:#fff; opacity:0.5; margin-top:5px;" onclick="renderAddressModal()">${t('cancel_btn', {default: 'ANNULER'})}</button>
             `;
             openCustomModal('OPTIONS ADRESSE', html);
         }
@@ -1960,7 +1958,7 @@ let mediaHtml = `<img src="${img}" class="card-img" onerror="this.onerror=null;t
                 <div id="address-suggestions-edit-addr-val" style="display:none; background:var(--card); border:1px solid var(--accent); border-radius:12px; margin-bottom:10px; max-height:150px; overflow-y:auto; box-shadow:0 5px 15px rgba(0,0,0,0.5); text-align:left;"></div>
                 <input type="text" id="edit-addr-digicode" placeholder="Digicode / Instructions" value="${(addr.digicode || '').replace(/"/g, '&quot;')}" style="width:100%; padding:15px; background:rgba(0,0,0,0.3); border:1px solid var(--border); border-radius:12px; color:#fff; font-family:'Outfit', sans-serif; font-size:14px; margin-bottom:20px; box-sizing:border-box;">
                 
-                <button class="btn-primary" style="background:var(--accent); color:#fff;" onclick="saveEditedAddress('${addr.id}')"><i class="notranslate ph-fill ph-floppy-disk"></i> METTRE À JOUR</button>
+                <button class="btn-primary" style="background:var(--accent); color:#fff;" onclick="saveEditedAddress('${addr.id}')"><i class="notranslate ph-fill ph-floppy-disk"></i> ${t('update_btn', {default: 'METTRE À JOUR'})}</button>
                 <button class="btn-primary" style="background:none; border:none; color:#fff; opacity:0.5; margin-top:10px;" onclick="showAddressActions('${addr.id}')"><span data-i18n="back_caps">RETOUR</span></button>
             `;
             openCustomModal('ÉDITER ADRESSE', html);
@@ -2056,8 +2054,8 @@ let mediaHtml = `<img src="${img}" class="card-img" onerror="this.onerror=null;t
                 <div id="address-suggestions-new-addr-val" style="display:none; background:var(--card); border:1px solid var(--accent); border-radius:12px; margin-bottom:10px; max-height:150px; overflow-y:auto; box-shadow:0 5px 15px rgba(0,0,0,0.5); text-align:left;"></div>
                 <input type="text" id="new-addr-digicode" placeholder="Digicode / Instructions (optionnel)" style="width:100%; padding:15px; background:rgba(0,0,0,0.3); border:1px solid var(--border); border-radius:12px; color:#fff; font-family:'Outfit', sans-serif; font-size:14px; margin-bottom:20px; box-sizing:border-box;">
                 
-                <button class="btn-primary" style="background:var(--accent); color:#fff;" onclick="saveNewAddress()"><i class="notranslate ph-fill ph-floppy-disk"></i> ENREGISTRER</button>
-                <button class="btn-primary" style="background:none; border:none; color:#fff; opacity:0.5; margin-top:10px;" onclick="renderAddressModal()">ANNULER</button>
+                <button class="btn-primary" style="background:var(--accent); color:#fff;" onclick="saveNewAddress()"><i class="notranslate ph-fill ph-floppy-disk"></i> ${t('save_btn', {default: 'ENREGISTRER'})}</button>
+                <button class="btn-primary" style="background:none; border:none; color:#fff; opacity:0.5; margin-top:10px;" onclick="renderAddressModal()">${t('cancel_btn', {default: 'ANNULER'})}</button>
             `;
             openCustomModal('NOUVELLE ADRESSE', html);
         }
@@ -2354,14 +2352,14 @@ let mediaHtml = `<img src="${img}" class="card-img" onerror="this.onerror=null;t
                 const h = o.chatHistory;
                 content.innerHTML = `
                     <div style="background:rgba(0,255,136,0.1); border:1px solid rgba(0,255,136,0.3); border-radius:16px; padding:12px; margin-bottom:15px;">
-                        <div style="font-weight:900; font-size:13px; color:#00ff88; margin-bottom:4px;"><i class="notranslate ph-fill ph-moped"></i> Chat Livreur</div>
-                        <div style="font-size:11px; opacity:0.8;">Discutez en direct avec votre livreur</div>
+                        <div style="font-weight:900; font-size:13px; color:#00ff88; margin-bottom:4px;"><i class="notranslate ph-fill ph-moped"></i> ${t('chat_courier_title', {default: 'Chat Livreur'})}</div>
+                        <div style="font-size:11px; opacity:0.8;">${t('chat_courier_desc', {default: 'Discutez en direct avec votre livreur'})}</div>
                     </div>
                     ${h && h.messages && h.messages.length > 0 ? `
                         <div style="background:rgba(0,0,0,0.2); border-radius:12px; padding:15px; margin-bottom:15px; max-height:250px; overflow-y:auto; display:flex; flex-direction:column; gap:10px;">
                             ${h.messages.map(m => `
                                 <div style="font-size:13px; opacity:0.9; ${m.role === 'client' ? 'text-align:right; color:var(--accent);' : 'text-align:left; color:#fff;'}">
-                                    <b>${m.role === 'client' ? 'Vous' : '🛵 Livreur'} :</b> ${m.text || m.message}
+                                    <b>${m.role === 'client' ? t('you', {default: 'Vous'}) : '🛵 ' + t('courier', {default: 'Livreur'})} :</b> ${m.text || m.message}
                                 </div>
                             `).join('')}
                         </div>
@@ -2542,11 +2540,11 @@ let mediaHtml = `<img src="${img}" class="card-img" onerror="this.onerror=null;t
                             if (old && old.status !== no.status) {
                                 statusChanged = true;
                                 const statusMap = {
-                                    'pending': 'En attente ⏳',
-                                    'accepted': 'Acceptée ✅',
-                                    'livreur_assigned': 'Livreur en route 🛵',
+                                    'pending': t('status_pending') + ' ⏳',
+                                    'accepted': t('status_confirmed') + ' ✅',
+                                    'livreur_assigned': t('courier_en_route', {default: 'Livreur en route 🛵'}),
                                     'delivered': t('status_delivered_short') + ' 📦',
-                                    'cancelled': 'Annulée ❌'
+                                    'cancelled': t('status_cancelled') + ' ❌'
                                 };
                                 const statusText = statusMap[no.status] || no.status;
                                 showNewsPopup(t('news_order_title', {default: "Mise à jour Commande"}), t('news_order_desc', {default: "Votre commande a été mise à jour :\nNouveau statut : {status}", status: statusText}), []);

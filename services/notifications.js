@@ -281,7 +281,7 @@ async function notifyUsersOfRestock(telegramIds, productName) {
             await bot.telegram.sendMessage(tid, message, {
                 parse_mode: 'HTML',
                 reply_markup: {
-                    inline_keyboard: [[{ text: '🛍️ Ouvrir le Shop', web_app: { url: (process.env.RENDER_EXTERNAL_URL || (process.env.RAILWAY_PUBLIC_DOMAIN ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}/catalog` : 'https://monshopbot-production.up.railway.app/catalog')) } }]]
+                    inline_keyboard: [[{ text: '🛍️ Ouvrir le Shop', web_app: { url: (process.env.RENDER_EXTERNAL_URL || (process.env.RAILWAY_PUBLIC_DOMAIN ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}/catalog?v=${Date.now()}` : `https://monshopbot-production.up.railway.app/catalog?v=${Date.now()}`)) } }]]
                 }
             });
             successCount++;

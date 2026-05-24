@@ -36,7 +36,7 @@ async function checkSubscription(bot, ctx, settings) {
 function setupStartHandler(bot) {
 
     bot.command('language', async (ctx) => {
-        const user = ctx.state.user || { language_code: ctx.from.language_code || 'fr' };
+        const user = ctx.state?.user || { language_code: ctx.from?.language_code || 'fr' };
         const text = `🌐 <b>CHOIX DE LA LANGUE / LANGUAGE CHOICE</b>\n\nChoisissez votre langue de préférence :\nChoose your preferred language:`;
         const keyboard = Markup.inlineKeyboard([
             [Markup.button.callback('🇫🇷 Français', 'set_lang_fr')],
@@ -68,7 +68,7 @@ function setupStartHandler(bot) {
         if (lang === 'en') msg = '✅ Language set to English!';
         if (lang === 'es') msg = '✅ ¡Idioma configurado en Español!';
         if (lang === 'de') msg = '✅ Sprache auf Deutsch eingestellt!';
-        await ctx.answerCbQuery(msg);
+        await ctx.answerCbQuery(msg).catch(() => {});
         return showMainMenu(ctx);
     });
 
@@ -157,22 +157,17 @@ function setupStartHandler(bot) {
                     await notifyAdmins(bot, adminMsg, adminKeyboard).catch(() => {});
                 }
                 
-                const isWa = ctx.platform === 'whatsapp';
                 const restrictedText = `🛑 <b>ACCÈS RESTREINT</b>\n\n` +
                     `Bonjour <b>${user.first_name}</b>,\n\n` +
                     `Pour accéder au bot, vous devez d'abord envoyer un message à l'administrateur.\n` +
                     `Une fois que l'admin aura validé votre accès, vous pourrez commander.\n\n` +
-                    (isWa ? `📝 <i>Une fois validé, écrivez <b>/start</b> pour actualiser le menu.</i>\n\n` +
-                            `👇 <b>Cliquez sur les liens ci-dessous :</b>\n` +
-                            (settings.private_contact_wa_url ? `• *WhatsApp Admin :* ${settings.private_contact_wa_url}\n` : '') +
-                            (settings.private_contact_url ? `• *Telegram Admin :* ${settings.private_contact_url}\n` : '') +
-                            (settings.channel_url ? `• *Notre Canal :* ${settings.channel_url}\n` : '') : 
-                            `👇 <b>Veuillez cliquer ci-dessous :</b>`);
+                    `👇 <b>Cliquez sur les liens ci-dessous :</b>\n` +
+                    (settings.private_contact_url ? `• *Telegram Admin :* ${settings.private_contact_url}\n` : '') +
+                    (settings.channel_url ? `• *Notre Canal :* ${settings.channel_url}\n` : '');
                 
                 const b = [];
                 if (settings.private_contact_url) b.push([Markup.button.url('✉️ Telegram : Admin', settings.private_contact_url)]);
-                if (settings.private_contact_wa_url) b.push([Markup.button.url('✉️ WhatsApp : Admin', settings.private_contact_wa_url)]);
-                b.push([Markup.button.url('📢 S’abonner au canal', settings.channel_url || 'https://t.me/channel')]);
+                                b.push([Markup.button.url('📢 S’abonner au canal', settings.channel_url || 'https://t.me/channel')]);
                 b.push([Markup.button.callback('🔄 Rafraîchir mon statut', 'start')]);
                 
                 const restrictedKeyboard = Markup.inlineKeyboard(b);
@@ -301,7 +296,7 @@ function setupStartHandler(bot) {
     });
 
     bot.action('check_sub', async (ctx) => {
-        await ctx.answerCbQuery();
+        await ctx.answerCbQuery().catch(() => {});
         const settings = ctx.state?.settings || await getAppSettings();
         if (ctx.platform === 'telegram' && settings.force_subscribe) {
             const isSubscribed = await checkSubscription(bot, ctx, settings);
@@ -322,7 +317,7 @@ function setupStartHandler(bot) {
     });
 
     bot.action('user_settings', async (ctx) => {
-        await ctx.answerCbQuery();
+        await ctx.answerCbQuery().catch(() => {});
         const settings = ctx.state?.settings || await getAppSettings();
         const user = ctx.state?.user || { language_code: ctx.from?.language_code || 'fr' };
         const text = `⚙️ <b>RÉGLAGES</b>\n\nQue souhaitez-vous modifier ?`;
@@ -334,8 +329,8 @@ function setupStartHandler(bot) {
     });
 
     bot.action('set_language_menu', async (ctx) => {
-        const user = ctx.state.user || { language_code: ctx.from.language_code || 'fr' };
-        await ctx.answerCbQuery();
+        const user = ctx.state?.user || { language_code: ctx.from?.language_code || 'fr' };
+        await ctx.answerCbQuery().catch(() => {});
         const text = `🌐 <b>CHOIX DE LA LANGUE / LANGUAGE CHOICE</b>\n\nChoisissez votre langue préférée :`;
         const keyboard = Markup.inlineKeyboard([
             [Markup.button.callback('🇫🇷 Français', 'set_lang_fr')],
@@ -348,7 +343,7 @@ function setupStartHandler(bot) {
     });
 
     bot.action('my_referrals', async (ctx) => {
-        await ctx.answerCbQuery();
+        await ctx.answerCbQuery().catch(() => {});
         const settings = ctx.state?.settings || await getAppSettings();
         const user = ctx.state?.user;
         if (!user) return ctx.reply(t(ctx, 'msg_utilisateur_introuv', "⚠️ Utilisateur introuvable."));
@@ -384,32 +379,31 @@ function setupStartHandler(bot) {
     });
 
     bot.action('private_contact', async (ctx) => {
-        await ctx.answerCbQuery();
+        await ctx.answerCbQuery().catch(() => {});
         const settings = ctx.state?.settings || await getAppSettings();
         const supplier = await getSupplierByTelegramId(String(ctx.from.id));
         const isFournisseur = !!supplier;
+        const user = ctx.state?.user || { language_code: ctx.from?.language_code || 'fr' };
         
         const buttons = [];
         if (settings.private_contact_url) {
             buttons.push([Markup.button.url('📲 Telegram : Admin', settings.private_contact_url)]);
         }
         if (settings.private_contact_wa_url) {
-            buttons.push([Markup.button.url('📲 WhatsApp : Admin', settings.private_contact_wa_url)]);
-        }
+                    }
         buttons.push([Markup.button.callback(t(user, 'btn_back_menu', '◀️ Menu'), 'main_menu')]);
         
         let text = `${settings.ui_icon_contact || '💬'} <b>${settings.label_contact || 'Contact Admin'}</b>\n\n` +
                    `Bonjour <b>${ctx.from.first_name}</b>, vous pouvez nous contacter en direct :\n\n` +
                    (settings.private_contact_url ? `🔹 <b>Telegram :</b> <a href="${settings.private_contact_url}">Cliquez ici</a>\n` : '') +
-                   (settings.private_contact_wa_url ? `🔸 <b>WhatsApp :</b> <a href="${settings.private_contact_wa_url}">Cliquez ici</a>\n\n` : '\n') +
-                   (isFournisseur ? `<i>Note : En tant que fournisseur, utilisez ces liens pour toute question logistique ou paiement.</i>\n\n` : '') +
+                                      (isFournisseur ? `<i>Note : En tant que fournisseur, utilisez ces liens pour toute question logistique ou paiement.</i>\n\n` : '') +
                    `Cliquez sur l'un des boutons ci-dessous pour ouvrir une discussion.`;
         await safeEdit(ctx, text, { parse_mode: 'HTML', ...Markup.inlineKeyboard(buttons) });
     });
 
     bot.action('channel_link', async (ctx) => {
-        const user = ctx.state.user || { language_code: ctx.from.language_code || 'fr' };
-        await ctx.answerCbQuery();
+        const user = ctx.state?.user || { language_code: ctx.from?.language_code || 'fr' };
+        await ctx.answerCbQuery().catch(() => {});
         const settings = ctx.state?.settings || await getAppSettings();
         const buttons = [
             [Markup.button.url('📢 Rejoindre le canal', settings.channel_url || 'https://t.me/channel'), Markup.button.callback(t(user, 'btn_back_menu', '◀️ Menu'), 'main_menu')]
@@ -557,7 +551,7 @@ async function getMainMenuKeyboard(ctx, settings, user, isFournisseur = false, i
     const buttons = [];
 
     const baseDomain = process.env.RENDER_EXTERNAL_URL || (process.env.RAILWAY_PUBLIC_DOMAIN ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}` : 'https://farmstegridy-bot.onrender.com');
-    const langCode = user?.language_code || 'fr';
+    const langCode = user?.data?.language || user?.language_code || 'fr';
     const catalogUrl = (settings.mini_app_url ? `${settings.mini_app_url}/catalog` : `${baseDomain}/catalog`) + `?lang=${langCode}` + `&v=${Date.now()}`;
 
     // Ligne 1 : Commander (Gros bouton principal)
@@ -643,7 +637,7 @@ async function updateMenuButton(ctx, user, settings, forceClient = false) {
     try {
         if (!settings) settings = await getAppSettings();
         const baseDomain = process.env.RENDER_EXTERNAL_URL || (process.env.RAILWAY_PUBLIC_DOMAIN ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}` : 'https://farmstegridy-bot.onrender.com');
-        const langCode = user?.language_code || 'fr';
+        const langCode = user?.data?.language || user?.language_code || 'fr';
         const catalogUrl = (settings.mini_app_url ? `${settings.mini_app_url}/catalog` : `${baseDomain}/catalog`) + `?lang=${langCode}` + `&v=${Date.now()}`;
         const livreurUrl = (settings.mini_app_url ? `${settings.mini_app_url}/livreur` : `${baseDomain}/livreur`) + `?lang=${langCode}` + `&v=${Date.now()}`;
         const dashboardUrl = (settings.mini_app_url ? `${settings.mini_app_url}/dashboard` : `${baseDomain}/dashboard`) + `?lang=${langCode}` + `&v=${Date.now()}`;

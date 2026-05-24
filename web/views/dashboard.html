@@ -3471,7 +3471,6 @@
                         <small style="opacity:0.6;">C'est le lien vers votre compte privé Telegram, PAS vers le canal.</small>
                     </div>
                     <div>
-                        <label style="display: none;">✉️ Lien Contact Privé (WhatsApp)</label>
                         <input id="set_private_contact_wa_url" placeholder="https://wa.me/33612345678" style="display: none;">
                     </div>
                     <div>
@@ -3757,8 +3756,7 @@
                         <input id="set_btn_confirm_review">
                     </div>
                     <div style="display:none;">
-                        <label>Nom WhatsApp par défaut (si inconnu)</label>
-                        <input id="set_default_wa_name" placeholder="Utilisateur WhatsApp">
+                        
                     </div>
                 </div>
 
@@ -4096,7 +4094,7 @@
                             <input type="checkbox" id="set_notify_on_approval" style="width: 20px; height: 20px;">
                         </div>
                     </div>
-                    <small style="opacity:0.6; display:block;">Pour WhatsApp, désactivez cette option si vous voulez éviter l'envoi de messages non-sollicités (anti-ban).</small>
+                    
                 </div>
 
                 <div style="background:rgba(255,255,255,0.05); padding:20px; border-radius:12px; border:1px solid var(--border);">
@@ -6175,7 +6173,7 @@
             document.getElementById('chart-title').innerText = `📈 ${label}`;
             const avgBasket = (platform === 'all') ? data.avgBasket : (data.byPlatform[platform]?.avgBasket || 0);
             document.getElementById('avg-basket-size').innerText = (parseFloat(avgBasket) || 0).toFixed(2) + ' €';
-            document.getElementById('avg-basket-platform').innerText = (platform === 'all') ? 'Toutes plateformes' : (platform === 'telegram' ? 'Telegram Only' : 'WhatsApp Only');
+            document.getElementById('avg-basket-platform').innerText = 'Telegram Only';
 
             // Update CA Global dynamically based on platform filter
             const caGlobalEl = document.getElementById('statCA');
