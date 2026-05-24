@@ -124,15 +124,20 @@ function setupOrderSystem(bot) {
 
     // ========== CATALOGUE & COMMANDE ==========
 
-    async function displayCatalog(ctx) {
+    async function displayCatalog(ctx, isBaas = false) {
         const [productsByCategory, settings] = await Promise.all([
             getProductsByCategory(true),
             ctx.state?.settings ? Promise.resolve(ctx.state.settings) : getAppSettings()
         ]);
         const user = ctx.state?.user || await getUser(`${ctx.platform}_${ctx.from.id}`);
         
-        const categories = Object.keys(productsByCategory);
-        if (categories.length === 0) {
+        const baasKeywords = ['BAAS', 'PACK', 'MODULE'];
+        let categories = Object.keys(productsByCategory).filter(cat => {
+            const isCatBaas = baasKeywords.some(kw => cat.toUpperCase().includes(kw));
+            return isBaas ? isCatBaas : !isCatBaas;
+        });
+
+        if (categories.length === 0 && !isBaas) {
             return safeEdit(ctx, t(user, 'msg_catalog_empty', settings.msg_catalog_empty || '📭 Le catalogue est actuellement vide.'), Markup.inlineKeyboard([[Markup.button.callback(settings.btn_back_generic || '◀️ Retour', 'main_menu')]]));
         }
 
@@ -164,10 +169,24 @@ function setupOrderSystem(bot) {
             }
         }
 
+                if (!isBaas) {
+            const hasBaas = Object.keys(productsByCategory).some(cat => baasKeywords.some(kw => cat.toUpperCase().includes(kw)));
+            if (hasBaas) {
+                buttons.push([Markup.button.callback(t(user, 'btn_view_baas', '🤖 Packs Bot & Modules'), 'view_catalog_baas')]);
+            }
+        } else {
+            buttons.push([Markup.button.callback(t(user, 'btn_view_classic', '🛍️ Retour au Catalogue Classique'), 'view_catalog')]);
+        }
+
         buttons.push([Markup.button.callback(t(user, 'btn_back_menu', settings.btn_back_menu || '◀️ Retour Menu'), 'main_menu')]);
 
         await safeEdit(ctx, text, Markup.inlineKeyboard(buttons));
     }
+
+    bot.action('view_catalog_baas', async (ctx) => {
+        try { await ctx.answerCbQuery().catch(() => {}); } catch(e) {}
+        await displayCatalog(ctx, true);
+    });
 
     bot.action(/^cat_header_(.+)$/, async (ctx) => {
         try {
