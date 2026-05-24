@@ -1406,7 +1406,7 @@
         }
 
         function stopAllVideos() {
-            document.querySelectorAll('video').forEach(v => {
+            document.querySelectorAll('.modal video').forEach(v => {
                 try {
                     v.pause();
                     v.removeAttribute('src');
