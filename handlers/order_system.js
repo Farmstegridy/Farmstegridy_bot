@@ -233,37 +233,32 @@ function setupOrderSystem(bot) {
         const unitLabel = (product.unit && product.unit.toLowerCase() !== 'unité') ? product.unit : 'g';
 
         const user = ctx.state?.user || await getUser(`${ctx.platform}_${ctx.from.id}`);
-        const stockBadge = await getScarcityBadge(product); // global badge
+        const stockBadge = await getScarcityBadge(product);
         let text = `🌟 <b>${esc(product.name)}</b> 🌟\n` +
             `📦 Statut : <b>${stockBadge}</b>\n\n` +
+            t(user, 'label_unit_price', '💰 Prix Unitaire :') + ` <b>${product.price}€</b>\n` +
             (promoText ? `${promoText}\n` : "") +
             (product.description ? `\n<i>${product.description}</i>\n` : "") +
-            `\n💎 <b>Quel conditionnement (format) souhaitez-vous ?</b>\n\n`;
-
-        const uv = parseFloat(String(product.unit_value || '1').replace(',','.')) || 1;
-
-        let optionsList = [{ packageIndex: 0, m: 1, pr: product.price, stock: parseInt(product.stock) || 0 }];
-        if (product.has_discounts && Array.isArray(product.discounts_config)) {
-            product.discounts_config.forEach((d, idx) => {
-                optionsList.push({ packageIndex: idx + 1, m: d.qty, pr: parseFloat(d.total || d.total_price), stock: parseInt(d.stock) || 0 });
-            });
-        }
-
-        const qtyRows = [];
-        for (const opt of optionsList) {
-            const avail = opt.stock;
-            if (avail > 0) {
-                let scarcity = '';
-                if (avail <= 5) scarcity = ` (Plus que ${avail}!)`;
-                const label = `${opt.m * uv}${unitLabel} - ${opt.pr}€${scarcity}`;
-                qtyRows.push([Markup.button.callback(label, `pkg_${productId}_${opt.packageIndex}`)]);
-            }
-        }
+            `\n💎 <b>Combien de sachets voulez-vous ?</b>\n\n` +
+            `💡 <i>Cliquez sur le chiffre qui correspond au nombre de sachets que vous voulez.</i>\n` +
+            `<i>(Exemple : si vous cliquez sur <b>1</b>, vous recevrez 1 sachet de ${multiplier}${unitLabel})</i>`;
+        const multipliers = [1, 2, 3, 4, 5, 10];
         
-        if (qtyRows.length === 0) {
-            text += `\n❌ <i>Désolé, tous les formats sont actuellement en rupture de stock.</i>\n`;
+        const qtyRows = [];
+        for (let i = 0; i < multipliers.length; i += 2) {
+            const m1 = multipliers[i];
+            const q1 = m1 * multiplier;
+            const label1 = `${m1}`;
+            const row = [Markup.button.callback(label1, `qty_${productId}_${q1}`)];
+            
+            if (i + 1 < multipliers.length) {
+                const m2 = multipliers[i+1];
+                const q2 = m2 * multiplier;
+                const label2 = `${m2}`;
+                row.push(Markup.button.callback(label2, `qty_${productId}_${q2}`));
+            }
+            qtyRows.push(row);
         }
-
         qtyRows.push([Markup.button.callback(t(user, 'btn_cancel', '❌ Annuler'), 'view_catalog')]);
         const keyboard = Markup.inlineKeyboard(qtyRows);
 
@@ -280,70 +275,13 @@ function setupOrderSystem(bot) {
             photo: isVideo ? null : firstPhoto,
             video: isVideo ? firstPhoto : null
         });
-
-        if (allMedia.length > 1) {
-            try {
-                const mediaGroup = allMedia.slice(1).map(m => ({
-                    type: m.type === 'video' ? 'video' : 'photo',
-                    media: m.url
-                }));
-                await ctx.telegram.sendMediaGroup(ctx.from.id, mediaGroup);
-            } catch(e) {
-                console.error('[Product] Failed to send media group', e.message);
-            }
-        }
     });
 
-    bot.action(/^pkg_([a-zA-Z0-9-]+)_(\d+)$/, async (ctx) => {
-        await ctx.answerCbQuery();
-        const productId = ctx.match[1];
-        const packageIndex = parseInt(ctx.match[2]);
-        const products = await getProducts(true);
-        const product = products.find(p => String(p.id) === String(productId));
-        
-        if (!product) return;
-        const user = ctx.state?.user || await getUser(`${ctx.platform}_${ctx.from.id}`);
-        
-        const uv = parseFloat(String(product.unit_value || '1').replace(',','.')) || 1;
-        const unitLabel = (product.unit && product.unit.toLowerCase() !== 'unité') ? product.unit : 'g';
-        
-        let pkgLabel, pkgPrice;
-        if (packageIndex === 0) {
-            pkgLabel = `${uv}${unitLabel}`;
-            pkgPrice = parseFloat(product.price);
-        } else {
-            const d = product.discounts_config[packageIndex - 1];
-            pkgLabel = `${d.qty * uv}${unitLabel}`;
-            pkgPrice = parseFloat(d.total || d.total_price);
-        }
-
-        const text = `🌟 <b>${esc(product.name)} - Format ${pkgLabel}</b> 🌟\n\n` +
-            `💰 Prix : <b>${pkgPrice}€</b> le sachet\n\n` +
-            `💎 <b>Combien de sachets de ce format voulez-vous ?</b>\n\n`;
-
-        const multipliers = [1, 2, 3, 4, 5, 10];
-        const qtyRows = [];
-        for (let i = 0; i < multipliers.length; i += 2) {
-            const m1 = multipliers[i];
-            const row = [Markup.button.callback(`${m1}`, `qty_${productId}_${packageIndex}_${m1}`)];
-            if (i + 1 < multipliers.length) {
-                const m2 = multipliers[i+1];
-                row.push(Markup.button.callback(`${m2}`, `qty_${productId}_${packageIndex}_${m2}`));
-            }
-            qtyRows.push(row);
-        }
-        qtyRows.push([Markup.button.callback(t(user, 'btn_back', '◀️ Retour'), `product_${product.id}`)]);
-
-        await safeEdit(ctx, text, Markup.inlineKeyboard(qtyRows));
-    });
-
-    // Nouveau format
-    bot.action(/^qty_([a-zA-Z0-9-]+)_(\d+)_(\d+)$/, async (ctx) => {
+    bot.action(/^qty_(.+)_(.+)$/, async (ctx) => {
         await ctx.answerCbQuery();
         const userId = `${ctx.platform}_${ctx.from.id}`;
         const productId = ctx.match[1];
-        const packageIndex = parseInt(ctx.match[2]);
-        const nSachets = parseInt(ctx.match[3]);
+        const qty = parseFloat(ctx.match[2]);
         const products = await getProducts(true);
         const product = products.find(p => String(p.id) === String(productId));
         const settings = (ctx.state?.settings || await getAppSettings());
@@ -353,22 +291,26 @@ function setupOrderSystem(bot) {
             return safeEdit(ctx, settings.msg_product_not_found || '❌ Produit non trouvé.', Markup.inlineKeyboard([[Markup.button.callback(settings.btn_back_generic || '◀️ Retour', 'view_catalog')]]));
         }
 
-        const uv = parseFloat(String(product.unit_value || '1').replace(',','.')) || 1;
-        const unitLabel = (product.unit && product.unit.toLowerCase() !== 'unité') ? product.unit : 'g';
-        
-        let pkgLabel, pkgPrice, pkgM;
-        if (packageIndex === 0) {
-            pkgM = 1;
-            pkgLabel = `${uv}${unitLabel}`;
-            pkgPrice = parseFloat(product.price);
-        } else {
-            const d = product.discounts_config[packageIndex - 1];
-            pkgM = d.qty;
-            pkgLabel = `${d.qty * uv}${unitLabel}`;
-            pkgPrice = parseFloat(d.total || d.total_price);
-        }
+        // Calcul du prix avec gestion des paliers dégressifs et NaN Fix
+        const baseVal = Math.max(0.001, parseFloat(String(product.unit_value || '1').replace(',', '.')) || 1);
+        const effectiveQty = (Number.isFinite(qty) && Number.isFinite(baseVal)) ? (qty / baseVal) : 0; 
+        const basePrice = Math.max(0, parseFloat(product.price) || 0);
+        let totalPriceValue = basePrice * effectiveQty;
 
-        let totalPriceValue = pkgPrice * nSachets;
+        if (product.has_discounts && product.discounts_config && Array.isArray(product.discounts_config)) {
+            const sortedDiscounts = [...product.discounts_config].sort((a, b) => b.qty - a.qty);
+            const bestDiscount = sortedDiscounts.find(d => effectiveQty >= d.qty);
+            if (bestDiscount) {
+                const discountValue = parseFloat(bestDiscount.total || bestDiscount.total_price || 0);
+                const discountQty = parseFloat(bestDiscount.qty);
+                totalPriceValue = discountValue + (effectiveQty - discountQty) * basePrice;
+            }
+        }
+        
+        if (!Number.isFinite(totalPriceValue)) {
+            console.error(`❌ [NaN Fix] totalPriceValue is invalid for product ${productId}. basePrice=${basePrice}, effectiveQty=${effectiveQty}`);
+            totalPriceValue = 0;
+        }
         const totalPrice = totalPriceValue.toFixed(2);
 
         let bundleText = "";
@@ -376,7 +318,7 @@ function setupOrderSystem(bot) {
             const config = product.bundle_config || { trigger_qty: 1, offered_qty: 1, offered_id: null };
             const trigger = config.trigger_qty || 1;
             const offered = config.offered_qty || 1;
-            const numGifts = Math.floor(nSachets / trigger) * offered;
+            const numGifts = Math.floor(effectiveQty / trigger) * offered;
 
             if (numGifts > 0) {
                 if (config.offered_id) {
@@ -388,23 +330,26 @@ function setupOrderSystem(bot) {
             }
         }
 
-        const formattedName = product.name + ` [Format: ${pkgLabel}]` + bundleText;
-
         pendingOrders.set(userId, {
             productId,
-            qty: nSachets,
-            packageIndex,
+            qty,
             totalPrice,
-            productName: formattedName,
+            productName: product.name + bundleText,
             is_bundle: product.is_bundle,
-            supplier_id: product.supplier_id,
+            supplier_id: product.supplier_id, // IMPORTANT pour la notification fournisseur
+            nSachets: (baseVal > 1) ? effectiveQty : null,
             productUnit: product.unit || 'g'
         });
 
-        await showAddToCartChoice(ctx, product, nSachets, pkgLabel, totalPrice);
+        if (baseVal === 1 && product.unit && product.unit.length > 0 && !(['unité', 'unite', 'piece', 'pce'].includes(product.unit.toLowerCase()))) {
+            const nSachets = Math.round(qty / baseVal) || 1;
+            return askUnitSelection(ctx, product, nSachets);
+        }
+
+        await showAddToCartChoice(ctx, product, qty, totalPrice);
     });
 
-    async function showAddToCartChoice(ctx, product, nSachets, pkgLabel, totalPrice, unitAmount = null) {
+    async function showAddToCartChoice(ctx, product, qty, totalPrice, unitAmount = null) {
         const userId = `${ctx.platform}_${ctx.from.id}`;
         const settings = ctx.state?.settings || await getAppSettings();
         const pending = pendingOrders.get(userId);
@@ -412,9 +357,19 @@ function setupOrderSystem(bot) {
         if (unitAmount) pending.chosen_unit_amount = unitAmount;
 
         const user = ctx.state?.user || await getUser(userId);
+        const rawVal = String(product.unit_value || '1');
+        const multiplier = parseFloat(rawVal.replace(',', '.')) || 1;
+        const unitLabel = product.unit || '';
         
-        let displayQty = `${nSachets} sachet${nSachets > 1 ? 's' : ''}`;
-        let sachetInfo = `\n📦 <b>Format sélectionné : ${pkgLabel}</b>`;
+        let displayQty;
+        let sachetInfo = "";
+        if (multiplier > 1) {
+            const nSachets = qty / multiplier;
+            displayQty = `${qty}${unitLabel}`;
+            sachetInfo = `\n📦 <b>Format : ${nSachets} sachet${nSachets > 1 ? 's' : ''} de ${multiplier}${unitLabel}</b>`;
+        } else {
+            displayQty = unitLabel ? `${qty}${unitLabel}` : `${qty}x`;
+        }
 
         const text = t(user, 'msg_selection', '🛒 <b>Vous avez choisi : {qty} {name}</b>', { qty: displayQty, name: product.name }) + (unitAmount ? ` (${unitAmount})` : '') + 
             sachetInfo + '\n' +
@@ -432,6 +387,8 @@ function setupOrderSystem(bot) {
             ]
         ];
 
+        // Si un media group est actif (multi-images), pas de photo dans safeEdit
+        // sinon le media group reste visible au-dessus et safeEdit édite juste le texte+boutons
         const hasActiveGroup = getAllMediaUrls(product).length > 1;
         await safeEdit(ctx, text, {
             ...Markup.inlineKeyboard(buttons),
@@ -455,17 +412,47 @@ function setupOrderSystem(bot) {
         const product = products.find(p => String(p.id) === String(pending.productId));
 
         if (product) {
+            // Tentative de fusion avec un item existant du même produit et même quantité unitaire (ex: 0.5g)
             const sameIdx = cart.findIndex(it => 
                 String(it.productId) === String(pending.productId) && 
-                it.packageIndex === pending.packageIndex
+                it.chosen_unit_amount === pending.chosen_unit_amount
             );
 
             if (sameIdx !== -1) {
                 // FUSION
                 const existing = cart[sameIdx];
-                const unitPrice = parseFloat(existing.totalPrice) / existing.qty;
                 existing.qty += pending.qty;
-                existing.totalPrice = formatPrice(unitPrice * existing.qty);
+                
+                // RECALCUL DU PRIX DÉGRESSIF pour la nouvelle quantité cumulée
+                let priceUsed = product.price;
+                let effectiveQty = existing.qty;
+
+                // Si c'est un produit à l'unité (0.5g, etc.), on ajuste le calcul
+                if (existing.chosen_unit_amount) {
+                    const cleanUnitVal = String(product.unit_value || '1').replace(',', '.');
+                    const baseVal = parseFloat(cleanUnitVal) || 1;
+                    // On extrait le nombre du chosen_unit_amount (ex: "0.5g" -> 0.5)
+                    const amountMatch = existing.chosen_unit_amount.match(/^[0-9.]+/);
+                    const amount = amountMatch ? parseFloat(amountMatch[0]) : baseVal;
+                    effectiveQty = (amount / baseVal) * existing.qty;
+                    priceUsed = (product.price / baseVal) * amount; // Prix de base de cette sélection (ex: prix de 0.5g)
+                }
+
+                let newTotalValue = priceUsed * existing.qty;
+                if (product.has_discounts && product.discounts_config && product.discounts_config.length > 0) {
+                    const sortedDiscounts = [...product.discounts_config].sort((a, b) => b.qty - a.qty);
+                    const bestD = sortedDiscounts.find(d => effectiveQty >= d.qty);
+                    if (bestD) {
+                        const dVal = parseFloat(bestD.total || bestD.total_price || 0);
+                        const dQty = parseFloat(bestD.qty);
+                        // extra_qty est la différence entre l'effectiveQty cumulée et le palier
+                        const extra = Math.max(0, effectiveQty - dQty);
+                        newTotalValue = dVal + (extra * (product.price / (parseFloat(String(product.unit_value || '1').replace(',', '.')) || 1)));
+                        // Si l'item fusionné avait un prix spécifique (amount != baseVal), on ajuste si besoin (mais dVal est déjà le total pour dQty)
+                        // Note: C'est complexe car dVal est un total fixe pour un certain nombre de baseUnits.
+                    }
+                }
+                existing.totalPrice = formatPrice(newTotalValue);
             } else {
                 cart.push(pending);
             }
@@ -478,7 +465,7 @@ function setupOrderSystem(bot) {
         pendingOrders.delete(userId);
         const text = t(user, 'msg_product_added', '✅ C\'est noté ! Produit ajouté au panier.') + '\n\n' + t(user, 'msg_cart_count', 'Votre panier contient <b>{count}</b> article(s).', { count: cart.length });
         const buttons = [
-            [Markup.button.callback(t(user, 'btn_continue', '🛍️ Acheter autre chose'), 'view_catalog'), Markup.button.callback(t(user, 'btn_cart_view', '🛒 Voir mon panier'), 'view_cart')],
+            [Markup.button.callback(t(user, 'btn_continue', '🛍️ Acheter autre chose'), 'view_catalog'), Markup.button.callback(t(user, 'btn_cart_view', '💳 Payer ma commande'), 'view_cart')],
             [Markup.button.callback(t(user, 'btn_clear', settings.btn_clear_cart || '❌ Tout enlever'), 'clear_cart')]
         ];
         await safeEdit(ctx, text, Markup.inlineKeyboard(buttons));
@@ -518,7 +505,7 @@ function setupOrderSystem(bot) {
             const price = parseFloat(item.totalPrice) || 0;
             total += price;
             const unit = item.productUnit || 'g';
-            const qtyLabel = `(x${item.qty})`;
+            const qtyLabel = item.nSachets ? `(x${item.nSachets} sachet${item.nSachets > 1 ? 's' : ''} - ${item.qty}${unit})` : `(x${item.qty}${unit})`;
             
             const warningText = getReservationWarningText(item);
             summary += `${idx + 1}. ${item.productName} <b>${qtyLabel}</b>${item.chosen_unit_amount ? ` [${item.chosen_unit_amount}]` : ''} - <b>${formatPrice(price)}€</b>\n`;
@@ -530,7 +517,7 @@ function setupOrderSystem(bot) {
         });
         summary += `\n💰 <b>` + t(user, 'label_total_price', 'TOTAL :') + ` ${formatPrice(total)}€</b>`;
 
-        buttons.push([Markup.button.callback(t(user, 'btn_checkout', '✅ Confirmer'), 'start_checkout'), Markup.button.callback(t(user, 'btn_add_more', '🛍️ Continuer'), 'view_catalog')]);
+        buttons.push([Markup.button.callback(t(user, 'btn_checkout', '💳 Commander'), 'start_checkout'), Markup.button.callback(t(user, 'btn_add_more', '🛍️ Continuer'), 'view_catalog')]);
         buttons.push([Markup.button.callback(t(user, 'btn_clear_cart', '❌ Vider'), 'clear_cart'), Markup.button.callback(t(user, 'btn_back_menu', '◀️ Menu'), 'main_menu')]);
 
         await safeEdit(ctx, summary, Markup.inlineKeyboard(buttons));
@@ -554,7 +541,7 @@ function setupOrderSystem(bot) {
     });
 
     bot.action('clear_cart', async (ctx) => {
-        await ctx.answerCbQuery('Panier vidé 🗑️');
+        await ctx.answerCbQuery(t(ctx, 'msg_panier_vid', "Panier vidé 🗑️"));
         const settings = (ctx.state?.settings || await getAppSettings());
         const userId = `${ctx.platform}_${ctx.from.id}`;
         userCarts.delete(userId);
@@ -651,12 +638,12 @@ function setupOrderSystem(bot) {
         const reversed = [...savedAddresses].reverse().slice(0, 3);
         const addr = reversed[idx];
 
-        if (!addr) return ctx.answerCbQuery('⚠️ Adresse introuvable.');
+        if (!addr) return ctx.answerCbQuery(t(ctx, 'msg_adresse_introuvable', "⚠️ Adresse introuvable."));
 
-        await ctx.answerCbQuery('Adresse sélectionnée !');
+        await ctx.answerCbQuery(t(ctx, 'msg_adresse_s_lectionn_e', "Adresse sélectionnée !"));
         const addrState = awaitingAddressDetails.get(userId);
         
-        if (!addrState) return ctx.reply("Session expirée.");
+        if (!addrState) return ctx.reply(t(ctx, 'msg_session_expir_e', "Session expirée."));
 
         const cpMatch = addr.match(/\b\d{5}\b/);
         const postalCode = cpMatch ? cpMatch[0] : '';
@@ -833,7 +820,7 @@ function setupOrderSystem(bot) {
         // Step 1: Address Validation -> Suite vers SCHEDULING
         if (addrState && addrState.step === 1) {
             const addr = ctx.message.text.trim();
-            // Un nombre (1, 2, 10, etc.) = raccourci menu numérique → laisser passer
+            // Sur WhatsApp, un nombre (1, 2, 10, etc.) = raccourci menu numérique → laisser passer
             if (/^\d+$/.test(addr)) return next();
 
             const hasNumber = addr.match(/\d/);
@@ -989,7 +976,7 @@ function setupOrderSystem(bot) {
         await ctx.answerCbQuery();
         const userId = `${ctx.platform}_${ctx.from.id}`;
         const pending = pendingOrders.get(userId);
-        if (!pending) return ctx.reply("Session expirée.");
+        if (!pending) return ctx.reply(t(ctx, 'msg_session_expir_e', "Session expirée."));
         pending.scheduled_at = null;
         pending.is_priority = false;
         pending.priority_fee = 0;
@@ -1004,7 +991,7 @@ function setupOrderSystem(bot) {
         const settings = ctx.state?.settings || await getAppSettings();
         const userId = `${ctx.platform}_${ctx.from.id}`;
         const pending = pendingOrders.get(userId);
-        if (!pending) return ctx.reply("Session expirée.");
+        if (!pending) return ctx.reply(t(ctx, 'msg_session_expir_e', "Session expirée."));
         pending.scheduled_at = null;
         pending.is_priority = true;
         pending.priority_fee = parseFloat(settings.priority_delivery_price) || 15;
@@ -1299,18 +1286,8 @@ function setupOrderSystem(bot) {
             const p = allProducts.find(prod => String(prod.id) === String(item.productId));
             if (!p) {
                 outOfStockItems.push(`${item.productName} (Indisponible)`);
-            } else {
-                let pStock = 0;
-                if (item.packageIndex && item.packageIndex > 0) {
-                    const dConf = p.discounts_config && p.discounts_config[item.packageIndex - 1];
-                    pStock = dConf ? parseInt(dConf.stock) : 0;
-                } else {
-                    pStock = parseInt(p.stock) || 0;
-                }
-                
-                if (pStock < item.qty) {
-                    outOfStockItems.push(`${item.productName} (Stock insuffisant : reste ${pStock})`);
-                }
+            } else if (typeof p.stock === 'number' && p.stock < item.qty) {
+                outOfStockItems.push(`${p.name} (Stock insuffisant : reste ${p.stock})`);
             }
         }
         if (outOfStockItems.length > 0) {
@@ -1378,8 +1355,32 @@ function setupOrderSystem(bot) {
             const order = createResult.order;
 
             // DECREMENT STOCK & LOG TO LEDGER
-            const { adjustOrderStock } = require('../services/database');
-            await adjustOrderStock(order.id, 'decrement').catch(e => console.error("Stock decrement error:", e));
+            const { saveProduct } = require('../services/database');
+            for (const item of cart) {
+                const p = allProducts.find(prod => String(prod.id) === String(item.productId));
+                if (p && typeof p.stock === 'number') {
+                    const newStock = Math.max(0, p.stock - item.qty);
+                    const updates = { id: p.id, stock: newStock };
+                    
+                    let alertMsg = null;
+                    if (newStock <= 0 && p.stock > 0) {
+                        updates.is_active = false;
+                        updates.is_available = false;
+                        alertMsg = `🚫 <b>Rupture de Stock</b>\nLe produit <b>${p.name}</b> est épuisé. Il a été automatiquement masqué du catalogue du bot.`;
+                    } else if (newStock <= 2 && p.stock > 2) {
+                        alertMsg = `⚠️ <b>Alerte Stock Critique (${newStock} restants)</b>\nLe produit <b>${p.name}</b> n'a plus que ${newStock} unités en stock ! Veuillez réapprovisionner au plus vite.`;
+                    } else if (newStock <= 5 && p.stock > 5) {
+                        alertMsg = `⚠️ <b>Alerte Stock Bas (${newStock} restants)</b>\nLe produit <b>${p.name}</b> n'a plus que ${newStock} unités en stock. Pensez à réapprovisionner !`;
+                    }
+                    
+                    if (alertMsg) {
+                        notifyAdmins(bot, alertMsg).catch(err => console.error("Error sending stock alert:", err.message));
+                    }
+                    
+                    await saveProduct(updates).catch(e => console.error(`[STOCK-ERR] ${p.id}:`, e.message));
+                    await logStockMovement(p.id, -item.qty, 'order', order?.id || 'unknown');
+                }
+            }
             
             // On vérifie si c'est la première commande en utilisant l'ID officiel (possiblement fusionné)
             const officialUserId = ctx.state.user?.id || userId;
@@ -1434,7 +1435,7 @@ function setupOrderSystem(bot) {
                     .replace('{pay_icon}', payIcon)
                     .replace('{pay_label}', payLabel);
 
-                const platformBadge = '✈️ <b>[ TELEGRAM ]</b>';
+                const platformBadge = ctx.platform === 'whatsapp' ? '📱 <b>[ WHATSAPP ]</b>' : '✈️ <b>[ TELEGRAM ]</b>';
                 const badge = (isFirstOrder ? `\n🔥 <b>[ NOUVEAU CLIENT ]</b> 🔥\n` : '') + platformBadge + '\n';
                 const baseNotifAdmin = (dbSettings.msg_order_received_admin || `🚨 <b>NOUVELLE COMMANDE !</b>\n{badge}\n👤 {client_name} (@{username})\n📦 {product_list}\n📍 {address}\n💰 {total}€ ({pay_icon} {pay_label})\n🔑 ID : <code>{order_id}</code>`)
                     .replace('{badge}', badge)
@@ -1474,9 +1475,9 @@ function setupOrderSystem(bot) {
     bot.action(/^confirm_payment_(.+)$/, async (ctx) => {
         const orderId = ctx.match[1];
         const order = await getOrder(orderId);
-        if (!order) return ctx.answerCbQuery('❌ Commande introuvable.');
+        if (!order) return ctx.answerCbQuery(t(ctx, 'msg_commande_introuvabl', "❌ Commande introuvable."));
         await updateOrderStatus(orderId, 'pending');
-        await ctx.answerCbQuery('✅ Paiement validé !');
+        await ctx.answerCbQuery(t(ctx, 'msg_paiement_valid', "✅ Paiement validé !"));
         await sendTelegramMessage(order.user_id, `✅ <b>Paiement Validé !</b>\n\nVotre commande <code>#${orderId.slice(-5)}</code> est confirmée.`, { parse_mode: 'HTML' });
         await ctx.editMessageCaption(`✅ <b>PAIEMENT VALIDÉ</b>`, Markup.inlineKeyboard([])).catch(() => {});
     });
@@ -1484,9 +1485,9 @@ function setupOrderSystem(bot) {
     bot.action(/^reject_payment_(.+)$/, async (ctx) => {
         const orderId = ctx.match[1];
         const order = await getOrder(orderId);
-        if (!order) return ctx.answerCbQuery('❌ Commande introuvable.');
+        if (!order) return ctx.answerCbQuery(t(ctx, 'msg_commande_introuvabl', "❌ Commande introuvable."));
         await updateOrderStatus(orderId, 'cancelled');
-        await ctx.answerCbQuery('❌ Paiement rejeté.');
+        await ctx.answerCbQuery(t(ctx, 'msg_paiement_rejet', "❌ Paiement rejeté."));
         await sendTelegramMessage(order.user_id, `❌ <b>Paiement Refusé</b>\n\nLa preuve pour la commande <code>#${orderId.slice(-5)}</code> a été refusée.`, { parse_mode: 'HTML' });
         await ctx.editMessageCaption(`❌ <b>PAIEMENT REJETÉ</b>`, Markup.inlineKeyboard([])).catch(() => {});
     });
@@ -1587,7 +1588,7 @@ function setupOrderSystem(bot) {
     });
 
     bot.action('quit_livreur_final', async (ctx) => {
-        await ctx.answerCbQuery('Profil désactivé');
+        await ctx.answerCbQuery(t(ctx, 'msg_profil_d_sactiv', "Profil désactivé"));
         const userId = `${ctx.platform}_${ctx.from.id}`;
         await supabase.from(COL_USERS).update({ is_livreur: false, is_available: false, updated_at: ts() }).eq('id', userId);
         
@@ -1735,7 +1736,7 @@ function setupOrderSystem(bot) {
         const order = await getOrder(orderId);
         const settings = ctx.state?.settings || await getAppSettings();
         
-        if (!order) return ctx.answerCbQuery('❌ Commande introuvable.');
+        if (!order) return ctx.answerCbQuery(t(ctx, 'msg_commande_introuvabl', "❌ Commande introuvable."));
 
         // Si c'est un livreur qui regarde une commande disponible, on lui montre le menu d'acceptation
         const isLivreurRole = user?.is_livreur === true;
@@ -1848,7 +1849,7 @@ function setupOrderSystem(bot) {
     });
 
     bot.action(/^notify_(.+)_(.+)$/, async (ctx) => {
-        await ctx.answerCbQuery('Notification envoyée ✅');
+        await ctx.answerCbQuery(t(ctx, 'msg_notification_envoy_e', "Notification envoyée ✅"));
         const orderId = ctx.match[1];
         const timeCode = ctx.match[2];
         const order = await getOrder(orderId);
@@ -1909,7 +1910,7 @@ function setupOrderSystem(bot) {
 
         // Validation stricte du schéma : 1. Client -> 2. Livreur -> 3. Client ... -> 6
         if (count >= 6) {
-            return ctx.reply("⚠️ <b>Limite d'échanges atteinte.</b>\n\nLe chat est clôturé (6/6).", { parse_mode: 'HTML' });
+            return ctx.reply(t(ctx, 'msg_b_limite_d_changes', "⚠️ <b>Limite d'échanges atteinte.</b>\n\nLe chat est clôturé (6/6)."), { parse_mode: 'HTML' });
         }
 
         // Tour de jeu : client envoie msg 1, livreur répond msg 2, client msg 3...
@@ -1998,11 +1999,11 @@ function setupOrderSystem(bot) {
         const settings = ctx.state?.settings || await getAppSettings();
         const order = await getOrder(orderId);
         if (!order || order.status === 'delivered' || order.status === 'cancelled') {
-            return ctx.answerCbQuery('Action impossible ou déjà effectuée.', true);
+            return ctx.answerCbQuery(t(ctx, 'msg_action_impossible_ou', "Action impossible ou déjà effectuée."), true);
         }
 
         await updateOrderStatus(orderId, 'cancelled');
-        await ctx.answerCbQuery('Votre commande a été annulée. ❌', true);
+        await ctx.answerCbQuery(t(ctx, 'msg_votre_commande_a_t_a', "Votre commande a été annulée. ❌"), true);
 
         const shortId = orderId.slice(-5);
         await safeEdit(ctx, `❌ <b>Commande #${shortId} annulée</b>\n\nVotre demande d'annulation a bien été prise en compte.`, Markup.inlineKeyboard([[Markup.button.callback(settings.btn_back_quick_menu || '◀️ Retour Menu', 'main_menu')]]));
@@ -2029,11 +2030,11 @@ function setupOrderSystem(bot) {
         const settings = ctx.state?.settings || await getAppSettings();
         const order = await getOrder(orderId);
         if (!order || order.status === 'delivered' || order.status === 'cancelled') {
-            return ctx.answerCbQuery('Action impossible ou déjà effectuée.', true);
+            return ctx.answerCbQuery(t(ctx, 'msg_action_impossible_ou', "Action impossible ou déjà effectuée."), true);
         }
 
         await updateOrderStatus(orderId, 'cancelled');
-        await ctx.answerCbQuery('La commande a été annulée. ❌', true);
+        await ctx.answerCbQuery(t(ctx, 'msg_la_commande_a_t_annu', "La commande a été annulée. ❌"), true);
 
         const shortId = orderId.slice(-5);
         await safeEdit(ctx, `🚩 <b>COMMANDE #${shortId} ANNULÉE</b>\n\nL'annulation a bien été effectuée.`, Markup.inlineKeyboard([[Markup.button.callback(settings.btn_back_to_livreur_menu || '◀️ Menu Livreur', 'livreur_menu')]]));
@@ -2136,7 +2137,14 @@ function setupOrderSystem(bot) {
     // Fonction utilitaire pour uploader un média de review
     async function _uploadReviewMedia(ctx, userId, mediaItem, isVideo = false) {
         const ext = isVideo ? '.mp4' : '.jpg';
-        try {
+        if (ctx.platform === 'whatsapp' && mediaItem.isWa) {
+            try {
+                const { uploadMediaBuffer } = require('../services/database');
+                const buffer = await ctx.channel.downloadMedia(mediaItem.msg);
+                if (buffer) return await uploadMediaBuffer(buffer, `rev_${Date.now()}${ext}`);
+            } catch (e) { console.error('[REVIEW-MEDIA-WA]', e.message); }
+        } else if (ctx.platform === 'telegram') {
+            try {
                 const fileId = isVideo
                     ? (Array.isArray(mediaItem) ? mediaItem[0]?.file_id : mediaItem?.file_id)
                     : (Array.isArray(mediaItem) ? mediaItem[mediaItem.length - 1]?.file_id : mediaItem?.file_id);
@@ -2149,6 +2157,7 @@ function setupOrderSystem(bot) {
                 const mediaArr = Array.isArray(mediaItem) ? mediaItem : [mediaItem];
                 return mediaArr[mediaArr.length - 1]?.file_id || null;
             }
+        }
         return null;
     }
 
@@ -2187,7 +2196,7 @@ function setupOrderSystem(bot) {
 
     // Hint button — just tells user to send a photo/video directly
     bot.action('review_add_media_hint', async (ctx) => {
-        await ctx.answerCbQuery('📸 Envoyez une photo ou vidéo directement dans le chat !', { show_alert: true });
+        await ctx.answerCbQuery(t(ctx, 'msg_envoyez_une_photo_o', "📸 Envoyez une photo ou vidéo directement dans le chat !"), { show_alert: true });
     });
 
     // Finaliser l'avis après avoir ajouté les médias
@@ -2399,14 +2408,28 @@ function setupOrderSystem(bot) {
                 const ext = isVideo ? '.mp4' : '.jpg';
                 const fileName = `rev_${Date.now()}${ext}`;
 
-                try {
-                    const fileId = media.file_id || media;
-                    const link = await ctx.telegram.getFileLink(fileId);
-                    const permanentUrl = await uploadMediaFromUrl(link.href, fileName);
-                    finalMediaUrls.push(permanentUrl);
-                } catch (e) {
-                    console.warn('[REVIEW] Upload to storage failed, using file_id:', e.message);
-                    finalMediaUrls.push(media.file_id || media); 
+                if (ctx.platform === 'whatsapp' && media.isWa) {
+                    try {
+                        const { uploadMediaBuffer } = require('../services/database');
+                        const buffer = await ctx.channel.downloadMedia(media.msg);
+                        if (buffer) {
+                             const mime = isVideo ? 'video/mp4' : 'image/jpeg';
+                            const permanentUrl = await uploadMediaBuffer(buffer, fileName, mime);
+                            finalMediaUrls.push(permanentUrl);
+                        }
+                    } catch (e) {
+                        console.error('[WA-REVIEW] Media processing failed:', e.message);
+                    }
+                } else if (ctx.telegram) {
+                    try {
+                        const fileId = media.file_id || media;
+                        const link = await ctx.telegram.getFileLink(fileId);
+                        const permanentUrl = await uploadMediaFromUrl(link.href, fileName);
+                        finalMediaUrls.push(permanentUrl);
+                    } catch (e) {
+                        console.warn('[REVIEW] Upload to storage failed, using file_id:', e.message);
+                        finalMediaUrls.push(media.file_id || media); 
+                    }
                 }
             }
 
@@ -2526,7 +2549,7 @@ function setupOrderSystem(bot) {
                 if (order) {
                     const count = (parseInt(order.chat_count) || 0);
                     if (count >= 6) {
-                        await ctx.reply("❌ Impossible d'envoyer : Limite de 6 échanges déjà atteinte.");
+                        await ctx.reply(t(ctx, 'msg_impossible_d_envoye', "❌ Impossible d'envoyer : Limite de 6 échanges déjà atteinte."));
                     } else {
                         const reason = String(ctx.message.text || '');
                         // On ne compte plus le signalement de retard comme un message de chat (notification système)
@@ -2551,7 +2574,7 @@ function setupOrderSystem(bot) {
                         const alertMsg = `⚠️ <b>SIGNALEMENT RETARD</b>\n\n🆔 Commande : <code>#${shortId}</code>\n👤 Livreur : ${safeHtml(ctx.from.first_name)}\n📝 Motif : "<i>${safeHtml(reason)}</i>"`;
                         await notifyAdmins(bot, alertMsg);
 
-                        await ctx.reply(`✅ Notification de retard envoyée au client.`).catch(() => { });
+                        await ctx.reply(t(ctx, 'msg_notification_de_ret', "✅ Notification de retard envoyée au client.")).catch(() => { });
                     }
                 }
                 return;
@@ -2572,7 +2595,7 @@ function setupOrderSystem(bot) {
                 if (order) {
                     // SÉCURITÉ : Vérifier si la commande est toujours en cours
                     if (order.status !== 'taken') {
-                        return await ctx.reply("❌ Cette commande est terminée ou annulée. La discussion est fermée.").catch(() => { });
+                        return await ctx.reply(t(ctx, 'msg_cette_commande_est', "❌ Cette commande est terminée ou annulée. La discussion est fermée.")).catch(() => { });
                     }
 
                     const reply = String(ctx.message.text || ctx.message.caption || '');
@@ -2588,7 +2611,7 @@ function setupOrderSystem(bot) {
                     const targetIdRaw = isLivreur ? order.user_id : order.livreur_id;
 
                     if (!targetIdRaw) {
-                        return await ctx.reply("❌ Impossible de trouver le destinataire (Livreur ou Client non assigné).").catch(() => { });
+                        return await ctx.reply(t(ctx, 'msg_impossible_de_trouv', "❌ Impossible de trouver le destinataire (Livreur ou Client non assigné).")).catch(() => { });
                     }
 
                     const targetId = String(targetIdRaw);
@@ -2630,7 +2653,7 @@ function setupOrderSystem(bot) {
                     const successIcon = settings ? (settings.ui_icon_success || '✅') : '✅';
                     await ctx.reply(`${successIcon} Message ${newCount}/6 transmis au ${targetRoleLabel}.`).catch(() => { });
                 } else {
-                    await ctx.reply("❌ Commande introuvable pour ce chat.").catch(() => { });
+                    await ctx.reply(t(ctx, 'msg_commande_introuvabl', "❌ Commande introuvable pour ce chat.")).catch(() => { });
                 }
                 return;
             }
@@ -2763,12 +2786,6 @@ function setupOrderSystem(bot) {
             }
 
             buttons.push([Markup.button.callback('📞 Parler à l\'Admin', 'help_chat_admin')]);
-            if (settings.admin_telegram_id) {
-                const adminIds = String(settings.admin_telegram_id).split(/[\s,]+/).map(id => id.trim().replace('telegram_', '')).filter(Boolean);
-                if (adminIds.length > 0) {
-                    buttons.push([Markup.button.url('💬 Contacter l\'Admin', `tg://user?id=${adminIds[0]}`)]);
-                }
-            }
             buttons.push([Markup.button.callback(settings.btn_back_quick_menu || '◀️ Retour Menu', 'main_menu')]);
 
             await safeEdit(ctx, text, Markup.inlineKeyboard(buttons));
@@ -2844,7 +2861,7 @@ function setupOrderSystem(bot) {
             );
         } catch (error) {
             console.error('❌ Erreur client_menu:', error);
-            await ctx.answerCbQuery('Erreur, réessayez', { show_alert: true }).catch(() => {});
+            await ctx.answerCbQuery(t(ctx, 'msg_erreur_r_essayez', "Erreur, réessayez"), { show_alert: true }).catch(() => {});
         }
     });
 
@@ -2920,7 +2937,7 @@ function setupOrderSystem(bot) {
     });
  
     bot.action('set_dispo_true', async (ctx) => {
-        await ctx.answerCbQuery("✅ Vous êtes maintenant DISPONIBLE !");
+        await ctx.answerCbQuery(t(ctx, 'msg_vous_tes_maintenant', "✅ Vous êtes maintenant DISPONIBLE !"));
         const docId = `${ctx.platform}_${ctx.from.id}`;
         const { setLivreurAvailability, getUser, getAppSettings, getLivreurOrders } = require('../services/database');
         await setLivreurAvailability(docId, true);
@@ -2934,7 +2951,7 @@ function setupOrderSystem(bot) {
     });
 
     bot.action('set_dispo_false', async (ctx) => {
-        await ctx.answerCbQuery("❌ Vous êtes maintenant INDISPONIBLE.");
+        await ctx.answerCbQuery(t(ctx, 'msg_vous_tes_maintenant', "❌ Vous êtes maintenant INDISPONIBLE."));
         const docId = `${ctx.platform}_${ctx.from.id}`;
         const { setLivreurAvailability, getUser, getAppSettings, getLivreurOrders } = require('../services/database');
         await setLivreurAvailability(docId, false);
@@ -3021,7 +3038,7 @@ function setupOrderSystem(bot) {
     });
 
     bot.action(/^supplier_ready_(.+)$/, async (ctx) => {
-        await ctx.answerCbQuery('✅ Marqué comme prêt !');
+        await ctx.answerCbQuery(t(ctx, 'msg_marqu_comme_pr_t', "✅ Marqué comme prêt !"));
         const orderId = ctx.match[1];
         await markOrderSupplierReady(orderId);
 

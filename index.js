@@ -54,6 +54,7 @@ async function bootstrap() {
 
         // 3. Initialisation du Serveur Web (Dashboard)
         console.log(`[System] Initializing server on port: ${portToUse}`);
+        server.setDispatcherInstance(dispatcher);
         const app = server.createServer(portToUse);
         
         // --- IMPORTANT: Enregistrement du bot dans le serveur pour les notifs admin ---
@@ -77,6 +78,37 @@ async function bootstrap() {
             server.setBotInstance(telegramChannel.bot); // Permet au dashboard d'envoyer des messages
         }
 
+        // --- WHATSAPP SETUP ---
+        const WhatsAppSessionChannel = require('./channels/WhatsAppSessionChannel');
+        let waSessionId = process.env.WHATSAPPD_SESSION_ID || process.env.WHATSAPP_SESSION_ID || process.env.SESSION_ID;
+        if (!waSessionId) {
+            const altKey = Object.keys(process.env).find(k => k.startsWith('WHATSAPP_SESSION_ID') || k.startsWith('WHATSAPPD_SESSION_ID'));
+            if (altKey) waSessionId = process.env[altKey];
+            else waSessionId = 'monshopbot_wa'; // Valeur par défaut pour toujours démarrer WhatsApp
+        }
+        if (waSessionId) {
+            const was = new WhatsAppSessionChannel({ sessionId: waSessionId });
+            
+            // Wire up dispatcher handler
+            was.onMessage((msg) => {
+                dispatcher.handleUpdate(was, msg).catch(err => {
+                    console.error('[Main-Handler-Error] whatsapp:', err.message);
+                });
+            });
+
+            // wait for init
+            was.initialize().then(() => {
+                console.log('[DISPATCHER] Canal whatsapp initialisé');
+            }).catch(e => console.error('[DISPATCHER] Erreur whatsapp:', e.message));
+            
+            dispatcher.registerChannel('whatsapp', was);
+            console.log('[DISPATCHER] Canal whatsapp prêt');
+        } else {
+            console.warn('⚠️ [Système] Pas de SESSION_ID WhatsApp trouvé, canal WhatsApp inactif.');
+        }
+        // --- FIN WHATSAPP SETUP ---
+
+
         const staticUrl = process.env.RENDER_EXTERNAL_URL || process.env.RAILWAY_STATIC_URL || 'localhost';
         console.log(`🔗 TEST HEALTH : https://${staticUrl}/_health`);
 
@@ -98,13 +130,37 @@ async function bootstrap() {
                     if (settings.bot_description) telegramChannel.bot.telegram.setMyDescription(settings.bot_description).catch(() => { });
                     if (settings.bot_short_description) telegramChannel.bot.telegram.setMyShortDescription(settings.bot_short_description).catch(() => { });
                     
-                    // Set default commands
+                    // Set default commands (French)
                     telegramChannel.bot.telegram.setMyCommands([
                         { command: 'start', description: '🏠 Lancer le bot / Accueil' },
                         { command: 'menu', description: '🛒 Voir le catalogue' },
                         { command: 'orders', description: '📦 Mes commandes' },
                         { command: 'help', description: '❓ Aide et support' }
                     ]).catch(() => { });
+
+                    // English
+                    telegramChannel.bot.telegram.setMyCommands([
+                        { command: 'start', description: '🏠 Start the bot / Home' },
+                        { command: 'menu', description: '🛒 View catalog' },
+                        { command: 'orders', description: '📦 My orders' },
+                        { command: 'help', description: '❓ Help and support' }
+                    ], { language_code: 'en' }).catch(() => { });
+
+                    // German
+                    telegramChannel.bot.telegram.setMyCommands([
+                        { command: 'start', description: '🏠 Bot starten / Startseite' },
+                        { command: 'menu', description: '🛒 Katalog ansehen' },
+                        { command: 'orders', description: '📦 Meine Bestellungen' },
+                        { command: 'help', description: '❓ Hilfe und Support' }
+                    ], { language_code: 'de' }).catch(() => { });
+
+                    // Spanish
+                    telegramChannel.bot.telegram.setMyCommands([
+                        { command: 'start', description: '🏠 Iniciar el bot / Inicio' },
+                        { command: 'menu', description: '🛒 Ver catálogo' },
+                        { command: 'orders', description: '📦 Mis pedidos' },
+                        { command: 'help', description: '❓ Ayuda y soporte' }
+                    ], { language_code: 'es' }).catch(() => { });
                 }).catch(() => { });
             }).catch(err => {
                 console.error('❌ Error launching Telegram:', err.message);
@@ -146,8 +202,8 @@ async function bootstrap() {
                 const { runRecommendationEngine } = require('./services/recommendation_engine');
                 const { checkAbandonedCarts } = require('./services/smart_reminders');
                 
-                // Run ranker every 30 minutes to catch the target hour
-                setInterval(runRecommendationEngine, 30 * 60 * 1000);
+                // Run ranker every hour
+                setInterval(runRecommendationEngine, 60 * 60 * 1000);
                 
                 // Run abandoned carts every 15 minutes
                 setInterval(checkAbandonedCarts, 15 * 60 * 1000);

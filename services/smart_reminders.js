@@ -1,94 +1,61 @@
+const { translate } = require('./translator');
 const { supabase } = require('../config/supabase');
-const { getBotInstance } = require('../server');
-const { getAppSettings } = require('./database');
+const { getBotInstance } = require('./notifications');
+const { getAppSettings, COL_USERS } = require('./database');
+const { analyzeUserTimePattern, heavyRanker, generateDynamicMessage } = require('./x_engine');
 
 /**
  * Analyse les commandes pour chaque utilisateur et envoie des rappels intelligents
  */
 async function runSmartAnalysis() {
     try {
-        console.log('[SMART-ANALYSIS] Starting periodic order analysis...');
-        
-        // 1. Récupérer toutes les commandes des 30 derniers jours
-        const thirtyDaysAgo = new Date();
-        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-        
-        const { data: orders, error } = await supabase
-            .from('bot_orders')
-            .select('*')
-            .gte('created_at', thirtyDaysAgo.toISOString());
+        const { data: users } = await supabase.from(COL_USERS).select('*');
+        if (!users) return;
 
-        if (error) throw error;
-        if (!orders || orders.length === 0) return;
-
-        // Groupement par utilisateur
-        const userStats = {};
-        orders.forEach(o => {
-            if (!userStats[o.user_id]) userStats[o.user_id] = { products: {}, hours: [] };
-            
-            // Heure de commande
-            const hour = new Date(o.created_at).getHours();
-            userStats[o.user_id].hours.push(hour);
-
-            // Produits
-            try {
-                let itemsList = null;
-                if (o.cart) {
-                    itemsList = typeof o.cart === 'string' ? JSON.parse(o.cart) : o.cart;
-                } else if (o.items) {
-                    itemsList = typeof o.items === 'string' ? JSON.parse(o.items) : o.items;
-                }
-                
-                if (Array.isArray(itemsList)) {
-                    itemsList.forEach(it => {
-                        const name = it.productName || it.name || it.id;
-                        if (name) userStats[o.user_id].products[name] = (userStats[o.user_id].products[name] || 0) + 1;
-                    });
-                } else if (o.product_name) {
-                    const parts = o.product_name.split(',');
-                    parts.forEach(p => {
-                        const cleanName = p.split(' (x')[0].split('\n')[0].trim();
-                        if (cleanName) userStats[o.user_id].products[cleanName] = (userStats[o.user_id].products[cleanName] || 0) + 1;
-                    });
-                }
-            } catch(e) {}
-        });
-
+        const currentHour = new Date().getHours();
+        const currentDay = new Date().getDay();
         const bot = getBotInstance();
         if (!bot) return;
 
-        // Analyse et envoi
-        for (const userId in userStats) {
-            const stats = userStats[userId];
+        for (const user of users) {
+            const history = user.data.view_history || [];
             
-            // Produit favori
-            let favorite = null;
-            let maxCount = 0;
-            for (const p in stats.products) {
-                if (stats.products[p] > maxCount) {
-                    maxCount = stats.products[p];
-                    favorite = p;
-                }
-            }
+            // X-Engine: Time Prediction
+            const timePattern = analyzeUserTimePattern(history);
+            
+            // Should we contact now? (1 hour before their usual time)
+            let targetHour = timePattern.bestHour - 1;
+            if (targetHour < 0) targetHour = 23;
 
-            // Heure favorite (moyenne)
-            const avgHour = Math.round(stats.hours.reduce((a, b) => a + b, 0) / stats.hours.length);
-            const currentHour = new Date().getHours();
+            // Only send if it's the right time and we haven't sent a reminder today
+            const lastReminder = user.data.last_x_reminder ? new Date(user.data.last_x_reminder).getDate() : null;
+            const today = new Date().getDate();
 
-            // Si c'est l'heure de sa commande habituelle et qu'il a un produit favori
-            if (currentHour === avgHour && favorite && maxCount >= 2) {
-                console.log(`[SMART-REMINDER] Sending recommendation to ${userId} for ${favorite}`);
-                const msg = `🌟 <b>CONSEIL VIP</b>\n\nOn a remarqué que vous adorez le <b>${favorite}</b> à cette heure-ci ! 😋\n\nEnvie de vous faire plaisir ? On s'occupe de tout en un clic sur la Mini App ! 💨`;
+            if (currentHour === targetHour && lastReminder !== today) {
+                // X-Engine: Ranker & Templating
+                const rankResult = heavyRanker(history, !user.data.has_ordered);
+                const message = generateDynamicMessage(user, rankResult, timePattern);
+
+                const tgId = String(user.id).replace('telegram_', '');
+                const lang = user.data?.language || 'fr';
+                if (lang !== 'fr') { message = await translate(message, lang).catch(() => message); }
+                bot.telegram.sendMessage(tgId, message, {
+                    parse_mode: 'HTML',
+                    reply_markup: {
+                        inline_keyboard: [[{ text: '🚀 Ouvrir la Mini App', web_app: { url: (process.env.RENDER_EXTERNAL_URL || (process.env.RAILWAY_PUBLIC_DOMAIN ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}/catalog` : 'https://monshopbot-production.up.railway.app/catalog')) } }]]
+                    }
+                }).catch(() => {});
+
+                // Update last reminder
+                await supabase.from(COL_USERS).update({
+                    data: { ...user.data, last_x_reminder: new Date().toISOString() }
+                }).eq('id', user.id);
                 
-                const keyboard = {
-                    inline_keyboard: [[{ text: '🛍️ Ouvrir la Mini App', web_app: { url: process.env.WEBAPP_URL || '' } }]]
-                };
-
-                bot.telegram.sendMessage(userId.replace('telegram_', ''), msg, { parse_mode: 'HTML', reply_markup: keyboard }).catch(() => {});
+                console.log(`[X-Engine] Relance envoyée à ${user.id} (Rank: ${rankResult.category})`);
             }
         }
     } catch (e) {
-        console.error('[SMART-ANALYSIS] Error:', e.message);
+        console.error('[X-Engine] Erreur CRON:', e);
     }
 }
 
@@ -98,47 +65,40 @@ async function runSmartAnalysis() {
 async function checkAbandonedCarts() {
     try {
         const { data: carts, error } = await supabase
-            .from('bot_state')
-            .select('*')
-            .eq('namespace', 'active_carts');
+            .from('bot_settings')
+            .select('data')
+            .eq('key', 'active_carts')
+            .single();
 
         if (error || !carts) return;
+        const allCarts = carts.data || {};
         const now = Date.now();
         const bot = getBotInstance();
 
-        for (const cartRow of carts) {
-            const userId = cartRow.user_key;
-            const c = cartRow.value || {};
-            
-            // Si le panier a plus de 30 minutes, on le supprime (expiration)
-            if (now - c.updated_at > 30 * 60 * 1000) {
-                await supabase.from('bot_state').delete().eq('id', cartRow.id);
-                continue;
-            }
-
+        for (const userId in allCarts) {
+            const c = allCarts[userId];
             // Si le panier a plus de 15 minutes et n'a pas été notifié
             if (now - c.updated_at > 15 * 60 * 1000 && !c.notified) {
-                const itemCount = c.cart ? c.cart.length : 0;
-                if (itemCount === 0) continue;
+                const itemCount = c.cart.length;
+                let msg = `🛒 <b>PANIER EN ATTENTE</b>\n\nHey ! Vous avez laissé <b>${itemCount} article(s)</b> dans votre panier. 😱\n\nIls vous attendent bien sagement. On valide la commande maintenant ?`;
+                try {
+                    const { data: userRow } = await supabase.from(COL_USERS).select('data').eq('id', userId).single();
+                    const lang = userRow?.data?.language || 'fr';
+                    if (lang !== 'fr') msg = await translate(msg, lang).catch(() => msg);
+                } catch(e) {}
                 
-                const msg = `🛒 <b>PANIER EN ATTENTE</b>\n\nHey ! Vous avez laissé <b>${itemCount} article(s)</b> dans votre panier. 😱\n\nIls vous attendent bien sagement. On valide la commande maintenant ?`;
-                
-                const baseDomain = process.env.RENDER_EXTERNAL_URL || (process.env.RAILWAY_PUBLIC_DOMAIN ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}` : 'https://farmstegridy-bot.onrender.com');
-                const catalogUrl = `${baseDomain}/catalog?v=${Date.now()}`;
-
                 const keyboard = {
-                    inline_keyboard: [[{ text: '✅ Finaliser ma commande', web_app: { url: catalogUrl } }]]
+                    inline_keyboard: [[{ text: '✅ Finaliser ma commande', web_app: { url: (process.env.RENDER_EXTERNAL_URL || (process.env.RAILWAY_PUBLIC_DOMAIN ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}/catalog` : 'https://monshopbot-production.up.railway.app/catalog')) } }]]
                 };
 
                 bot.telegram.sendMessage(userId.replace('telegram_', ''), msg, { parse_mode: 'HTML', reply_markup: keyboard }).catch(() => {});
-                
-                c.notified = true;
-                await supabase.from('bot_state').update({ value: c }).eq('id', cartRow.id);
+                allCarts[userId].notified = true;
             }
         }
-    } catch(e) {
-        console.error('[checkAbandonedCarts] Error:', e.message);
-    }
+
+        // Sauvegarder l'état
+        await supabase.from('bot_settings').update({ data: allCarts }).eq('key', 'active_carts');
+    } catch(e) {}
 }
 
 module.exports = { runSmartAnalysis, checkAbandonedCarts };

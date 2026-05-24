@@ -8,14 +8,8 @@ async function downloadToBuffer(url) {
     if (typeof url !== 'string' || !url.startsWith('http')) return null;
     return new Promise((resolve) => {
         const mod = url.startsWith('https') ? https : http;
-        mod.get(url, { timeout: 30000 }, (res) => {
+        mod.get(url, { timeout: 10000 }, (res) => {
             if (res.statusCode !== 200) return resolve(null);
-            const size = parseInt(res.headers['content-length'] || '0');
-            if (size > 15 * 1024 * 1024) {
-                console.log(`[downloadToBuffer] Media too large (${size} bytes). Aborting.`);
-                res.destroy();
-                return resolve(null);
-            }
             const chunks = [];
             res.on('data', chunk => chunks.push(chunk));
             res.on('end', () => {
@@ -101,26 +95,6 @@ class TelegramChannel extends Channel {
                 console.error('[TG-CB] ERREUR: Pas de messageHandler !');
             }
         });
-
-        this.bot.on('chat_join_request', async (ctx) => {
-            try {
-                await ctx.telegram.approveChatJoinRequest(ctx.chat.id, ctx.from.id);
-                console.log(`[TG] Demande d'adhésion approuvée pour ${ctx.from.id} dans le chat ${ctx.chat.id}`);
-                
-                if (this.messageHandler) {
-                    // Simuler la commande /start pour envoyer le menu de bienvenue complet
-                    await this.messageHandler({
-                        from: ctx.from.id,
-                        name: ctx.from.first_name,
-                        text: '/start',
-                        type: 'message',
-                        ctx: ctx
-                    });
-                }
-            } catch (err) {
-                console.error("[TG] Erreur lors de l'approbation chat_join_request:", err.message);
-            }
-        });
     }
 
     async start() {
@@ -130,15 +104,58 @@ class TelegramChannel extends Channel {
         }
 
         // --- DISTRIBUTED LOCK ---
-        // Lock désactivé pour Render (instance unique) pour assurer un boot immédiat
-        console.log(`[TG-LOCK] Distributed lock bypassed for instant boot.`);
+        const { claimLock, checkLock } = require('../services/database');
         
+        // Use a stable ID for the replica (index is better than PID for reboots)
+        const replicaIndex = process.env.RAILWAY_REPLICA_INDEX || 0;
+        const processUniqueId = Math.random().toString(36).substring(2, 8);
+        const instanceId = `replica-${replicaIndex}-${processUniqueId}`;
+        const telegramLockId = `tg_lock`;
+
+        try {
+            const lock = await checkLock(telegramLockId);
+            
+            // If lock exists and isn't ours, check if it's expired
+            if (lock && lock.owner && lock.owner !== instanceId) {
+                const now = Date.now();
+                const expiresAtDate = new Date(lock.expires).getTime();
+                
+                if (expiresAtDate > now) {
+                    const expiresAt = new Date(lock.expires).toLocaleTimeString();
+                    console.log(`[TG-LOCK] ⚠️ Session busy (Owner: ${lock.owner}, Expires: ${expiresAt}). Retrying in 30s...`);
+                    setTimeout(() => this.start(), 30000);
+                    return;
+                }
+            }
+
+            // Try to claim
+            const claimed = await claimLock(telegramLockId, instanceId);
+            if (!claimed) {
+                console.log(`[TG-LOCK] ❌ Claim failed. Retrying in 30s...`);
+                setTimeout(() => this.start(), 30000);
+                return;
+            }
+
+            console.log(`[TG-LOCK] 🎉 Lock obtained by ${instanceId}. launching bot...`);
+            
+            // Launch bot via heartbeat
+            if (this.heartbeatInterval) clearInterval(this.heartbeatInterval);
+            this.heartbeatInterval = setInterval(async () => {
+                await claimLock(telegramLockId, instanceId);
+            }, 45000); // refresh every 45s (lock TTL is 60s)
+        } catch (err) {
+            console.error('[TG-LOCK] Error during lock sequence:', err);
+            setTimeout(() => this.start(), 30000);
+            return;
+        }
+
+        console.log(`[TG-LOCK] Telegram lock claimed by ${instanceId}`);
         console.log(`[TG] Lancement du bot (${this.token.substring(0, 4)}****...)...`);
         
         // Build launch options
         const launchOptions = {
-            drop_pending_updates: false,
-            allowedUpdates: ['message', 'callback_query', 'chat_join_request']
+            drop_pending_updates: true,
+            allowedUpdates: ['message', 'callback_query']
         };
 
         const launch = async (retryCount = 0) => {

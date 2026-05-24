@@ -1,3 +1,4 @@
+const { t } = require('../services/i18n');
 /**
  * MARKETPLACE FOURNISSEURS
  *
@@ -145,7 +146,7 @@ function setupMarketplaceHandlers(bot) {
     });
 
     bot.action('mp_quit_final', async (ctx) => {
-        await ctx.answerCbQuery('Profil supprimé');
+        await ctx.answerCbQuery(t(ctx, 'msg_profil_supprim', "Profil supprimé"));
         const supplier = await getSupplierByTelegramId(String(ctx.from.id));
         if (supplier) {
             const { deleteSupplier } = require('../services/database');
@@ -244,7 +245,7 @@ function setupMarketplaceHandlers(bot) {
         const { getProducts, saveProduct } = require('../services/database');
         const all = await getProducts(true);
         const p = all.find(x => String(x.id) === String(pId));
-        if (!p) return ctx.answerCbQuery('Produit introuvable.');
+        if (!p) return ctx.answerCbQuery(t(ctx, 'msg_produit_introuvable', "Produit introuvable."));
 
         const newStatus = (p.is_active === false) ? true : false;
         await saveProduct({ id: p.id, is_active: newStatus });
@@ -360,7 +361,7 @@ function setupMarketplaceHandlers(bot) {
     });
 
     bot.action(/^mp_confirmdelete_(.+)$/, async (ctx) => {
-        await ctx.answerCbQuery('🗑 Supprimé !');
+        await ctx.answerCbQuery(t(ctx, 'msg_supprim', "🗑 Supprimé !"));
         await deleteMarketplaceProduct(ctx.match[1]);
         return safeEdit(ctx, '✅ Produit supprimé.', Markup.inlineKeyboard([
             [Markup.button.callback('◀️ Mes Produits', 'mp_my_products')]
@@ -526,7 +527,7 @@ function setupMarketplaceHandlers(bot) {
 
     // Accepter une commande
     bot.action(/^mp_accept_(.+)$/, async (ctx) => {
-        await ctx.answerCbQuery('✅ Commande acceptée !');
+        await ctx.answerCbQuery(t(ctx, 'msg_commande_accept_e', "✅ Commande acceptée !"));
         const orderId = ctx.match[1];
         await updateMarketplaceOrderStatus(orderId, 'accepted');
         
@@ -551,7 +552,7 @@ function setupMarketplaceHandlers(bot) {
 
     // Commande prête
     bot.action(/^mp_ready_(.+)$/, async (ctx) => {
-        await ctx.answerCbQuery('📦 Marquée comme prête !');
+        await ctx.answerCbQuery(t(ctx, 'msg_marqu_e_comme_pr_te', "📦 Marquée comme prête !"));
         const orderId = ctx.match[1];
         await updateMarketplaceOrderStatus(orderId, 'ready');
         
@@ -575,14 +576,14 @@ function setupMarketplaceHandlers(bot) {
 
     bot.action(/^retail_accept_(.+)$/, async (ctx) => {
         const orderId = ctx.match[1].trim();
-        await ctx.answerCbQuery('✅ Commande acceptée !');
+        await ctx.answerCbQuery(t(ctx, 'msg_commande_accept_e', "✅ Commande acceptée !"));
 
         const [order, supplier] = await Promise.all([
             getOrder(orderId),
             getSupplierByTelegramId(String(ctx.from.id))
         ]);
 
-        if (!order) return ctx.reply("❌ Commande introuvable.");
+        if (!order) return ctx.reply(t(ctx, 'msg_commande_introuvabl', "❌ Commande introuvable."));
 
         await updateOrderStatus(orderId, 'supplier_accepted');
 
@@ -603,14 +604,14 @@ function setupMarketplaceHandlers(bot) {
 
     bot.action(/^retail_ready_(.+)$/, async (ctx) => {
         const orderId = ctx.match[1].trim();
-        await ctx.answerCbQuery('📦 Commande prête !');
+        await ctx.answerCbQuery(t(ctx, 'msg_commande_pr_te', "📦 Commande prête !"));
 
         const [order, supplier] = await Promise.all([
             getOrder(orderId),
             getSupplierByTelegramId(String(ctx.from.id))
         ]);
 
-        if (!order || !supplier) return ctx.reply("❌ Erreur (Commande ou Fournisseur introuvable).");
+        if (!order || !supplier) return ctx.reply(t(ctx, 'msg_erreur_commande_ou', "❌ Erreur (Commande ou Fournisseur introuvable)."));
 
         await updateOrderStatus(orderId, 'supplier_ready');
 
@@ -641,7 +642,7 @@ function setupMarketplaceHandlers(bot) {
 
     bot.action(/^retail_reject_(.+)$/, async (ctx) => {
         const orderId = ctx.match[1].trim();
-        await ctx.answerCbQuery('❌ Commande refusée.');
+        await ctx.answerCbQuery(t(ctx, 'msg_commande_refus_e', "❌ Commande refusée."));
         
         const order = await getOrder(orderId);
         if (order) {
@@ -663,7 +664,7 @@ function setupMarketplaceHandlers(bot) {
     });
 
     bot.action(/^mp_confirmreject_(.+)$/, async (ctx) => {
-        await ctx.answerCbQuery('❌ Commande refusée');
+        await ctx.answerCbQuery(t(ctx, 'msg_commande_refus_e', "❌ Commande refusée"));
         const orderId = ctx.match[1];
         await updateMarketplaceOrderStatus(orderId, 'cancelled');
         const supplier = await getSupplierByTelegramId(String(ctx.from.id));
@@ -812,7 +813,7 @@ function setupMarketplaceHandlers(bot) {
 
     // Ajouter au panier admin
     bot.action(/^mp_addcart_(.+)$/, async (ctx) => {
-        await ctx.answerCbQuery('✅ Ajouté au panier !');
+        await ctx.answerCbQuery(t(ctx, 'msg_ajout_au_panier', "✅ Ajouté au panier !"));
         const productId = ctx.match[1];
         const product = await getMarketplaceProduct(productId);
         if (!product) return;
@@ -935,7 +936,7 @@ function setupMarketplaceHandlers(bot) {
 
     // Vider le panier
     bot.action('mp_clear_cart', async (ctx) => {
-        await ctx.answerCbQuery('🗑 Panier vidé');
+        await ctx.answerCbQuery(t(ctx, 'msg_panier_vid', "🗑 Panier vidé"));
         adminMarketCart.delete(String(ctx.from.id));
         return safeEdit(ctx, '🗑 Panier vidé.', Markup.inlineKeyboard([
             [Markup.button.callback('◀️ Retour Marketplace', 'mp_browse')]
@@ -1053,7 +1054,7 @@ function setupMarketplaceHandlers(bot) {
 
     // Marquer comme récupérée
     bot.action(/^mp_collected_(.+)$/, async (ctx) => {
-        await ctx.answerCbQuery('✅ Récupérée !');
+        await ctx.answerCbQuery(t(ctx, 'msg_r_cup_r_e', "✅ Récupérée !"));
         await updateMarketplaceOrderStatus(ctx.match[1], 'collected');
         return safeEdit(ctx, '✅ Commande marquée comme récupérée.', Markup.inlineKeyboard([
             [Markup.button.callback('◀️ Retour Commandes', 'mp_admin_orders')]
@@ -1269,7 +1270,7 @@ function setupMarketplaceHandlers(bot) {
         if (!ctx.from.id) return;
         const pId = ctx.match[1];
         await require('../services/database').validateMarketplaceProduct(pId, true);
-        await ctx.answerCbQuery('Produit validé ✅');
+        await ctx.answerCbQuery(t(ctx, 'msg_produit_valid', "Produit validé ✅"));
         await ctx.editMessageText(ctx.callbackQuery.message.text + '\n\n✅ <b>VALIDÉ !</b>');
     });
 
@@ -1278,7 +1279,7 @@ function setupMarketplaceHandlers(bot) {
         const pId = ctx.match[1];
         try {
             await require('../services/database').promoteMarketplaceProduct(pId);
-            await ctx.answerCbQuery('Promu au catalogue client ! 🚀');
+            await ctx.answerCbQuery(t(ctx, 'msg_promu_au_catalogue_c', "Promu au catalogue client ! 🚀"));
             await ctx.editMessageText(ctx.callbackQuery.message.text + '\n\n🚀 <b>PROMU AU CATALOGUE !</b>');
         } catch (e) { await ctx.answerCbQuery('Erreur : ' + e.message, { show_alert: true }); }
     });
@@ -1295,13 +1296,13 @@ function setupMarketplaceHandlers(bot) {
             
             await saveMarketplaceProduct({ id: productId, image_url: imageUrl || fileUrl.toString() });
             
-            return ctx.reply('✅ <b>Photo mise à jour !</b>', {
+            return ctx.reply(t(ctx, 'msg_b_photo_mise_jour_b', "✅ <b>Photo mise à jour !</b>"), {
                 parse_mode: 'HTML',
                 ...Markup.inlineKeyboard([[Markup.button.callback('◀️ Retour au produit', `mp_edit_${productId}`)]])
             });
         } catch (e) {
             console.error('handlePhotoUpload error:', e);
-            return ctx.reply('❌ Erreur lors de l\'upload. Réessayez.');
+            return ctx.reply(t(ctx, 'msg_erreur_lors_de_l_up', "❌ Erreur lors de l\'upload. Réessayez."));
         }
     }
 
@@ -1319,7 +1320,7 @@ function setupMarketplaceHandlers(bot) {
 
             // Demander la catégorie
             awaitingProductCategory.set(String(ctx.from.id), data);
-            return ctx.reply(`📸 <b>Photo ajoutée !</b>\n\n🏷 Envoyez une <b>catégorie</b> (ex: Sneakers, Textile...) ou "skip" :`, {
+            return ctx.reply(t(ctx, 'msg_b_photo_ajout_e_b_n', "📸 <b>Photo ajoutée !</b>\\n\\n🏷 Envoyez une <b>catégorie</b> (ex: Sneakers, Textile...) ou \"skip\" :"), {
                 parse_mode: 'HTML',
                 ...Markup.inlineKeyboard([
                     [Markup.button.callback('⏭ Passer', `mp_skipcat_${ctx.from.id}`)],

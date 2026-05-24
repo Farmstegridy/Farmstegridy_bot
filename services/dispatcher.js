@@ -430,6 +430,17 @@ class Dispatcher {
             }
         }
 
+        // Nettoyage Emojis pour les boutons du Reply Keyboard (Style La Frappe)
+        const cleanText = lowerText.replace(/[\u{1F300}-\u{1F9FF}]/gu, '').trim();
+
+        if (['menu', 'hi', 'bonjour', 'salut', 'hello', 'hey', 'yo', 'coucou', 'start', 'boutique', 'catalogue', 'commander', 'commande', 'aide', 'help', 
+             'panier', 'réglages', 'reglages', 'commandes', 'historique', 'profile', 'parrain', 'livreur', 'fournisseur', 'admin'].includes(cleanText) || 
+            ['menu', 'hi', 'bonjour', 'salut', 'hello', 'hey', 'yo', 'coucou', 'start', 'boutique', 'catalogue', 'commander', 'commande', 'aide', 'help', 
+             'panier', 'réglages', 'reglages', 'commandes', 'historique', 'profile', 'parrain', 'livreur', 'fournisseur', 'admin'].includes(lowerText)) {
+            
+            if (this.commands.has('start')) return await this.commands.get('start')(ctx);
+        }
+
         for (const h of this.onHandlers) {
             if (h.type === 'text' && (ctx.message.text || ctx.text)) {
                 await h.fn(ctx, () => {});
@@ -442,20 +453,6 @@ class Dispatcher {
             } else if (h.type === 'location' && ctx.message.location) {
                 await h.fn(ctx, () => {});
             }
-            if (ctx._handled) break;
-        }
-
-        if (ctx._handled) return;
-
-        // Nettoyage Emojis pour les boutons du Reply Keyboard (Style La Frappe)
-        const cleanText = lowerText.replace(/[\u{1F300}-\u{1F9FF}]/gu, '').trim();
-
-        if (['menu', 'hi', 'bonjour', 'salut', 'hello', 'hey', 'yo', 'coucou', 'start', 'boutique', 'catalogue', 'commander', 'commande', 'aide', 'help', 
-             'panier', 'réglages', 'reglages', 'commandes', 'historique', 'profile', 'parrain', 'livreur', 'fournisseur', 'admin'].includes(cleanText) || 
-            ['menu', 'hi', 'bonjour', 'salut', 'hello', 'hey', 'yo', 'coucou', 'start', 'boutique', 'catalogue', 'commander', 'commande', 'aide', 'help', 
-             'panier', 'réglages', 'reglages', 'commandes', 'historique', 'profile', 'parrain', 'livreur', 'fournisseur', 'admin'].includes(lowerText)) {
-            
-            if (this.commands.has('start')) return await this.commands.get('start')(ctx);
         }
     }
 

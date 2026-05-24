@@ -16,7 +16,7 @@ async function getMarketingTemplates() {
         {
             segment: "prospect",
             title: "🚀 CRÉEZ VOTRE BOT PROFESSIONNEL",
-            message: "Bonjour {first_name}, sublimez votre activité avec un bot sur-mesure de présentation ou de vente automatisée sur Telegram .\n\n✨ <b>De 10€ à 50€ de réduction immédiate</b> sur nos formules grâce à votre code parrainage ou code promo !\n\n👇 Découvrez nos solutions BaaS :",
+            message: "Bonjour {first_name}, sublimez votre activité avec un bot sur-mesure de présentation ou de vente automatisée sur Telegram et WhatsApp.\n\n✨ <b>De 10€ à 50€ de réduction immédiate</b> sur nos formules grâce à votre code parrainage ou code promo !\n\n👇 Découvrez nos solutions BaaS :",
             action: "DÉCOUVRIR LES SOLUTIONS",
             type: "catalog"
         },

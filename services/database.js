@@ -153,7 +153,7 @@ async function claimLock(resourceName, ownerId, ttlMs = 60000) {
 
         if (error) {
             if (error.message.includes('column') && (process.env.RAILWAY_REPLICA_COUNT || 1) <= 1) {
-                console.warn('[TG-LOCK] ⚠️ Columns missing in bot_stats but only 1 replica detected. Bypassing lock for stability.');
+                // Suppress console.warn to avoid log spam on single replicas
                 return true; 
             }
             console.error('[TG-LOCK] claimLock Error:', error.message);
@@ -233,7 +233,7 @@ async function registerUser(platformUser, platform = 'telegram', referrerId = nu
         if (!needsUpdate) return { user: existing, isNew: false };
         // Update in background
         supabase.from(COL_USERS).update(encryptedData).eq('id', docId).then(() => {
-            _userCacheSet(docId, decryptUser(encryptedData));
+            _userCacheSet(docId, { ...existing, ...decryptUser(encryptedData) });
         });
         return { user: { ...existing, ...encryptedData }, isNew: false };
     }
@@ -373,51 +373,10 @@ async function getProducts(onlyActive = false) {
     if (onlyActive) {
         query = query.eq('is_active', true);
     }
+    // Priorité au custom sorting si on finit par ajouter une colonne 'display_order', 
+    // sinon created_at pour respecter l'ordre d'ajout/rangement.
     const { data } = await query.order('created_at', { ascending: true });
-    let products = data || [];
-
-    // Deduct active carts stock
-    try {
-        const { createPersistentMap } = require('./persistent_map');
-        const userCarts = createPersistentMap('userCarts');
-        const lockedStock = {};
-        const now = Date.now();
-        
-        userCarts.forEach(cart => {
-            if (!Array.isArray(cart)) return;
-            cart.forEach(item => {
-                // Check if reservation hasn't expired (15 mins)
-                if (item.addedAt && (now - item.addedAt < 15 * 60 * 1000)) {
-                    // Extract qty (handle both old MiniApp format and new bot format)
-                    const qty = parseFloat(item.qty) || ((item.n || 1) * (item.m || 1));
-                    const productId = item.productId || item.id;
-                    const pkgIdx = item.packageIndex || 0;
-                    
-                    if (!lockedStock[productId]) lockedStock[productId] = { total: 0, pkgs: {} };
-                    lockedStock[productId].total += qty;
-                    lockedStock[productId].pkgs[pkgIdx] = (lockedStock[productId].pkgs[pkgIdx] || 0) + qty;
-                }
-            });
-        });
-
-        products = products.map(p => {
-            if (lockedStock[p.id]) {
-                p.stock = Math.max(0, p.stock - lockedStock[p.id].total);
-                
-                if (Array.isArray(p.discounts_config)) {
-                    p.discounts_config = p.discounts_config.map((pkg, idx) => {
-                        const pkgLocked = lockedStock[p.id].pkgs[idx + 1] || 0;
-                        return { ...pkg, stock: Math.max(0, (pkg.stock || 0) - pkgLocked) };
-                    });
-                }
-            }
-            return p;
-        });
-    } catch(e) {
-        console.error('[DB] Error calculating locked stock:', e.message);
-    }
-
-    return products;
+    return data || [];
 }
 
 async function getProductsByCategory(onlyActive = false) {
@@ -582,20 +541,18 @@ async function getReviews(limit = 100) {
 
 async function saveReview(review) {
     const payload = JSON.stringify({ text: review.text, media: review.media || [], product_id: review.product_id });
-    const id = review.id || (Date.now().toString(36) + Math.random().toString(36).substr(2, 5));
+    const id = Date.now().toString(36) + Math.random().toString(36).substr(2, 5);
     const encrypted = {
         ...review,
         id: id,
         text: encryption.encrypt(payload),
         first_name: encryption.encrypt(review.first_name),
-        username: encryption.encrypt(review.username)
+        username: encryption.encrypt(review.username),
+        created_at: ts()
     };
-    if (!review.id) {
-        encrypted.created_at = ts();
-    }
     delete encrypted.media;
     delete encrypted.product_id;
-    return await supabase.from(COL_REVIEWS).upsert(encrypted);
+    return await supabase.from(COL_REVIEWS).insert(encrypted);
 }
 
 async function deleteReview(id) {
@@ -1083,69 +1040,35 @@ async function adjustOrderStock(orderId, action) {
             const productId = item.productId || item.id;
             const qty = action === 'increment' ? item.qty : -item.qty;
             
-            const { data: p } = await supabase.from(COL_PRODUCTS).select('id, stock, discounts_config, name').eq('id', productId).maybeSingle();
-            if (p) {
-                const packageIndex = item.packageIndex || 0;
-                let newStock = 0;
-                let isBase = packageIndex === 0;
+            const { data: p } = await supabase.from(COL_PRODUCTS).select('id, stock, name').eq('id', productId).maybeSingle();
+            if (p && typeof p.stock === 'number') {
+                const newStock = Math.max(0, p.stock + qty);
+                const updates = { stock: newStock };
                 
-                if (isBase && typeof p.stock === 'number') {
-                    newStock = Math.max(0, p.stock + qty);
-                    const updates = { stock: newStock };
-                    
-                    let alertMsg = null;
-                    if (action === 'decrement') {
-                        if (newStock <= 0 && p.stock > 0) {
-                            updates.is_active = false;
-                            updates.is_available = false;
-                            alertMsg = `🚫 <b>Rupture de Stock</b>\nLe produit <b>${p.name}</b> (Base) est épuisé. Il a été automatiquement masqué.`;
-                        } else if (newStock <= 2 && p.stock > 2) {
-                            alertMsg = `⚠️ <b>Alerte Stock Critique (${newStock} restants)</b>\nLe produit <b>${p.name}</b> (Base) n'a plus que ${newStock} unités en stock ! Veuillez réapprovisionner au plus vite.`;
-                        } else if (newStock <= 5 && p.stock > 5) {
-                            alertMsg = `⚠️ <b>Alerte Stock Bas (${newStock} restants)</b>\nLe produit <b>${p.name}</b> (Base) n'a plus que ${newStock} unités en stock. Pensez à réapprovisionner !`;
-                        }
-                    }
-                    
-                    await supabase.from(COL_PRODUCTS).update(updates).eq('id', productId);
-                    if (alertMsg) {
-                        try {
-                            const { notifyAdmins } = require('./notifications');
-                            await notifyAdmins(null, alertMsg);
-                        } catch(err) {
-                            console.error("Error sending stock alert from DB:", err.message);
-                        }
-                    }
-                } else if (!isBase && Array.isArray(p.discounts_config) && p.discounts_config[packageIndex - 1]) {
-                    const dc = p.discounts_config;
-                    const pkg = dc[packageIndex - 1];
-                    const oldStock = pkg.stock || 0;
-                    pkg.stock = Math.max(0, oldStock + qty);
-                    newStock = pkg.stock;
-                    
-                    // On déduit également du stock global du produit
-                    const newGlobalStock = Math.max(0, (p.stock || 0) + qty);
-                    
-                    let alertMsg = null;
-                    if (action === 'decrement') {
-                        if (newStock <= 0 && oldStock > 0) {
-                            alertMsg = `🚫 <b>Rupture de Stock</b>\nLe produit <b>${p.name}</b> (Format x${pkg.qty}) est épuisé.`;
-                        } else if (newStock <= 2 && oldStock > 2) {
-                            alertMsg = `⚠️ <b>Alerte Stock Critique (${newStock} restants)</b>\nLe produit <b>${p.name}</b> (Format x${pkg.qty}) n'a plus que ${newStock} unités.`;
-                        }
-                    }
-                    
-                    await supabase.from(COL_PRODUCTS).update({ discounts_config: dc, stock: newGlobalStock }).eq('id', productId);
-                    if (alertMsg) {
-                        try {
-                            const { notifyAdmins } = require('./notifications');
-                            await notifyAdmins(null, alertMsg);
-                        } catch(err) {
-                            console.error("Error sending stock alert from DB:", err.message);
-                        }
+                let alertMsg = null;
+                if (action === 'decrement') {
+                    if (newStock <= 0 && p.stock > 0) {
+                        updates.is_active = false;
+                        updates.is_available = false;
+                        alertMsg = `🚫 <b>Rupture de Stock</b>\nLe produit <b>${p.name}</b> est épuisé. Il a été automatiquement masqué du catalogue du bot.`;
+                    } else if (newStock <= 2 && p.stock > 2) {
+                        alertMsg = `⚠️ <b>Alerte Stock Critique (${newStock} restants)</b>\nLe produit <b>${p.name}</b> n'a plus que ${newStock} unités en stock ! Veuillez réapprovisionner au plus vite.`;
+                    } else if (newStock <= 5 && p.stock > 5) {
+                        alertMsg = `⚠️ <b>Alerte Stock Bas (${newStock} restants)</b>\nLe produit <b>${p.name}</b> n'a plus que ${newStock} unités en stock. Pensez à réapprovisionner !`;
                     }
                 }
                 
-                await logStockMovement(productId, qty, `order_${action}_pkg${packageIndex}`, orderId);
+                await supabase.from(COL_PRODUCTS).update(updates).eq('id', productId);
+                
+                if (alertMsg) {
+                    try {
+                        const { notifyAdmins } = require('./notifications');
+                        await notifyAdmins(null, alertMsg);
+                    } catch(err) {
+                        console.error("Error sending stock alert from DB:", err.message);
+                    }
+                }
+                await logStockMovement(productId, qty, `order_${action}`, orderId);
             }
         }
     } catch(e) {
@@ -1709,61 +1632,238 @@ const database = {
     },
     syncUserCart: async (userId, cart) => {
         try {
-            const { createPersistentMap } = require('./persistent_map');
-            const userCarts = createPersistentMap('userCarts');
+            const { data: settings } = await supabase.from(COL_SETTINGS).select('data').eq('key', 'active_carts').single();
+            const carts = settings ? (settings.data || {}) : {};
+            
             if (!cart || cart.length === 0) {
-                userCarts.delete(userId);
+                delete carts[userId];
             } else {
-                userCarts.set(userId, cart);
+                carts[userId] = {
+                    cart: cart,
+                    updated_at: Date.now(),
+                    notified: false
+                };
             }
-        } catch (e) {
-            console.error('[syncUserCart] Error:', e.message);
-        }
+            
+            if (settings) {
+                await supabase.from(COL_SETTINGS).update({ data: carts }).eq('key', 'active_carts');
+            } else {
+                await supabase.from(COL_SETTINGS).insert([{ key: 'active_carts', data: carts }]);
+            }
+        } catch (e) {}
     },
     trackUserView: async (userId, viewData) => {
         try {
-            const stateId = `user_views:${userId}`;
-            const { data: stateData } = await supabase.from('bot_state').select('value').eq('id', stateId).maybeSingle();
-            let views = stateData ? (stateData.value || []) : [];
+            const { data: settings } = await supabase.from(COL_SETTINGS).select('data').eq('key', 'user_views').maybeSingle();
+            const views = settings ? (settings.data || {}) : {};
             
-            views.push(viewData);
-            if (views.length > 50) views = views.slice(-50);
+            if (!views[userId]) views[userId] = [];
+            views[userId].push(viewData);
             
-            const payload = {
-                id: stateId,
-                namespace: 'user_views',
-                user_key: String(userId),
-                value: views
-            };
-            await supabase.from('bot_state').upsert([payload], { onConflict: 'id' });
-        } catch (e) {
-            console.error('[trackUserView] Error:', e.message);
-        }
-    },
-    getUserAnalytics: async (userId) => {
-        try {
-            // Fetch views
-            const stateId = `user_views:${userId}`;
-            const { data: stateData } = await supabase.from('bot_state').select('value').eq('id', stateId).maybeSingle();
-            const views = stateData ? (stateData.value || []) : [];
+            // Keep only the last 50 views per user to prevent bloat
+            if (views[userId].length > 50) {
+                views[userId] = views[userId].slice(-50);
+            }
             
-            // Fetch orders
-            const { data: orders } = await supabase.from(COL_ORDERS).select('id, created_at, product_id, product_name, status, total_price').eq('user_id', userId).order('created_at', { ascending: false });
-            
-            return {
-                views,
-                orders: orders || []
-            };
-        } catch (e) {
-            console.error('[DB] getUserAnalytics Error:', e.message);
-            return { views: [], orders: [] };
-        }
+            if (settings) {
+                await supabase.from(COL_SETTINGS).update({ data: views }).eq('key', 'user_views');
+            } else {
+                await supabase.from(COL_SETTINGS).insert([{ key: 'user_views', data: views }]);
+            }
+        } catch (e) {}
     },
     COL_USERS,
     supabase
 };
 
+async function useSupabaseAuthState(sessionId) {
+    const TABLE = 'bot_state';
+    const NAMESPACE = 'wa_session';
+    const DB_TIMEOUT = 10000;
+    
+    // Dynamic import for ESM-only baileys
+    const baileysMod = await import('@whiskeysockets/baileys');
+    const BufferJSON = baileysMod.BufferJSON;
+    const initAuthCreds = baileysMod.initAuthCreds;
+
+    // Construit un ID unique pour bot_state : "wa_session::{sessionId}::{key}"
+    function makeId(key) {
+        return `${NAMESPACE}::${sessionId}::${key}`;
+    }
+
+    async function readData(key) {
+        try {
+            const { data, error } = await supabase
+                .from(TABLE)
+                .select('value')
+                .eq('id', makeId(key))
+                .abortSignal(AbortSignal.timeout(DB_TIMEOUT))
+                .single();
+            
+            if (error) {
+                if (error.code !== 'PGRST116') {
+                    console.error(`[WA-DB-READ-ERR] ${key}:`, error.message);
+                    throw error;
+                }
+            }
+
+            if (data) {
+                const creds = JSON.parse(JSON.stringify(data.value), BufferJSON.reviver);
+                console.log(`[WA-DB] Session primary data found for ${key} (creds registered: ${creds?.registered})`);
+                return creds;
+            }
+
+            // [🛡️ REDONDANCE] Si la session principale est vide, on cherche dans le backup
+            const backupId = `wa_backup::${sessionId}::${key}`;
+            const { data: backupData, error: backupError } = await supabase
+                .from(TABLE)
+                .select('value')
+                .eq('id', backupId)
+                .maybeSingle();
+
+            if (backupError) {
+                console.error(`[WA-DB-BACKUP-ERR] ${backupId}:`, backupError.message);
+                throw backupError;
+            }
+
+            if (backupData) {
+                console.log(`[WA-DB] 🛡️ Restoring session from BACKUP for ${key}`);
+                // Restauration vers la session principale
+                const serialized = JSON.parse(JSON.stringify(backupData.value));
+                supabase.from(TABLE).upsert({
+                    id: makeId(key),
+                    namespace: NAMESPACE,
+                    user_key: key,
+                    value: serialized,
+                    updated_at: new Date().toISOString()
+                }).then(() => {});
+
+                return JSON.parse(JSON.stringify(backupData.value), BufferJSON.reviver);
+            }
+            console.log(`[WA-DB] ⚠️ No session data found for ${key} in primary or backup.`);
+
+            return null;
+        } catch (e) {
+            console.error(`[WA-DB-READ-ERR] Key ${key}:`, e.message);
+            throw e; // Propage l'erreur pour empêcher une mauvaise init
+        }
+    }
+
+    async function writeData(key, value) {
+        try {
+            const serialized = JSON.parse(JSON.stringify(value, BufferJSON.replacer));
+            const id = makeId(key);
+            
+            // Verrou local préventif (collision-safe)
+            if (global.wa_db_locks?.[id]) return;
+            if (!global.wa_db_locks) global.wa_db_locks = {};
+            global.wa_db_locks[id] = true;
+
+            try {
+                const payload = {
+                    id: id,
+                    namespace: NAMESPACE,
+                    user_key: key,
+                    value: serialized,
+                    updated_at: new Date().toISOString()
+                };
+
+                // Écriture principale
+                await supabase.from(TABLE).upsert(payload, { onConflict: 'id' }).abortSignal(AbortSignal.timeout(DB_TIMEOUT));
+
+                // Écriture redondante (Backup) - Persiste même après clearSession()
+                const backupId = `wa_backup::${sessionId}::${key}`;
+                await supabase.from(TABLE).upsert({
+                    ...payload,
+                    id: backupId,
+                    namespace: 'wa_backup'
+                }, { onConflict: 'id' });
+            } finally {
+                delete global.wa_db_locks[id];
+            }
+
+        } catch (e) {
+            console.error(`[WA-DB] writeData error for key ${key}:`, e.message);
+        }
+    }
+
+    async function removeData(key) {
+        try {
+            await supabase.from(TABLE).delete().eq('id', makeId(key));
+        } catch (e) { }
+    }
+
+    async function clearAllData() {
+        try {
+            // Supprimer toutes les entrées de cette session (Primaire ET Backup)
+            // On nettoie tout pour éviter la boucle infinie de restauration d'identifiants rejetés (401)
+            const { error } = await supabase.from(TABLE).delete()
+                .or(`namespace.eq.${NAMESPACE},namespace.eq.wa_backup`)
+                .filter('id', 'like', `%::${sessionId}::%`);
+            
+            if (error) throw error;
+            console.log(`[WA-DB] Session ${sessionId} (and backup) cleared from Supabase`);
+        } catch (e) {
+            console.error('[WA-DB] clearAllData error:', e.message);
+        }
+    }
+
+    // Chargement initial des credentials depuis Supabase (avec retry léger pour éviter le crash au boot)
+    let credsRaw = null;
+    let attempts = 0;
+    while (attempts < 3) {
+        try {
+            credsRaw = await readData('creds');
+            break;
+        } catch (dbErr) {
+            attempts++;
+            if (attempts >= 3) {
+                console.error(`[WA-DB-CRITICAL] Échec définitif après 3 tentatives (${dbErr.message}).`);
+                throw new Error(`CRITICAL_STORAGE_ERROR: ${dbErr.message}`);
+            }
+            console.warn(`[WA-DB-RETRY] Tentative ${attempts}/3 échouée (${dbErr.message}). Nouvel essai dans 5s...`);
+            await new Promise(r => setTimeout(r, 5000));
+        }
+    }
+
+    const creds = credsRaw || initAuthCreds();
+    if (!credsRaw) {
+        console.warn(`[WA-DB] ⚠️ AUCUNE SESSION TROUVÉE pour ${sessionId}. Prêt pour un nouveau QR code (Backup vide également).`);
+    } else {
+        console.log(`[WA-DB] Auth state chargé avec succès (session: ${sessionId})`);
+    }
+
+    return {
+        state: {
+            creds,
+            keys: {
+                get: async (type, data) => {
+                    const dict = {};
+                    for (const key of data) {
+                        const val = await readData(`${type}-${key}`);
+                        if (val) dict[key] = val;
+                    }
+                    return dict;
+                },
+                set: async (data) => {
+                    for (const category in data) {
+                        for (const id in data[category]) {
+                            const val = data[category][id];
+                            if (val) await writeData(`${category}-${id}`, val);
+                            else await removeData(`${category}-${id}`);
+                        }
+                    }
+                }
+            }
+        },
+        saveCreds: () => writeData('creds', creds),
+        clearSession: clearAllData
+    };
+}
+
+
 module.exports = {
+    useSupabaseAuthState,
     database,
     ...database
 };

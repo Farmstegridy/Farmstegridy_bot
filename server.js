@@ -48,7 +48,8 @@ function escapeHTML(str) {
 
 // configuration handled in index.js
 
-const { dispatcher } = require('./services/dispatcher');
+let _dispatcher = null;
+function setDispatcherInstance(d) { _dispatcher = d; }
 const { registry } = require('./channels/ChannelRegistry');
 
 // Référence partagée au bot Telegram (définie par index.js)
@@ -98,11 +99,6 @@ function createServer(port = 8080) {
     app.use(cors());
     app.use(express.json({ limit: '50mb' }));
     app.use(express.urlencoded({ extended: true, limit: '50mb' }));
-
-    app.post('/api/log-error', (req, res) => {
-        console.log("[CLIENT ERROR]", req.body);
-        res.json({ok: true});
-    });
     app.use(fileUpload({
         limits: { fileSize: 500 * 1024 * 1024 },
         useTempFiles: true,
@@ -110,6 +106,12 @@ function createServer(port = 8080) {
     }));
     app.use('/public', express.static(path.join(__dirname, 'web', 'public')));
     app.use('/js', express.static(path.join(__dirname, 'web', 'js')));
+    app.post('/api/log-error', (req, res) => {
+        console.error('[CLIENT ERROR]', req.body);
+        res.json({ok: true});
+    });
+
+
 
     // ========== Authentication ==========
 
@@ -152,6 +154,467 @@ function createServer(port = 8080) {
         });
     });
 
+
+    // --- DEBUT INJECTION WHATSAPP ---
+    // Webhook WhatsApp (Cloud API)
+    app.post('/api/whatsapp/webhook', async (req, res) => {
+        const waChannel = _dispatcher.channels.get('whatsapp');
+        if (waChannel && waChannel.handleWebhook) {
+            await waChannel.handleWebhook(req, res);
+        } else {
+            res.sendStatus(404);
+        }
+    });
+
+    app.get('/api/whatsapp/webhook', (req, res) => {
+        const waChannel = _dispatcher.channels.get('whatsapp');
+        if (waChannel && waChannel.handleWebhook) {
+            waChannel.handleWebhook(req, res);
+        } else {
+            res.sendStatus(404);
+        }
+    });
+    // QR Code WhatsApp - accessible via navigateur pour le scan
+    app.get('/whatsapp-qr', (req, res) => {
+        const qrPath = path.join(process.cwd(), 'whatsapp_qr.png');
+        if (fs.existsSync(qrPath)) {
+            res.setHeader('Content-Type', 'image/png');
+            res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+            res.sendFile(qrPath);
+        } else {
+            res.status(404).send('<html><body style="background:#111;color:#fff;font-family:sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0"><div style="text-align:center"><h1>QR Code pas encore généré</h1><p>Le bot est en cours de connexion. Rechargez la page dans quelques secondes.</p><script>setTimeout(()=>location.reload(),5000)</script></div></body></html>');
+        }
+    });
+
+    // Redémarrage WhatsApp - nettoie la session et relance le QR
+    app.get('/wa-restart', authMiddleware, async (req, res) => {
+        try {
+            const waSession = _dispatcher.channels.get('whatsapp');
+            const redirect = req.query.redirect;
+
+            if (waSession && waSession.restart) {
+                // On peut passer le numéro de téléphone pour le pairing directement dans le restart
+                const phone = req.query.phone || await getAppSettings().then(s => s.private_contact_wa_url?.replace(/[^0-9]/g, '')).catch(() => null);
+
+                await waSession.restart({ pairingPhone: phone });
+
+                if (redirect) {
+                    // Inclure le token dans la redirection pour éviter une boucle auth
+                    const token = req.query.token || req.headers['x-admin-token'] || '';
+                    const sep = redirect.includes('?') ? '&' : '?';
+                    return res.redirect(redirect + sep + 'token=' + encodeURIComponent(token));
+                }
+                res.send('<html><body style="background:#111;color:#0f0;font-family:sans-serif;text-align:center;padding:50px"><h1>WhatsApp redémarré</h1><p>Nouveau QR en cours de génération...</p><script>setTimeout(()=>window.location="/whatsapp-qr",3000)</script></body></html>');
+            } else {
+                res.status(404).send('WhatsApp Session channel not found');
+            }
+        } catch (e) {
+            res.status(500).send('Error: ' + e.message);
+        }
+    });
+
+    // Journaux de connexion WhatsApp - débogage en direct
+    app.get('/wa-logs', authMiddleware, (req, res) => {
+        const { waLogs } = require('./services/wa_log_shared');
+        const logs = waLogs;
+        res.setHeader('Content-Type', 'text/html');
+        res.setHeader('Cache-Control', 'no-cache');
+        res.send(`<html><head><meta http-equiv="refresh" content="3"><style>body{background:#111;color:#0f0;font-family:monospace;padding:20px;font-size:13px}pre{white-space:pre-wrap}</style></head><body><h2 style="color:#fff">WhatsApp Logs (auto-refresh 3s)</h2><pre>${logs.join('\n') || 'Aucun log encore...'}</pre></body></html>`);
+    });
+
+    // Code d'appairage WhatsApp - alternative au QR
+    app.get('/wa-pairing', authMiddleware, async (req, res) => {
+        try {
+            const settings = await getAppSettings();
+            const dbNumber = settings.private_contact_wa_url?.replace('https://wa.me/', '').replace(/[^0-9]/g, '');
+            const phoneNumber = req.query.phone || dbNumber || process.env.WHATSAPP_PAIRING_NUMBER;
+
+            if (!phoneNumber) {
+                return res.status(400).send('Numéro de téléphone manquant. Utilisez ?phone=337XXXXXXXX');
+            }
+
+            const waSession = _dispatcher.channels.get('whatsapp');
+            if (waSession && waSession.requestPairingCode) {
+                const code = await waSession.requestPairingCode(phoneNumber);
+                res.send(`<html><body style="background:#111;color:#fff;font-family:sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;flex-direction:column">
+                    <div style="text-align:center;background:#222;padding:40px;border-radius:20px;box-shadow:0 10px 30px rgba(0,0,0,0.5)">
+                        <h1 style="color:#25D366">Code d'appairage WhatsApp</h1>
+                        <p style="opacity:0.8">Numéro : <b>${phoneNumber}</b></p>
+                        <div style="font-size:64px;font-family:monospace;letter-spacing:10px;margin:30px 0;background:#000;padding:20px;border-radius:10px;color:#0f0;border:2px solid #25D366">${code}</div>
+                        <p style="font-size:14px;opacity:0.6">Entrez ce code sur votre téléphone dans :<br>Appareils connectés > Connecter un appareil > Se connecter avec le numéro de téléphone</p>
+                        <button onclick="location.reload()" style="margin-top:20px;padding:10px 20px;background:#25D366;border:none;border-radius:5px;color:#000;font-weight:bold;cursor:pointer">Nouveau code</button>
+                        <br><br>
+                        <a href="/dashboard" style="color:#25D366;text-decoration:none">Retour au Dashboard</a>
+                    </div>
+                </body></html>`);
+            } else {
+                res.status(404).send('WhatsApp Session channel not found or method not implemented');
+            }
+        } catch (e) {
+            res.status(500).send('<html><body style="background:#111;color:#f44;font-family:sans-serif;text-align:center;padding:50px"><h1>Erreur</h1><p>' + e.message + '</p><a href="/dashboard" style="color:#fff">Retour</a></body></html>');
+        }
+    });
+
+    // [🛡️ RESET] Endpoint POST pour purger la session WhatsApp et relancer proprement
+    app.post('/wa-connector/reset', async (req, res) => {
+        try {
+            const waSession = _dispatcher.channels.get('whatsapp');
+            if (waSession) {
+                console.log('[WA-RESET] Purge de session demandée via dashboard...');
+                await waSession.restart({ pairingPhone: waSession.pairingPhone });
+                res.json({ success: true, message: 'Session purgée et relancée' });
+            } else {
+                res.json({ success: false, message: 'WhatsApp non trouvé' });
+            }
+        } catch (e) {
+            res.status(500).json({ success: false, error: e.message });
+        }
+    });
+
+    // Page de connexion Premium (Style La Frappe) - QR + Pairing + Reset
+    app.get('/wa-connector', async (req, res) => {
+        try {
+            const settings = await getAppSettings();
+            let phoneNumber = settings.private_contact_wa_url?.replace('https://wa.me/', '').replace(/[^0-9]/g, '');
+            if (!phoneNumber) phoneNumber = process.env.WHATSAPP_PAIRING_NUMBER;
+
+            const waSession = _dispatcher.channels.get('whatsapp');
+            let lastError = null;
+
+            // Support polling JSON pour mise à jour dynamique sans rechargement
+            if (req.query.json === '1') {
+                return res.json({
+                    phone: waSession?.pairingPhone || phoneNumber,
+                    code: waSession?.pairingCode || "Génération...",
+                    qr: waSession?.lastQR || null,
+                    connected: (waSession?.isActive && !waSession?.lastQR) || false,
+                    status: (waSession?.isActive && !waSession?.lastQR) ? 'connected' : (waSession?.pairingCode ? 'ready' : 'pending')
+                });
+            }
+
+            let pairingCode = waSession?.pairingCode || "Génération...";
+            // Si un QR est en attente de scan, on n'est PAS connecté même si isActive est stale
+            const isConnected = (waSession?.isActive && !waSession?.lastQR) || false;
+
+            // [🛡️ STABILITÉ] Ne demander le code que si :
+            // 1. Le bot n'est PAS connecté
+            // 2. Le bot n'a PAS déjà un code en attente
+            // 3. Le bot n'est PAS en train de se connecter (lastQR = on a un QR actif)
+            // IMPORTANT: NE JAMAIS demander un code sur une session ouverte (cause 503 → 401 → déconnexion)
+            if (waSession && !waSession.pairingCode && phoneNumber && !isConnected && !waSession._pairingRequested) {
+                // Vérifier aussi que les credentials ne sont pas déjà registered (session active)
+                const isRegistered = waSession.sock?.authState?.creds?.registered;
+                if (!isRegistered) {
+                    waSession.requestPairingCode(phoneNumber).catch(e => console.error("[WA-CONNECTOR] Async pairing error:", e.message));
+                }
+            }
+
+            const { waLogs } = require('./services/wa_log_shared');
+            const recentLogs = waLogs.slice(-8).reverse().join('\n');
+
+            res.send(`
+            <!DOCTYPE html>
+            <html lang="fr">
+            <head>
+                <meta charset="UTF-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                <title>WhatsApp Connector - Premium</title>
+                <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+                <style>
+                    :root {
+                        --bg: #050505;
+                        --card: #111;
+                        --accent: #25D366;
+                        --accent-glow: rgba(37, 211, 102, 0.4);
+                        --text: #ffffff;
+                    }
+                    body {
+                        background: var(--bg);
+                        color: var(--text);
+                        font-family: 'Outfit', sans-serif;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        min-height: 100vh;
+                        margin: 0;
+                        overflow-x: hidden;
+                    }
+                    .container {
+                        width: 100%;
+                        max-width: 450px;
+                        padding: 20px;
+                        text-align: center;
+                        animation: fadeIn 0.8s ease-out;
+                    }
+                    .card {
+                        background: var(--card);
+                        border-radius: 40px;
+                        padding: 40px;
+                        border: 1px solid rgba(255,255,255,0.05);
+                        box-shadow: 0 30px 60px rgba(0,0,0,0.8);
+                        position: relative;
+                        overflow: hidden;
+                    }
+                    .card::before {
+                        content: '';
+                        position: absolute;
+                        top: -50%;
+                        left: -50%;
+                        width: 200%;
+                        height: 200%;
+                        background: radial-gradient(circle, var(--accent-glow) 0%, transparent 70%);
+                        z-index: 0;
+                        pointer-events: none;
+                    }
+                    .content { position: relative; z-index: 1; }
+                    .logo { font-size: 50px; margin-bottom: 20px; text-shadow: 0 0 20px var(--accent); }
+                    h1 { font-size: 28px; font-weight: 800; margin: 0 0 10px 0; letter-spacing: -1px; }
+                    p { font-size: 14px; opacity: 0.6; margin-bottom: 30px; }
+                    
+                    .qr-wrapper {
+                        background: #fff;
+                        padding: 15px;
+                        border-radius: 25px;
+                        display: inline-block;
+                        margin-bottom: 30px;
+                        box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+                        position: relative;
+                    }
+                    .qr-image {
+                        width: 220px;
+                        height: 220px;
+                        display: block;
+                        background: #f0f0f0;
+                    }
+
+                    .divider {
+                        display: flex;
+                        align-items: center;
+                        margin: 20px 0;
+                        opacity: 0.3;
+                        font-size: 11px;
+                        text-transform: uppercase;
+                        letter-spacing: 2px;
+                        font-weight: 700;
+                    }
+                    .divider::before, .divider::after {
+                        content: '';
+                        flex: 1;
+                        height: 1px;
+                        background: #fff;
+                        margin: 0 15px;
+                    }
+
+                    .pairing-box {
+                        background: #000;
+                        border: 2px solid var(--accent);
+                        border-radius: 20px;
+                        padding: 20px;
+                        margin-bottom: 30px;
+                        box-shadow: inset 0 0 20px rgba(37, 211, 102, 0.1);
+                    }
+                    .pairing-label { font-size: 10px; text-transform: uppercase; letter-spacing: 1px; opacity: 0.5; margin-bottom: 10px; font-weight: 700; }
+                    .pairing-code { font-size: 44px; font-family: 'Courier New', monospace; letter-spacing: 8px; color: var(--accent); font-weight: 800; text-shadow: 0 0 10px rgba(37, 211, 102, 0.5); }
+
+                    .actions { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+                    .btn {
+                        padding: 16px;
+                        border-radius: 20px;
+                        font-weight: 700;
+                        cursor: pointer;
+                        border: none;
+                        transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+                        font-family: inherit;
+                        text-decoration: none;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        font-size: 14px;
+                    }
+                    .btn-primary { background: var(--accent); color: #000; box-shadow: 0 10px 20px rgba(37, 211, 102, 0.3); }
+                    .btn-secondary { background: rgba(255,255,255,0.05); color: #fff; border: 1px solid rgba(255,255,255,0.1); }
+                    .btn:hover { transform: translateY(-3px); }
+                    .btn-primary:hover { background: #1ebe57; transform: translateY(-3px) scale(1.02); }
+                    .btn-secondary:hover { background: rgba(255,255,255,0.1); }
+                    
+                    .btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none !important; }
+
+                    @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+                    
+                    .instructions {
+                        text-align: left;
+                        font-size: 12px;
+                        opacity: 0.7;
+                        background: rgba(255,255,255,0.03);
+                        padding: 20px;
+                        border-radius: 20px;
+                        margin-top: 30px;
+                        line-height: 1.6;
+                        border: 1px solid rgba(255,255,255,0.05);
+                    }
+
+                    #loading-overlay {
+                        position: absolute;
+                        inset: 0;
+                        background: rgba(0,0,0,0.8);
+                        display: none;
+                        align-items: center;
+                        justify-content: center;
+                        flex-direction: column;
+                        z-index: 100;
+                        border-radius: 40px;
+                        backdrop-filter: blur(10px);
+                    }
+                    .spinner {
+                        width: 40px;
+                        height: 40px;
+                        border: 4px solid rgba(255,255,255,0.1);
+                        border-left-color: var(--accent);
+                        border-radius: 50%;
+                        animation: spin 1s linear infinite;
+                        margin-bottom: 15px;
+                    }
+                    @keyframes spin { to { transform: rotate(360deg); } }
+                </style>
+            </head>
+            <body>
+                <div class="container">
+                    <div class="card">
+                        <div id="loading-overlay">
+                            <div class="spinner"></div>
+                            <div style="font-weight:700; color:var(--accent);">Régénération...</div>
+                        </div>
+                        <div class="content">
+                            <div class="logo">📱</div>
+                            <h1>Connexion WhatsApp</h1>
+                            <p>Utilisez le QR ou le Code d'appairage</p>
+
+                            ${isConnected ? `
+                            <div style="margin: 30px 0; text-align: center;">
+                                <div style="font-size: 80px; margin-bottom: 15px;">✅</div>
+                                <h2 style="color: var(--accent); margin: 0 0 5px 0;">WhatsApp Connecté</h2>
+                                <p style="opacity: 0.6; margin: 0;">Le bot est en ligne et opérationnel</p>
+                            </div>
+                            <div class="actions">
+                                <a href="/dashboard" class="btn btn-secondary" style="text-decoration:none">📊 Dashboard</a>
+                                <button onclick="resetSession()" id="regen-btn" class="btn btn-primary">🔥 Régénérer</button>
+                            </div>
+                            ` : `
+                            <div class="qr-wrapper">
+                                <img src="/whatsapp-qr?t=${Date.now()}" id="qr-image" class="qr-image" alt="QR Code" onerror="this.src='https://placehold.co/220x220/ffffff/000000?text=Génération...'">
+                            </div>
+
+                            <div class="divider">OU VIA LE CODE</div>
+
+                            <div class="pairing-box">
+                                <div class="pairing-label">Entrez ce code pour ${phoneNumber}</div>
+                                <div class="pairing-code" id="pairing-code-text">${pairingCode}</div>
+                            </div>
+
+                            <div class="actions">
+                                <button onclick="location.reload()" class="btn btn-secondary">🔄 Actualiser</button>
+                                <button onclick="resetSession()" id="regen-btn" class="btn btn-primary">🔥 Régénérer</button>
+                            </div>
+                            `}
+
+                            ${lastError ? `<div style="margin-top:20px; color:#ff4444; font-size:12px; background:rgba(255,68,68,0.1); padding:10px; border-radius:10px; border:1px solid rgba(255,68,68,0.2)"><b>Erreur:</b> ${lastError}</div>` : ''}
+
+                            <div style="margin-top:30px; text-align:left;">
+                                <div style="font-size:10px; text-transform:uppercase; opacity:0.5; margin-bottom:10px; font-weight:700;">Derniers événements (Logs)</div>
+                                <pre style="font-size:10px; background:#000; padding:15px; border-radius:15px; overflow-x:auto; color:#aaa; font-family:monospace; line-height:1.4; border:1px solid rgba(255,255,255,0.05); max-height:150px;">${recentLogs || 'Aucun log disponible...'}</pre>
+                            </div>
+
+                            <div class="instructions">
+                                <b style="color:var(--accent)">Comment faire ?</b><br>
+                                1. WhatsApp > Appareils connectés<br>
+                                2. "Connecter un appareil"<br>
+                                3. Cliquez sur <b>"Se connecter avec le numéro"</b> en bas de votre écran<br>
+                                4. Entrez le code de 8 caractères affiché ici.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <script>
+                    function getToken() {
+                        const urlParams = new URLSearchParams(window.location.search);
+                        return urlParams.get('token') || localStorage.getItem('admin_token') || '';
+                    }
+
+                    async function resetSession() {
+                        const btn = document.getElementById('regen-btn');
+                        const overlay = document.getElementById('loading-overlay');
+                        
+                        if(confirm('Voulez-vous vraiment régénérer une nouvelle session ? Cela déconnectera le compte actuel.')) {
+                            btn.disabled = true;
+                            overlay.style.display = 'flex';
+                            
+                            // Récupération robuste du token
+                            const token = getToken();
+                            
+                            // Redirection vers le restart avec redirection retour
+                            window.location.href = '/wa-restart?token=' + encodeURIComponent(token) + '&redirect=/wa-connector';
+                        }
+                    }
+
+                    // Polling intelligent pour le QR et le code d'appairage
+                    async function pollStatus() {
+                        try {
+                            const token = getToken();
+                            const res = await fetch(window.location.pathname + '?json=1&token=' + encodeURIComponent(token) + '&t=' + Date.now());
+                            const data = await res.json();
+                            
+                            // Mise à jour du QR code si disponible
+                            if (data.qr) {
+                                const qrWrapper = document.querySelector('.qr-wrapper');
+                                if (qrWrapper) {
+                                    const existingImg = qrWrapper.querySelector('img');
+                                    if (existingImg && existingImg.src !== data.qr) {
+                                        existingImg.src = data.qr;
+                                        existingImg.style.width = '100%';
+                                        existingImg.style.height = '100%';
+                                        existingImg.style.objectFit = 'contain';
+                                    }
+                                }
+                            }
+                            
+                            // Mise à jour du code d'appairage
+                            const codeElement = document.getElementById('pairing-code-text');
+                            if (data.code && data.code !== "Génération..." && codeElement) {
+                                codeElement.textContent = data.code;
+                                codeElement.style.color = "#0f0";
+                            }
+                            
+                            // Si connecté, recharger pour voir le statut
+                            if (data.connected) {
+                                location.reload();
+                            }
+                        } catch(e) {}
+                    }
+                    
+                    setInterval(pollStatus, 3000);
+                    
+                    // Détecter si on revient d'un restart (pour arrêter le loading si besoin)
+                    window.onload = () => {
+                        const urlParams = new URLSearchParams(window.location.search);
+                        if (urlParams.has('restarted')) {
+                            console.log("Session restarted successfully");
+                        }
+                    };
+                </script>
+            </body>
+            </html>
+            `);
+        } catch (e) {
+            res.status(500).send('Erreur: ' + e.message);
+        }
+    });
+
+    // Page de connexion publique pour le client (autonome)
+    app.get('/wa-connect', async (req, res) => {
+        res.redirect('/wa-connector');
+    });
+    // --- FIN INJECTION WHATSAPP ---
 
 
     // ========== Static Pages ==========
@@ -513,6 +976,37 @@ function createServer(port = 8080) {
         }
     });
 
+    // X-Engine: Track product views
+    app.post('/api/tracking/view', async (req, res) => {
+        try {
+            const { telegramId, productId, category } = req.body;
+            if (!telegramId) return res.json({ success: false });
+            
+            const { supabase } = require('./services/supabase');
+            const { COL_USERS } = require('./services/database');
+            
+            const { data: user } = await supabase.from(COL_USERS).select('data').eq('telegram_id', String(telegramId)).maybeSingle();
+            if (user) {
+                const history = user.data.view_history || [];
+                history.push({
+                    productId,
+                    category,
+                    timestamp: new Date().toISOString(),
+                    weight: 1
+                });
+                
+                // Keep only last 50
+                if (history.length > 50) history.shift();
+                
+                const newData = { ...user.data, view_history: history };
+                await supabase.from(COL_USERS).update({ data: newData }).eq('telegram_id', String(telegramId));
+            }
+            res.json({ success: true });
+        } catch (e) {
+            res.json({ success: false });
+        }
+    });
+
     app.get('/api/products', async (req, res) => {
         try { 
             let products = await getProducts();
@@ -559,32 +1053,11 @@ function createServer(port = 8080) {
                 oldProduct = await getProduct(req.body.id).catch(() => null);
             }
 
-            const stockLivreurs = req.body.stock_livreurs;
-            delete req.body.stock_livreurs;
-
             if (isMp) {
                 const { saveMarketplaceProduct } = require('./services/database');
                 id = await saveMarketplaceProduct(req.body);
             } else {
                 id = await saveProduct(req.body);
-                
-                // Update livreurs inventory
-                if (stockLivreurs) {
-                    const { getUser, updateUser } = require('./services/database');
-                    for (const [livreurId, qty] of Object.entries(stockLivreurs)) {
-                        const lUser = await getUser(livreurId);
-                        if (lUser) {
-                            const data = lUser.data || {};
-                            const inventory = data.inventory || {};
-                            const newQty = parseInt(qty);
-                            if (!isNaN(newQty)) {
-                                inventory[id] = newQty;
-                                data.inventory = inventory;
-                                await updateUser(livreurId, { data });
-                            }
-                        }
-                    }
-                }
             }
 
             // Log stock movement for native products
@@ -1501,7 +1974,7 @@ function createServer(port = 8080) {
                 points: user.points || 0,
                 referralLink: `https://t.me/${settings.bot_username}?start=${user.referral_code}`,
                 hotline: settings.admin_telegram_id || 'admin',
-                private_contact_url: settings.private_contact_url || 'https://t.me/Farmstegridy_bot',
+                private_contact_url: settings.private_contact_url || 'https://t.me/ShopTonBot',
                 mini_app_logo: settings.mini_app_logo || '/public/img/logo.png',
                 chat_history: user.data?.chat_history || []
             });
@@ -1572,7 +2045,17 @@ function createServer(port = 8080) {
         try {
             const { getBroadcastHistory } = require('./services/database');
             const news = await getBroadcastHistory(10);
-            res.json(news.filter(b => b.status === 'completed'));
+            let filteredNews = news.filter(b => b.status === 'completed');
+            
+            const lang = req.query.lang || 'fr';
+            if (lang !== 'fr') {
+                const { translate } = require('./services/translator');
+                filteredNews = await Promise.all(filteredNews.map(async b => {
+                    const translatedMsg = await translate(b.message || '', lang);
+                    return { ...b, message: translatedMsg };
+                }));
+            }
+            res.json(filteredNews);
         } catch (e) {
             res.status(500).json({ error: e.message });
         }
@@ -1645,6 +2128,7 @@ function createServer(port = 8080) {
                         }));
                     }
                     if (o.product_name) o.product_name = await translate(o.product_name, targetLang);
+                    if (o.product) o.product = await translate(o.product, targetLang);
                 }
                 
                 return {
@@ -1697,29 +2181,10 @@ function createServer(port = 8080) {
     app.post('/api/mini-app/create-order', async (req, res) => {
         try {
             const { userId, items, total, address, note, platform, discount, promoCode, promoDiscount, walletDiscount } = req.body;
-            const { createOrder, getUser, updateUserWallet, adjustOrderStock, syncUserCart } = require('./services/database');
+            const { createOrder, getUser, updateUserWallet, adjustOrderStock } = require('./services/database');
             const { notifyAdmins } = require('./services/notifications');
-            const { supabase } = require('./config/supabase');
             
             const user = await getUser(userId);
-            
-            // Validation du stock réel
-            for (const item of items) {
-                const { data: p } = await supabase.from('bot_products').select('stock, discounts_config, name').eq('id', item.id).maybeSingle();
-                if (!p) return res.status(400).json({ error: `Produit introuvable: ${item.name || item.id}` });
-                
-                let availableStock = p.stock || 0;
-                let pkgName = "Base";
-                if (item.packageIndex > 0 && Array.isArray(p.discounts_config) && p.discounts_config[item.packageIndex - 1]) {
-                    const pkg = p.discounts_config[item.packageIndex - 1];
-                    availableStock = pkg.stock || 0;
-                    pkgName = `Format x${pkg.qty}`;
-                }
-
-                if (availableStock < item.qty) {
-                    return res.status(400).json({ error: `Stock insuffisant pour ${p.name || item.name} (${pkgName}) (Restant: ${availableStock})` });
-                }
-            }
             
             // Validation des réductions
             let appliedWalletDiscount = parseFloat(walletDiscount) || (!promoCode ? parseFloat(discount) || 0 : 0);
@@ -1767,9 +2232,6 @@ function createServer(port = 8080) {
             if (order && order.id) {
                 adjustOrderStock(order.id, 'decrement').catch(e => console.error("Stock deduct error:", e));
             }
-            
-            // CLEAR ACTIVE CART GLOBALLY
-            syncUserCart(userId, []).catch(e => console.error("Sync cart clear error:", e));
 
             // DEDUCT WALLET BALANCE ONLY FOR WALLET DISCOUNT
             if (appliedWalletDiscount > 0) {
@@ -1824,10 +2286,22 @@ function createServer(port = 8080) {
             const { userId } = req.query;
             const { getLivreurOrders } = require('./services/database');
             const { activeChatHistory } = require('./handlers/order_system');
+            const { translate } = require('./services/translator');
+            const targetLang = req.query.lang || 'fr';
             const orders = await getLivreurOrders(userId);
-            const enriched = orders.map(o => ({
-                ...o,
-                chatHistory: activeChatHistory ? activeChatHistory.get(o.id) : null
+            const enriched = await Promise.all(orders.map(async o => {
+                let cart = o.cart;
+                if (targetLang !== 'fr' && Array.isArray(cart)) {
+                    cart = await Promise.all(cart.map(async item => {
+                        const tName = await translate(item.name, targetLang);
+                        return { ...item, name: tName };
+                    }));
+                }
+                return {
+                    ...o,
+                    cart,
+                    chatHistory: activeChatHistory ? activeChatHistory.get(o.id) : null
+                };
             }));
             res.json(enriched);
         } catch (e) {
@@ -1858,14 +2332,11 @@ function createServer(port = 8080) {
                 let cart = o.cart;
                 if (targetLang !== 'fr' && Array.isArray(cart)) {
                     cart = await Promise.all(cart.map(async item => {
-                        return { ...item, name: await translate(item.name, targetLang) };
+                        const tName = await translate(item.name, targetLang);
+                        return { ...item, name: tName };
                     }));
                 }
-                let prodName = o.product_name;
-                if (targetLang !== 'fr' && prodName) {
-                    prodName = await translate(prodName, targetLang);
-                }
-                return { ...o, cart, product_name: prodName };
+                return { ...o, cart };
             }));
             res.json(enriched);
         } catch (e) {
@@ -2227,13 +2698,12 @@ function createServer(port = 8080) {
 
     app.post('/api/products/reviews', async (req, res) => {
         try {
-            const { id, userId, productId, rating, text, media } = req.body;
+            const { userId, productId, rating, text, media } = req.body;
             const { getUser, saveReview } = require('./services/database');
             const user = await getUser(userId);
             if (!user) return res.status(404).json({ error: 'User not found' });
             
             await saveReview({
-                id,
                 user_id: userId,
                 product_id: productId,
                 rating,
@@ -2447,5 +2917,5 @@ function createServer(port = 8080) {
     return app;
 }
 
-module.exports = { createServer, setBotInstance, getBotInstance };
+module.exports = { createServer, setBotInstance, getBotInstance, setDispatcherInstance };
 

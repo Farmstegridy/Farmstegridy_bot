@@ -142,12 +142,30 @@ async function broadcastMessage(platform, message, options = {}) {
         return true;
     });
 
+
+    const { translate } = require('./translator');
+    const langs = ['en', 'es', 'de'];
+    const translatedMessages = { fr: finalMessage };
+    if (!_isBroadcastPrivileged({ is_livreur: platform === 'livreurs' })) {
+        for (const l of langs) {
+            try {
+                translatedMessages[l] = await translate(finalMessage, l);
+            } catch(e) {
+                translatedMessages[l] = finalMessage;
+            }
+        }
+    }
+
     const { default: pLimit } = await import('p-limit');
+
     const limit = pLimit(CONCURRENCY_LIMIT);
 
     await Promise.allSettled(eligibleTargets.map(user => limit(async () => {
         await new Promise(r => setTimeout(r, BATCH_DELAY_MS));
         const cleanChatId = String(user.platform_id || '').replace('telegram_', '');
+        const userLang = (user.data && user.data.language) ? user.data.language : 'fr';
+        const localizedMessage = translatedMessages[userLang] || translatedMessages['fr'];
+
         debugLog(`[BC-SENDING] To ${cleanChatId}, Média count: ${unifiedMediaList.length}`);
         const res = await sendToUser(user, finalMessage, unifiedMediaList, { ...options, broadcastId });
         if (res.success) successCount++;
@@ -176,22 +194,35 @@ async function sendToUser(user, message, unifiedMediaList = [], options = {}) {
     const { Markup } = require('telegraf');
     const poll_options = options.poll_options?.split('|') || null;
     const broadcastId = options.broadcastId;
+    
+    let finalMessage = message;
+    let finalPollOptions = poll_options;
+    
+    // Server-side translation
+    const lang = user.language_code || 'fr';
+    if (lang !== 'fr') {
+        try {
+            const { translate } = require('./translator');
+            if (finalMessage) {
+                finalMessage = await translate(finalMessage, lang);
+            }
+            if (finalPollOptions) {
+                finalPollOptions = await Promise.all(finalPollOptions.map(o => translate(o, lang)));
+            }
+        } catch (e) {
+            console.error('[BC-TRANSLATE-ERR]', e.message);
+        }
+    }
 
     let keyboard = null;
-    if (poll_options) {
-        const btns = poll_options.map((opt, idx) => [Markup.button.callback(opt, `poll_vote_${broadcastId}_${idx}`)]);
+    if (finalPollOptions) {
+        const btns = finalPollOptions.map((opt, idx) => [Markup.button.callback(opt, `poll_vote_${broadcastId}_${idx}`)]);
         if (options.poll_allow_free) btns.push([Markup.button.callback('🖊 Réponse libre', `poll_free_${broadcastId}`)]);
         keyboard = Markup.inlineKeyboard(btns);
     }
 
     const _protect = !_isBroadcastPrivileged(user);
-    
-    let personalizedMessage = message || '';
-    if (personalizedMessage) {
-        personalizedMessage = personalizedMessage.replace(/{first_name}/g, user.first_name || 'Client');
-    }
-    
-    const caption = personalizedMessage ? (personalizedMessage.length > 1020 ? personalizedMessage.substring(0, 1017) + '...' : personalizedMessage) : '';
+    const caption = finalMessage ? (finalMessage.length > 1020 ? finalMessage.substring(0, 1017) + '...' : finalMessage) : '';
 
     try {
         if (unifiedMediaList.length > 1) {
@@ -206,7 +237,7 @@ async function sendToUser(user, message, unifiedMediaList = [], options = {}) {
             const method = m.type === 'video' ? 'sendVideo' : 'sendPhoto';
             await _bot.bot.telegram[method](chatId, m.file_id || m.url, { caption, parse_mode: 'HTML', ...(_protect ? { protect_content: true } : {}), ...(keyboard || {}) });
         } else {
-            await _bot.bot.telegram.sendMessage(chatId, personalizedMessage, { parse_mode: 'HTML', ...(_protect ? { protect_content: true } : {}), ...(keyboard || {}) });
+            await _bot.bot.telegram.sendMessage(chatId, finalMessage, { parse_mode: 'HTML', ...(_protect ? { protect_content: true } : {}), ...(keyboard || {}) });
         }
         return { success: true };
     } catch (error) {

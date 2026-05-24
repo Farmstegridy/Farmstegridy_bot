@@ -2,11 +2,7 @@
 const TABLE = 'bot_state';
 const db = () => require('../config/supabase').supabase.from(TABLE);
 
-const mapCache = {};
-
 function createPersistentMap(namespace) {
-    if (mapCache[namespace]) return mapCache[namespace];
-
     const mem = new Map();
     let live = false;
     const rid = (k) => `${namespace}:${k}`;
@@ -29,7 +25,7 @@ function createPersistentMap(namespace) {
         }
     };
 
-    const obj = {
+    return {
         has: (key) => mem.has(String(key)),
         get: (key) => mem.get(String(key)),
         set(key, val) {
@@ -78,9 +74,6 @@ function createPersistentMap(namespace) {
             }
         }
     };
-    
-    mapCache[namespace] = obj;
-    return obj;
 }
 
 module.exports = { createPersistentMap };

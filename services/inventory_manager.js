@@ -64,9 +64,7 @@ async function cleanupExpiredReservations() {
             
             // Log expiration for each item
             for (const item of expiredItems) {
-                const id = item.productId || item.id;
-                const qty = parseFloat(item.qty) || ((item.n || 1) * (item.m || 1));
-                await logStockMovement(id, qty, 'reservation_expiry', userId);
+                await logStockMovement(item.productId, item.qty, 'reservation_expiry', userId);
             }
             
             // Save updated cart (or delete if empty)
@@ -82,18 +80,15 @@ async function cleanupExpiredReservations() {
 /**
  * Calculate the total reserved quantity of a product in all active shopping carts.
  */
-async function getReservedStock(productId, packageIndex = 0) {
+async function getReservedStock(productId) {
     await cleanupExpiredReservations();
     
     let reserved = 0;
     userCarts.forEach(cart => {
         if (!Array.isArray(cart)) return;
         cart.forEach(item => {
-            const itemPkgIdx = item.packageIndex || 0;
-            const id = String(item.productId || item.id);
-            if (id === String(productId) && itemPkgIdx === packageIndex) {
-                const qty = parseFloat(item.qty) || ((item.n || 1) * (item.m || 1));
-                reserved += qty;
+            if (String(item.productId) === String(productId)) {
+                reserved += parseFloat(item.qty) || 0;
             }
         });
     });
@@ -102,25 +97,20 @@ async function getReservedStock(productId, packageIndex = 0) {
 }
 
 /**
- * Get available stock (physical stock minus reserved stock) for a specific conditionnement.
+ * Get available stock (physical stock minus reserved stock).
  */
-async function getAvailableStock(product, packageIndex = 0) {
+async function getAvailableStock(product) {
     if (!product) return 0;
-    let physical = 0;
-    if (packageIndex === 0) {
-        physical = parseInt(product.stock) || 0;
-    } else if (Array.isArray(product.discounts_config) && product.discounts_config[packageIndex - 1]) {
-        physical = parseInt(product.discounts_config[packageIndex - 1].stock) || 0;
-    }
-    const reserved = await getReservedStock(product.id, packageIndex);
+    const physical = parseInt(product.stock) || 0;
+    const reserved = await getReservedStock(product.id);
     return Math.max(0, physical - reserved);
 }
 
 /**
  * Return scarcity label and emoji badge.
  */
-async function getScarcityBadge(product, packageIndex = 0) {
-    const available = await getAvailableStock(product, packageIndex);
+async function getScarcityBadge(product) {
+    const available = await getAvailableStock(product);
     if (available <= 0) {
         return "🔴 Rupture de stock";
     }

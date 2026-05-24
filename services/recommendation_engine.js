@@ -172,11 +172,8 @@ async function runRecommendationEngine() {
             settings = settingsRow || {};
         } catch(e) {}
         
-        const baseDomain = process.env.RENDER_EXTERNAL_URL || (process.env.RAILWAY_PUBLIC_DOMAIN ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}` : 'https://farmstegridy-bot.onrender.com');
-        const catalogUrl = `${baseDomain}/catalog?v=${Date.now()}`;
-
         const allUserIds = new Set([...Object.keys(userOrders), ...Object.keys(allViews)]);
-        const fatigueUpdates = [];
+        let notificationsSent = 0;
 
         for (const userId of allUserIds) {
             const uOrders = userOrders[userId] || [];
@@ -243,7 +240,7 @@ async function runRecommendationEngine() {
                     
                     const message = generateDynamicText(firstName, topProduct, candidateType);
                     const keyboard = {
-                        inline_keyboard: [[{ text: '🛍️ Ouvrir la Boutique', web_app: { url: catalogUrl } }]]
+                        inline_keyboard: [[{ text: '🛍️ Ouvrir la Mini App', web_app: { url: (process.env.RENDER_EXTERNAL_URL || (process.env.RAILWAY_PUBLIC_DOMAIN ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}/catalog` : 'https://monshopbot-production.up.railway.app/catalog')) } }]]
                     };
 
                     const tgId = userId.replace('telegram_', '');
@@ -253,19 +250,20 @@ async function runRecommendationEngine() {
                     await sendMessageToUser(tgId, message, { parse_mode: 'HTML', reply_markup: keyboard }).catch(() => {});
                     
                     fatigueTracker[userId] = now;
-                    fatigueUpdates.push({
-                        id: `fatigue_tracker:${userId}`,
-                        namespace: 'fatigue_tracker',
-                        user_key: String(userId),
-                        value: now
-                    });
+                    notificationsSent++;
                 }
             }
         }
 
-        // Save fatigue tracking state
-        if (fatigueUpdates.length > 0) {
-            await supabase.from('bot_state').upsert(fatigueUpdates, { onConflict: 'id' });
+        // Sauvegarder la fatigue
+        if (notificationsSent > 0) {
+            if (settingsRow && settingsRow.key === 'fatigue_tracker') {
+                await supabase.from('bot_settings').update({ data: fatigueTracker }).eq('key', 'fatigue_tracker');
+            } else {
+                // If it doesn't exist, we should ideally check if any row exists or just upsert.
+                // In shoptonbot, bot_settings usually uses upsert or check.
+                await supabase.from('bot_settings').upsert({ key: 'fatigue_tracker', data: fatigueTracker }, { onConflict: 'key' });
+            }
         }
         
     } catch (e) {

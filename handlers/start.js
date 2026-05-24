@@ -49,7 +49,7 @@ function setupStartHandler(bot) {
 
     bot.action(/^set_lang_(.+)$/, async (ctx) => {
         const lang = ctx.match[1];
-        const { supabase, COL_USERS } = require('../services/database');
+        const { updateUser } = require('../services/database');
         const docId = `${ctx.platform}_${ctx.from.id}`;
         
         // 1. Mettre à jour l'état immédiatement pour que le menu s'affiche dans la nouvelle langue
@@ -58,11 +58,11 @@ function setupStartHandler(bot) {
         ctx.state.user.data.language = lang;
         ctx.state.user.language_code = lang;
 
-        // 2. Persister en base de données
-        await supabase.from(COL_USERS).update({ 
+        // 2. Persister en base de données avec updateUser pour mettre à jour le cache !
+        await updateUser(docId, { 
             language_code: lang, 
             data: { ...(ctx.state.user.data), language: lang } 
-        }).eq('id', docId);
+        });
 
         let msg = '✅ Langue réglée sur Français !';
         if (lang === 'en') msg = '✅ Language set to English!';
@@ -157,14 +157,21 @@ function setupStartHandler(bot) {
                     await notifyAdmins(bot, adminMsg, adminKeyboard).catch(() => {});
                 }
                 
+                const isWa = ctx.platform === 'whatsapp';
                 const restrictedText = `🛑 <b>ACCÈS RESTREINT</b>\n\n` +
                     `Bonjour <b>${user.first_name}</b>,\n\n` +
                     `Pour accéder au bot, vous devez d'abord envoyer un message à l'administrateur.\n` +
                     `Une fois que l'admin aura validé votre accès, vous pourrez commander.\n\n` +
-                    `👇 <b>Veuillez cliquer ci-dessous :</b>`;
+                    (isWa ? `📝 <i>Une fois validé, écrivez <b>/start</b> pour actualiser le menu.</i>\n\n` +
+                            `👇 <b>Cliquez sur les liens ci-dessous :</b>\n` +
+                            (settings.private_contact_wa_url ? `• *WhatsApp Admin :* ${settings.private_contact_wa_url}\n` : '') +
+                            (settings.private_contact_url ? `• *Telegram Admin :* ${settings.private_contact_url}\n` : '') +
+                            (settings.channel_url ? `• *Notre Canal :* ${settings.channel_url}\n` : '') : 
+                            `👇 <b>Veuillez cliquer ci-dessous :</b>`);
                 
                 const b = [];
                 if (settings.private_contact_url) b.push([Markup.button.url('✉️ Telegram : Admin', settings.private_contact_url)]);
+                if (settings.private_contact_wa_url) b.push([Markup.button.url('✉️ WhatsApp : Admin', settings.private_contact_wa_url)]);
                 b.push([Markup.button.url('📢 S’abonner au canal', settings.channel_url || 'https://t.me/channel')]);
                 b.push([Markup.button.callback('🔄 Rafraîchir mon statut', 'start')]);
                 
@@ -215,7 +222,7 @@ function setupStartHandler(bot) {
                 const useWelcome = settings.welcome_message_enabled !== false;
                 
                 if (isNew && useWelcome) {
-                    welcomeText = t(ctx, 'msg_welcome', `✨ <b>Bienvenue sur {bot_name}, {first_name} !</b>`, {
+                    welcomeText = t(registeredUser, 'msg_welcome', `✨ <b>Bienvenue sur {bot_name}, {first_name} !</b>`, {
                         bot_name: settings.bot_name,
                         first_name: user.first_name
                     }) + '\n\n' +
@@ -226,7 +233,7 @@ function setupStartHandler(bot) {
                     if (!referrerId) pendingReferralInput.set(docId, true);
                 } else {
                     const defaultText = (settings.msg_welcome_back || `👋 <b>Ravi de vous revoir, {first_name} !</b>`);
-                    welcomeText = t(ctx, 'msg_welcome_back', defaultText, {
+                    welcomeText = t(registeredUser, 'msg_welcome_back', defaultText, {
                         first_name: user.first_name,
                         bot_name: settings.bot_name,
                         payment_line: paymentLine
@@ -248,9 +255,42 @@ function setupStartHandler(bot) {
                 ...keyboard
             });
 
+            
             if (ctx.telegram) {
                 await updateMenuButton(ctx, registeredUser, settings);
+                
+                // Force command translation per user
+                const cmdLang = registeredUser.language_code || 'fr';
+                const cmds = {
+                    'en': [
+                        { command: 'start', description: '🏠 Start the bot / Home' },
+                        { command: 'menu', description: '🛒 View catalog' },
+                        { command: 'orders', description: '📦 My orders' },
+                        { command: 'help', description: '❓ Help and support' }
+                    ],
+                    'de': [
+                        { command: 'start', description: '🏠 Bot starten / Startseite' },
+                        { command: 'menu', description: '🛒 Katalog ansehen' },
+                        { command: 'orders', description: '📦 Meine Bestellungen' },
+                        { command: 'help', description: '❓ Hilfe und Support' }
+                    ],
+                    'es': [
+                        { command: 'start', description: '🏠 Iniciar el bot / Inicio' },
+                        { command: 'menu', description: '🛒 Ver catálogo' },
+                        { command: 'orders', description: '📦 Mis pedidos' },
+                        { command: 'help', description: '❓ Ayuda y soporte' }
+                    ],
+                    'fr': [
+                        { command: 'start', description: '🏠 Lancer le bot / Accueil' },
+                        { command: 'menu', description: '🛒 Voir le catalogue' },
+                        { command: 'orders', description: '📦 Mes commandes' },
+                        { command: 'help', description: '❓ Aide et support' }
+                    ]
+                };
+                const userCmds = cmds[cmdLang] || cmds['fr'];
+                await ctx.telegram.setMyCommands(userCmds, { scope: { type: 'chat', chat_id: ctx.chat.id } }).catch(()=>{});
             }
+
 
         } catch (error) {
             console.error('❌ Erreur /start:', error);
@@ -263,9 +303,9 @@ function setupStartHandler(bot) {
         if (ctx.platform === 'telegram' && settings.force_subscribe) {
             const isSubscribed = await checkSubscription(bot, ctx, settings);
             if (!isSubscribed) {
-                return ctx.reply('❌ Vous n\'êtes pas encore abonné au canal. Veuillez cliquer sur "Rejoindre le Canal" puis réessayer.', { parse_mode: 'HTML' });
+                return ctx.reply(t(ctx, 'msg_vous_n_tes_pas_enco', "❌ Vous n\\'êtes pas encore abonné au canal. Veuillez cliquer sur \"Rejoindre le Canal\" puis réessayer."), { parse_mode: 'HTML' });
             } else {
-                ctx.reply('✅ Abonnement vérifié avec succès !', { parse_mode: 'HTML' });
+                ctx.reply(t(ctx, 'msg_abonnement_v_rifi_a', "✅ Abonnement vérifié avec succès !"), { parse_mode: 'HTML' });
                 // Simuler une commande /start pour réévaluer la logique utilisateur
                 return bot.handleUpdate({ ...ctx.update, message: { text: '/start', from: ctx.from } });
             }
@@ -306,7 +346,7 @@ function setupStartHandler(bot) {
         await ctx.answerCbQuery();
         const settings = ctx.state?.settings || await getAppSettings();
         const user = ctx.state?.user;
-        if (!user) return ctx.reply('⚠️ Utilisateur introuvable.');
+        if (!user) return ctx.reply(t(ctx, 'msg_utilisateur_introuv', "⚠️ Utilisateur introuvable."));
 
         const text = `🎁 <b>PARRAINAGE</b>\n\n` +
             `Invitez vos amis et gagnez des récompenses !\n\n` +
@@ -348,11 +388,15 @@ function setupStartHandler(bot) {
         if (settings.private_contact_url) {
             buttons.push([Markup.button.url('📲 Telegram : Admin', settings.private_contact_url)]);
         }
+        if (settings.private_contact_wa_url) {
+            buttons.push([Markup.button.url('📲 WhatsApp : Admin', settings.private_contact_wa_url)]);
+        }
         buttons.push([Markup.button.callback('◀️ Retour', 'main_menu')]);
         
         let text = `${settings.ui_icon_contact || '💬'} <b>${settings.label_contact || 'Contact Admin'}</b>\n\n` +
                    `Bonjour <b>${ctx.from.first_name}</b>, vous pouvez nous contacter en direct :\n\n` +
                    (settings.private_contact_url ? `🔹 <b>Telegram :</b> <a href="${settings.private_contact_url}">Cliquez ici</a>\n` : '') +
+                   (settings.private_contact_wa_url ? `🔸 <b>WhatsApp :</b> <a href="${settings.private_contact_wa_url}">Cliquez ici</a>\n\n` : '\n') +
                    (isFournisseur ? `<i>Note : En tant que fournisseur, utilisez ces liens pour toute question logistique ou paiement.</i>\n\n` : '') +
                    `Cliquez sur l'un des boutons ci-dessous pour ouvrir une discussion.`;
         await safeEdit(ctx, text, { parse_mode: 'HTML', ...Markup.inlineKeyboard(buttons) });
@@ -377,7 +421,7 @@ function setupStartHandler(bot) {
         try {
             const { saveUserLocation } = require('../services/database');
             await saveUserLocation(userId, loc.latitude, loc.longitude);
-            await ctx.reply('✅ Position enregistrée.');
+            await ctx.reply(t(ctx, 'msg_position_enregistr', "✅ Position enregistrée."));
         } catch (e) { console.error('Location error:', e); }
     });
 
@@ -391,7 +435,7 @@ function setupStartHandler(bot) {
             try {
                 const { registerUser } = require('../services/database');
                 await registerUser(ctx.from, ctx.platform, ref);
-                return ctx.reply('🎉 Code parrainage validé !');
+                return ctx.reply(t(ctx, 'msg_code_parrainage_val', "🎉 Code parrainage validé !"));
             } catch (e) { }
         }
         return next();
@@ -402,10 +446,10 @@ function setupStartHandler(bot) {
         const isSubscribed = await checkSubscription(bot, ctx, settings);
         
         if (!isSubscribed) {
-            return await ctx.answerCbQuery('❌ Vous n\'êtes pas encore abonné au canal !', { show_alert: true });
+            return await ctx.answerCbQuery(t(ctx, 'msg_vous_n_tes_pas_enco', "❌ Vous n\'êtes pas encore abonné au canal !"), { show_alert: true });
         }
         
-        await ctx.answerCbQuery('✅ Merci pour votre abonnement !');
+        await ctx.answerCbQuery(t(ctx, 'msg_merci_pour_votre_ab', "✅ Merci pour votre abonnement !"));
         // Relancer le start
         return bot.handleUpdate({ ...ctx.update, message: { text: '/start', from: ctx.from } });
     });
@@ -454,7 +498,7 @@ async function showMainMenu(ctx) {
         return await safeEdit(ctx, livreurText, { photo: settings.welcome_photo || null, ...keyboard });
     }
 
-    const text = t(user, 'menu_main', `📋 <b>Menu principal</b>`);
+    const text = t(registeredUser || user, 'menu_main', `📋 <b>Menu principal</b>`);
     const supplier = await getSupplierByTelegramId(String(ctx.from.id));
     const isFournisseur = !!supplier;
     const keyboard = await getMainMenuKeyboard(ctx, settings, user, isFournisseur);
@@ -464,7 +508,42 @@ async function showMainMenu(ctx) {
         ...keyboard
     });
     
+    
     await updateMenuButton(ctx, user, settings);
+    
+    // Force command translation per user when returning to menu
+    if (ctx.telegram && ctx.chat) {
+        const cmdLang = user?.language_code || 'fr';
+        const cmds = {
+            'en': [
+                { command: 'start', description: '🏠 Start the bot / Home' },
+                { command: 'menu', description: '🛒 View catalog' },
+                { command: 'orders', description: '📦 My orders' },
+                { command: 'help', description: '❓ Help and support' }
+            ],
+            'de': [
+                { command: 'start', description: '🏠 Bot starten / Startseite' },
+                { command: 'menu', description: '🛒 Katalog ansehen' },
+                { command: 'orders', description: '📦 Meine Bestellungen' },
+                { command: 'help', description: '❓ Hilfe und Support' }
+            ],
+            'es': [
+                { command: 'start', description: '🏠 Iniciar el bot / Inicio' },
+                { command: 'menu', description: '🛒 Ver catálogo' },
+                { command: 'orders', description: '📦 Mis pedidos' },
+                { command: 'help', description: '❓ Ayuda y soporte' }
+            ],
+            'fr': [
+                { command: 'start', description: '🏠 Lancer le bot / Accueil' },
+                { command: 'menu', description: '🛒 Voir le catalogue' },
+                { command: 'orders', description: '📦 Mes commandes' },
+                { command: 'help', description: '❓ Aide et support' }
+            ]
+        };
+        const userCmds = cmds[cmdLang] || cmds['fr'];
+        await ctx.telegram.setMyCommands(userCmds, { scope: { type: 'chat', chat_id: ctx.chat.id } }).catch(()=>{});
+    }
+
 }
 
 async function getMainMenuKeyboard(ctx, settings, user, isFournisseur = false, isAdminUser = false) {
@@ -580,7 +659,7 @@ async function updateMenuButton(ctx, user, settings, forceClient = false) {
         } else {
             await ctx.telegram.setChatMenuButton(ctx.chat.id, {
                 type: 'web_app',
-                text: `${settings.ui_icon_catalog || '🛍️'} Catalogue`,
+                text: `${settings.ui_icon_catalog || '🛍️'} ` + require('../services/i18n').t({ language_code: langCode }, 'btn_catalog', 'Catalogue'),
                 web_app: { url: catalogUrl }
             }).catch(() => {});
         }
