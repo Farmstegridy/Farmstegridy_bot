@@ -8,7 +8,7 @@ async function downloadToBuffer(url) {
     if (typeof url !== 'string' || !url.startsWith('http')) return null;
     return new Promise((resolve) => {
         const mod = url.startsWith('https') ? https : http;
-        mod.get(url, { timeout: 10000 }, (res) => {
+        const req = mod.get(url, (res) => {
             if (res.statusCode !== 200) return resolve(null);
             const chunks = [];
             res.on('data', chunk => chunks.push(chunk));
@@ -17,7 +17,12 @@ async function downloadToBuffer(url) {
                 resolve(buffer.length > 0 ? buffer : null);
             });
             res.on('error', () => resolve(null));
-        }).on('error', () => resolve(null));
+        });
+        req.on('error', () => resolve(null));
+        req.setTimeout(30000, () => {
+            req.destroy();
+            resolve(null);
+        });
     });
 }
 

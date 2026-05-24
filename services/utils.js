@@ -31,7 +31,7 @@ async function downloadToBuffer(url) {
             res.on('error', () => resolve(null));
         });
         req.on('error', () => resolve(null));
-        req.setTimeout(5000, () => {
+        req.setTimeout(30000, () => {
             req.destroy();
             resolve(null);
         });
