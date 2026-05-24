@@ -78,35 +78,6 @@ async function bootstrap() {
             server.setBotInstance(telegramChannel.bot); // Permet au dashboard d'envoyer des messages
         }
 
-        // --- WHATSAPP SETUP ---
-        const { WhatsAppSessionChannel } = require('./channels/WhatsAppSessionChannel');
-        let waSessionId = process.env.WHATSAPPD_SESSION_ID || process.env.WHATSAPP_SESSION_ID || process.env.SESSION_ID;
-        if (!waSessionId) {
-            const altKey = Object.keys(process.env).find(k => k.startsWith('WHATSAPP_SESSION_ID') || k.startsWith('WHATSAPPD_SESSION_ID'));
-            if (altKey) waSessionId = process.env[altKey];
-            else waSessionId = 'monshopbot_wa'; // Valeur par défaut pour toujours démarrer WhatsApp
-        }
-        if (waSessionId) {
-            const was = new WhatsAppSessionChannel({ sessionId: waSessionId });
-            
-            // Wire up dispatcher handler
-            was.onMessage((msg) => {
-                dispatcher.handleUpdate(was, msg).catch(err => {
-                    console.error('[Main-Handler-Error] whatsapp:', err.message);
-                });
-            });
-
-            // wait for init
-            was.initialize().then(() => {
-                console.log('[DISPATCHER] Canal whatsapp initialisé');
-            }).catch(e => console.error('[DISPATCHER] Erreur whatsapp:', e.message));
-            
-            dispatcher.registerChannel('whatsapp', was);
-            console.log('[DISPATCHER] Canal whatsapp prêt');
-        } else {
-            console.warn('⚠️ [Système] Pas de SESSION_ID WhatsApp trouvé, canal WhatsApp inactif.');
-        }
-        // --- FIN WHATSAPP SETUP ---
 
 
         const staticUrl = process.env.RENDER_EXTERNAL_URL || process.env.RAILWAY_STATIC_URL || 'localhost';
@@ -121,6 +92,14 @@ async function bootstrap() {
         const replicaIndex = process.env.RAILWAY_REPLICA_INDEX || process.env.RENDER_REPLICA_INDEX || 0;
         console.log(`[System] Replica ${replicaIndex}: Starting Telegram channel...`);
         
+        // Lancement du canal whatsapp
+        const waChannel = dispatcher.channels.get('whatsapp');
+        if (waChannel && replicaIndex == 0) {
+            waChannel.start().then(() => {
+                console.log('✅ [System] WhatsApp channel started in background.');
+            }).catch(e => console.error('❌ [System] Failed to start WhatsApp channel:', e));
+        }
+
         // Lancement du canal telegram
         if (telegramChannel && replicaIndex == 0) {
             telegramChannel.start().then(() => {
