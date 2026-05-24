@@ -134,7 +134,7 @@ function setupOrderSystem(bot) {
         const baasKeywords = ['BAAS', 'PACK', 'MODULE'];
         let categories = Object.keys(productsByCategory).filter(cat => {
             const isCatBaas = baasKeywords.some(kw => cat.toUpperCase().includes(kw));
-            return isBaas ? isCatBaas : !isCatBaas;
+            return !isCatBaas;
         });
 
         if (categories.length === 0) {
