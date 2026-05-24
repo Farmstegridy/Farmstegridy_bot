@@ -2229,8 +2229,22 @@
                 d.style = `position:relative; background:var(--card); border:1px solid var(--border); border-radius:24px; padding:20px; margin-bottom:15px; ${n.id === focusId ? 'border-color:var(--accent);' : ''}`;
                 
                 let msg = n.message || '';
+                let mediaUrl = null;
+                let mediaType = 'photo';
                 
                 if (n.type !== 'order') {
+                    // Extraction des médias
+                    let mediaMatch = msg.match(/\|\|\|MEDIA_URLS\|\|\|(.*)(?=\n|$)/);
+                    if (mediaMatch && mediaMatch[1]) {
+                        try {
+                            let parsed = JSON.parse(mediaMatch[1]);
+                            if (parsed.length > 0) {
+                                mediaUrl = parsed[0].url;
+                                mediaType = parsed[0].type || 'photo';
+                            }
+                        } catch(e) {}
+                    }
+                    
                     // Nettoyage des balises MEDIA_URLS brutes
                     msg = msg.replace(/\|\|\|MEDIA_URLS\|\|\|[\s\S]*?(?=\n|$)/g, '').replace(/\[\]/g, '').trim();
 
@@ -2241,13 +2255,21 @@
                     }
                 }
 
-                const hasMedia = n.media_url && n.media_url.length > 5;
+                const hasMedia = mediaUrl && mediaUrl.length > 5;
+                let mediaHtml = '';
+                if (hasMedia) {
+                    if (mediaType === 'video' || mediaUrl.match(/\.(mp4|mov|webm)$/i)) {
+                        mediaHtml = `<div style="width:100%; height:200px; background:#000; border-radius:15px; overflow:hidden; margin-bottom:15px; display:flex; align-items:center; justify-content:center;"><video src="${mediaUrl}#t=0.001" preload="metadata" controls playsinline style="width:100%; height:100%; object-fit:contain;"></video></div>`;
+                    } else {
+                        mediaHtml = `<div style="width:100%; height:200px; background:#000; border-radius:15px; overflow:hidden; margin-bottom:15px; display:flex; align-items:center; justify-content:center;"><img src="${mediaUrl}" style="width:100%; height:100%; object-fit:contain;"></div>`;
+                    }
+                }
 
                 d.innerHTML = `
-                    <div style="position:absolute; top:15px; right:15px; cursor:pointer; opacity:0.5;" onclick="hideNotification('${n.id}', event)">
+                    <div style="position:absolute; top:15px; right:15px; cursor:pointer; opacity:0.5; z-index:10;" onclick="hideNotification('${n.id}', event)">
                         <i class="notranslate ph-bold ph-x" style="font-size:18px;"></i>
                     </div>
-                    ${hasMedia ? `<div style="width:100%; height:200px; background:#000; border-radius:15px; overflow:hidden; margin-bottom:15px; display:flex; align-items:center; justify-content:center;"><img src="${n.media_url}" style="width:100%; height:100%; object-fit:contain;"></div>` : ''}
+                    ${mediaHtml}
                     <div style="font-size:14px; font-weight:500; line-height:1.6; margin-bottom:10px; color:rgba(255,255,255,0.95); padding-right:20px;">${msg}</div>
                     <div style="font-size:10px; font-weight:900; color:var(--accent);">${new Date(n.created_at).toLocaleString()}</div>
                 `;
@@ -2265,7 +2287,7 @@
                 } else {
                     d.style.cursor = 'pointer';
                     d.onclick = () => {
-                        let match = n.message && n.message.match(/Nouveaut(?:é|e)\s*:\s*([^<]+)/i);
+                        let match = msg.match(/Nouveaut(?:é|e)\s*:\s*([^<]+)/i);
                         if (match && typeof allProducts !== 'undefined') {
                             let pName = match[1].trim().toLowerCase();
                             let prod = allProducts.find(p => p.name.toLowerCase() === pName);
@@ -2280,7 +2302,7 @@
                         closeNotifications();
                         openCustomModal('ACTUALITÉ', `
                             <div style="padding:10px; text-align:center;">
-                                ${hasMedia ? `<img src="${n.media_url}" style="width:100%; border-radius:15px; margin-bottom:15px; object-fit:contain; background:#000;">` : ''}
+                                ${mediaHtml.replace('height:200px', 'max-height:250px').replace('margin-bottom:15px', 'margin-bottom:20px')}
                                 <div style="font-size:16px; font-weight:700; line-height:1.5;">${msg}</div>
                                 <div style="margin-top:15px; opacity:0.5; font-size:12px; font-weight:900; color:var(--accent);">${new Date(n.created_at).toLocaleString()}</div>
                             </div>
