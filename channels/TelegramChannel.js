@@ -137,7 +137,7 @@ class TelegramChannel extends Channel {
         
         // Build launch options
         const launchOptions = {
-            drop_pending_updates: true,
+            drop_pending_updates: false,
             allowedUpdates: ['message', 'callback_query', 'chat_join_request']
         };
 
