@@ -557,7 +557,7 @@
             if (mediaList.length === 1) {
                 const m = mediaList[0];
                 if (m.type === 'video' || m.url.endsWith('.mp4') || m.url.endsWith('.webm') || m.url.endsWith('.mov')) {
-                    container.innerHTML = `<video controls playsinline style="width:100%; height:100%; object-fit:contain; background:#000;"><source src="${m.url}"></video>`;
+                    container.innerHTML = `<video controls playsinline preload="metadata" style="width:100%; height:100%; object-fit:contain; background:#000;"><source src="${m.url}#t=0.001"></video>`;
                 } else {
                     container.innerHTML = `<img src="${m.url}" style="width:100%; height:100%; object-fit:contain;">`;
                 }
@@ -570,7 +570,7 @@
                 const isVideo = m.type === 'video' || m.url.endsWith('.mp4') || m.url.endsWith('.webm') || m.url.endsWith('.mov');
                 if (isVideo) {
                     html += `<div style="flex:0 0 100%; scroll-snap-align:start; position:relative; width:100%; height:100%;">
-                                <video controls playsinline style="width:100%; height:100%; object-fit:contain;"><source src="${m.url}"></video>
+                                <video controls playsinline preload="metadata" style="width:100%; height:100%; object-fit:contain;"><source src="${m.url}#t=0.001"></video>
                              </div>`;
                 } else {
                     html += `<div style="flex:0 0 100%; scroll-snap-align:start; position:relative; width:100%; height:100%;">
@@ -1322,7 +1322,7 @@
                     if (r.media && r.media.length > 0) {
                         const m = r.media[0];
                         if (m.endsWith('.mp4') || m.endsWith('.webm') || m.endsWith('.mov')) {
-                            mediaHtml = `<div style="margin-top:10px;"><video src="${m}" controls style="max-height:120px; border-radius:8px; max-width:100%; border:1px solid rgba(255,255,255,0.1);"></video></div>`;
+                            mediaHtml = `<div style="margin-top:10px;"><video src="${m}#t=0.001" preload="metadata" controls style="max-height:120px; border-radius:8px; max-width:100%; border:1px solid rgba(255,255,255,0.1);"></video></div>`;
                         } else {
                             mediaHtml = `<div style="margin-top:10px;"><img src="${m}" style="max-height:120px; border-radius:8px; max-width:100%; border:1px solid rgba(255,255,255,0.1); object-fit:contain;"></div>`;
                         }
@@ -1355,7 +1355,7 @@
                     if (r.media && r.media.length > 0) {
                         const m = r.media[0];
                         if (m.endsWith('.mp4') || m.endsWith('.webm') || m.endsWith('.mov')) {
-                            mediaHtml = `<div style="margin-top:10px;"><video src="${m}" controls style="max-height:80px; border-radius:8px; border:1px solid rgba(255,255,255,0.1);"></video></div>`;
+                            mediaHtml = `<div style="margin-top:10px;"><video src="${m}#t=0.001" preload="metadata" controls style="max-height:80px; border-radius:8px; border:1px solid rgba(255,255,255,0.1);"></video></div>`;
                         } else {
                             mediaHtml = `<div style="margin-top:10px;"><img src="${m}" style="max-height:80px; border-radius:8px; border:1px solid rgba(255,255,255,0.1); object-fit:contain;"></div>`;
                         }
@@ -2238,11 +2238,18 @@
                     d.style.cursor = 'pointer';
                     d.onclick = () => { 
                         closeNotifications(); 
-                        switchPage('help', document.querySelectorAll('.nav-item')[3]); 
+                        switchPage('orders', document.querySelectorAll('.nav-item')[1]); 
                         setTimeout(()=> { 
                             const chatHeader = document.querySelector(`.order-card[data-id="${n.id.replace('order_','')}"]`); 
                             if(chatHeader) chatHeader.scrollIntoView({behavior:'smooth'}); 
                         }, 500); 
+                    };
+                } else {
+                    d.style.cursor = 'pointer';
+                    d.onclick = () => {
+                        closeNotifications();
+                        switchPage('shop', document.querySelectorAll('.nav-item')[0]);
+                        window.scrollTo({top:0, behavior:'smooth'});
                     };
                 }
 
