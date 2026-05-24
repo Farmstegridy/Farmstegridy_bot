@@ -72,6 +72,7 @@ async function translateProduct(product, targetLang) {
     
     // Create a copy
     const p = { ...product };
+    if (p.category) p.raw_category = p.category; // Keep original for logic filtering
     if (p.name) p.name = await translate(p.name, targetLang);
     if (p.description) p.description = await translate(p.description, targetLang);
     if (p.category) p.category = await translate(p.category, targetLang);

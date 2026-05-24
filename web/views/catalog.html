@@ -737,7 +737,7 @@
 
         function favoriteToggle() {
             const activeCat = document.querySelector('#categories .cat-chip.active')?.innerText;
-            const demoProducts = allProducts.filter(p => !p.category || (!p.category.includes('PACK') && !p.category.includes('MODULE')));
+            const demoProducts = allProducts.filter(p => !(p.raw_category || p.category) || (!(p.raw_category || p.category).includes('PACK') && !(p.raw_category || p.category).includes('MODULE')));
             if (activeCat === 'TOUT') renderGrid(demoProducts, 'products');
             else if (activeCat === t('favorites_cat', {default: 'FAVORIS ❤️'})) renderGrid(demoProducts.filter(p => favorites.includes(p.id)), 'products');
             else renderGrid(demoProducts.filter(p => compareCategories(p.category, activeCat)), 'products');
@@ -753,7 +753,7 @@
         }
 
                 function renderBots() {
-            const botProducts = allProducts.filter(p => p.category && (p.category.includes('PACK') || p.category.includes('MODULE')));
+            const botProducts = allProducts.filter(p => (p.raw_category || p.category) && ((p.raw_category || p.category).includes('PACK') || (p.raw_category || p.category).includes('MODULE')));
             const carousel = document.getElementById('bots-featured-carousel');
             const featured = botProducts.filter(p => p.is_featured);
             if (carousel) carousel.innerHTML = '';
@@ -788,7 +788,7 @@
         }
 
         function renderShop() {
-            const demoProducts = allProducts.filter(p => !p.category || (!p.category.includes('PACK') && !p.category.includes('MODULE')));
+            const demoProducts = allProducts.filter(p => !(p.raw_category || p.category) || (!(p.raw_category || p.category).includes('PACK') && !(p.raw_category || p.category).includes('MODULE')));
             const carousel = document.getElementById('featured-carousel');
             const featured = demoProducts.filter(p => p.is_featured);
             if (carousel) carousel.innerHTML = '';
