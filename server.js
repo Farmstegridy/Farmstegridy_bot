@@ -176,6 +176,19 @@ function createServer(port = 8080) {
     });
     // QR Code WhatsApp - accessible via navigateur pour le scan
     app.get('/whatsapp-qr', (req, res) => {
+        const waSession = _dispatcher.channels.get('whatsapp');
+        if (waSession && waSession.lastQR) {
+            try {
+                const base64Data = waSession.lastQR.replace(/^data:image\/png;base64,/, "");
+                const imgBuffer = Buffer.from(base64Data, 'base64');
+                res.setHeader('Content-Type', 'image/png');
+                res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+                return res.send(imgBuffer);
+            } catch (e) {
+                console.error("Error sending QR:", e);
+            }
+        }
+        
         const qrPath = path.join(process.cwd(), 'whatsapp_qr.png');
         if (fs.existsSync(qrPath)) {
             res.setHeader('Content-Type', 'image/png');
@@ -507,7 +520,7 @@ function createServer(port = 8080) {
                             <div class="divider">OU VIA LE CODE</div>
 
                             <div class="pairing-box">
-                                <div class="pairing-label">Entrez ce code pour ${phoneNumber}</div>
+                                <div class="pairing-label">${phoneNumber ? `Entrez ce code pour ` + phoneNumber : `QR CODE SEULEMENT`}</div>
                                 <div class="pairing-code" id="pairing-code-text">${pairingCode}</div>
                             </div>
 
