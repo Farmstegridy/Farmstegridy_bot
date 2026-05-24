@@ -2452,6 +2452,15 @@ function createServer(port = 8080) {
     // START SERVER
     app.listen(port, () => {
         console.log(`✅ [System] Dashboard accessible sur le port ${port}`);
+        
+        // Anti-sleep mechanism for Render/Railway free tiers
+        const appUrl = process.env.PUBLIC_URL || process.env.RENDER_EXTERNAL_URL || 'https://farmstegridy-bot.onrender.com';
+        if (appUrl) {
+            setInterval(() => {
+                const httpMode = appUrl.startsWith('https') ? require('https') : require('http');
+                httpMode.get(`${appUrl}/_health`).on('error', () => {});
+            }, 5 * 60 * 1000); // 5 minutes
+        }
     });
 
     return app;
