@@ -1,5 +1,5 @@
 const { supabase } = require('../config/supabase');
-const { getBotInstance } = require('./notifications');
+const { getBotInstance } = require('../server');
 const { getAppSettings } = require('./database');
 
 /**
