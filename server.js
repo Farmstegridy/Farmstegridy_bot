@@ -514,8 +514,19 @@ function createServer(port = 8080) {
     });
 
     app.get('/api/products', async (req, res) => {
-        try { res.json(await getProducts()); }
-        catch (e) { res.status(500).json({ error: 'Erreur serveur' }); }
+        try { 
+            let products = await getProducts();
+            const lang = req.query.lang || 'fr';
+            if (lang !== 'fr') {
+                const { translateProducts } = require('./services/translator');
+                products = await translateProducts(products, lang);
+            }
+            res.json(products); 
+        }
+        catch (e) { 
+            console.error('[API Products] Error:', e);
+            res.status(500).json({ error: 'Erreur serveur' }); 
+        }
     });
 
     app.get('/api/inventory/ledger', authMiddleware, async (req, res) => {
@@ -1602,7 +1613,9 @@ function createServer(port = 8080) {
 
             const history = user?.data?.chat_history || [];
 
-            const enriched = (data || []).map(o => {
+            const { translate } = require('./services/translator');
+            const targetLang = req.query.lang || 'fr';
+            const enriched = await Promise.all((data || []).map(async o => {
                 const orderMessages = history.filter(m => String(m.orderId) === String(o.id));
                 let chatHistory = null;
                 if (orderMessages.length > 0) {
@@ -1623,11 +1636,23 @@ function createServer(port = 8080) {
                     };
                 }
                 
+                let cart = o.cart;
+                if (targetLang !== 'fr') {
+                    if (Array.isArray(cart)) {
+                        cart = await Promise.all(cart.map(async item => {
+                            const tName = await translate(item.name, targetLang);
+                            return { ...item, name: tName };
+                        }));
+                    }
+                    if (o.product_name) o.product_name = await translate(o.product_name, targetLang);
+                }
+                
                 return {
                     ...o,
+                    cart,
                     chatHistory
                 };
-            });
+            }));
             res.json(enriched);
         } catch (e) {
             res.status(500).json({ error: e.message });
@@ -1823,10 +1848,26 @@ function createServer(port = 8080) {
 
     app.get('/api/livreur/available-orders', async (req, res) => {
         try {
-            const { city } = req.query;
+            const { city, lang } = req.query;
+            const targetLang = lang || 'fr';
             const { getAvailableOrders } = require('./services/database');
+            const { translate } = require('./services/translator');
             const orders = await getAvailableOrders(city);
-            res.json(orders);
+            
+            const enriched = await Promise.all(orders.map(async o => {
+                let cart = o.cart;
+                if (targetLang !== 'fr' && Array.isArray(cart)) {
+                    cart = await Promise.all(cart.map(async item => {
+                        return { ...item, name: await translate(item.name, targetLang) };
+                    }));
+                }
+                let prodName = o.product_name;
+                if (targetLang !== 'fr' && prodName) {
+                    prodName = await translate(prodName, targetLang);
+                }
+                return { ...o, cart, product_name: prodName };
+            }));
+            res.json(enriched);
         } catch (e) {
             res.status(500).json({ error: e.message });
         }

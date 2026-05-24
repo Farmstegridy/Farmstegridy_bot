@@ -1,0 +1,6 @@
+const { supabase } = require('./config/supabase');
+async function test() {
+    const { data, error } = await supabase.from('bot_settings').select('*').limit(1);
+    console.log("Data:", data, "Error:", error);
+}
+test();
