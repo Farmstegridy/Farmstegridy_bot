@@ -61,7 +61,6 @@ function setupStartHandler(bot) {
 
         // 2. Persister en base de données avec updateUser pour mettre à jour le cache !
         await updateUser(docId, { 
-            language_code: lang, 
             data: { ...(ctx.state.user.data), language: lang } 
         });
 
