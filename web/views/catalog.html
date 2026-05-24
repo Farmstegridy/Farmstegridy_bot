@@ -541,7 +541,8 @@
 
         function getImgUrl(product) {
             const media = getAllMedia(product);
-            return media.length > 0 ? media[0].url : null;
+            const imgMedia = media.find(m => m.type !== 'video' && !m.url.match(/\.(mp4|webm|mov)$/i));
+            return imgMedia ? imgMedia.url : null;
         }
 
         function renderMediaGallery(product, containerId) {
@@ -1401,7 +1402,13 @@
         }
 
         function stopAllVideos() {
-            document.querySelectorAll('video').forEach(v => v.pause());
+            document.querySelectorAll('video').forEach(v => {
+                try {
+                    v.pause();
+                    v.removeAttribute('src');
+                    v.load();
+                } catch(e) {}
+            });
         }
 
         function closeProductModal() { 
