@@ -2684,20 +2684,31 @@ function setupOrderSystem(bot) {
         const { getLivreurOrders } = require('../services/database');
         const activeOrders = await getLivreurOrders(`${ctx.platform}_${ctx.from.id}`);
 
-        let text = `${settings.ui_icon_livreur} <b>${settings.label_livreur || 'Espace Livreur'}</b>\n\n` +
-            `👤 ${user.first_name || ctx.from.first_name}\n` +
-            `📍 Secteur : <b>${city.toUpperCase()}</b>\n` +
-            `🔘 Statut : <b>${isAvail ? (settings.ui_icon_success || '✅') + ' DISPONIBLE' : (settings.ui_icon_error || '❌') + ' INDISPONIBLE'}</b>\n\n`;
+        const statusLabel = isAvail ? t(user, 'label_available', 'AVAILABLE') : t(user, 'label_unavailable', 'UNAVAILABLE');
+        let text = t(user, 'msg_livreur_welcome', `🚴 <b>Welcome, {first_name} !</b>`, { first_name: user.first_name || ctx.from.first_name }) + '
+
+' +
+            t(user, 'msg_livreur_city', `📍 Sector: <b>{city}</b>`, { city: city.toUpperCase() }) + '
+' +
+            t(user, 'msg_livreur_status', `🔘 Status: <b>{status}</b>`, { status: (isAvail ? (settings.ui_icon_success || '✅') : (settings.ui_icon_error || '❌')) + ' ' + statusLabel }) + '
+
+';
 
         if (activeOrders.length > 0) {
-            text += `🚨 <b>VOUS AVEZ ${activeOrders.length} COMMANDE(S) EN COURS !</b>\n\n`;
+            text += t(user, 'msg_livreur_active_count', `🚀 <b>YOU HAVE {count} ACTIVE ORDER(S) !</b>`, { count: activeOrders.length }) + '
+
+';
             activeOrders.forEach(o => {
-                text += `📦 #${o.id.slice(-5)} - ${o.address}\n`;
+                text += `📦 #${o.id.slice(-5)} - ${o.address}
+`;
             });
-            text += `\n<i>Cliquez sur "Mes livraisons en cours" pour les gérer.</i>\n\n`;
+            text += `
+` + t(user, 'msg_livreur_active_help', `<i>Click on "Active Deliveries" to manage them.</i>`) + `
+
+`;
         }
 
-        text += `Que voulez-vous faire ?`;
+        text += t(user, 'msg_what_to_do', `Que voulez-vous faire ?`);
 
         const opts = await getLivreurMenuKeyboard(ctx, settings, user, activeOrders.length > 0);
         await safeEdit(ctx, text, opts);

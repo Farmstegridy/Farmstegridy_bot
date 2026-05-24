@@ -204,14 +204,25 @@ function setupStartHandler(bot) {
                 const city = registeredUser.current_city || registeredUser.data?.current_city || 'Non défini';
                 const isAvail = registeredUser.is_available || registeredUser.data?.is_available;
 
-                welcomeText = `${settings.ui_icon_livreur} <b>Bienvenue, ${user.first_name} !</b>\n\n` +
-                    `📍 Secteur : <b>${city.toUpperCase()}</b>\n` +
-                    `🔘 Statut : <b>${isAvail ? (settings.ui_icon_success || '✅') + ' DISPONIBLE' : (settings.ui_icon_error || '❌') + ' INDISPONIBLE'}</b>\n\n`;
+                const statusLabel = isAvail ? t(registeredUser, 'label_available', 'AVAILABLE') : t(registeredUser, 'label_unavailable', 'UNAVAILABLE');
+                welcomeText = t(registeredUser, 'msg_livreur_welcome', `🚴 <b>Welcome, {first_name} !</b>`, { first_name: user.first_name }) + '
+
+' +
+                    t(registeredUser, 'msg_livreur_city', `📍 Sector: <b>{city}</b>`, { city: city.toUpperCase() }) + '
+' +
+                    t(registeredUser, 'msg_livreur_status', `🔘 Status: <b>{status}</b>`, { status: (isAvail ? (settings.ui_icon_success || '✅') : (settings.ui_icon_error || '❌')) + ' ' + statusLabel }) + '
+
+';
 
                 if (hasActive) {
-                    welcomeText += `🚀 <b>VOUS AVEZ ${activeOrders.length} COMMANDE(S) EN COURS !</b>\n\n` +
-                        activeOrders.map(o => `📦 #${o.id.slice(-5)} - ${o.address || '?'}`).join('\n') +
-                        `\n\n<i>Cliquez sur "Mes livraisons en cours" pour les gérer.</i>`;
+                    welcomeText += t(registeredUser, 'msg_livreur_active_count', `🚀 <b>YOU HAVE {count} ACTIVE ORDER(S) !</b>`, { count: activeOrders.length }) + '
+
+' +
+                        activeOrders.map(o => `📦 #${o.id.slice(-5)} - ${o.address || '?'}`).join('
+') +
+                        '
+
+' + t(registeredUser, 'msg_livreur_active_help', `<i>Click on "Active Deliveries" to manage them.</i>`);
                 }
             } else {
                 const paymentLine = settings.payment_modes
