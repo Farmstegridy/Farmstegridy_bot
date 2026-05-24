@@ -36,13 +36,14 @@ async function checkSubscription(bot, ctx, settings) {
 function setupStartHandler(bot) {
 
     bot.command('language', async (ctx) => {
+        const user = ctx.state.user || { language_code: ctx.from.language_code || 'fr' };
         const text = `🌐 <b>CHOIX DE LA LANGUE / LANGUAGE CHOICE</b>\n\nChoisissez votre langue de préférence :\nChoose your preferred language:`;
         const keyboard = Markup.inlineKeyboard([
             [Markup.button.callback('🇫🇷 Français', 'set_lang_fr')],
             [Markup.button.callback('🇺🇸 English', 'set_lang_en')],
             [Markup.button.callback('🇪🇸 Español', 'set_lang_es')],
             [Markup.button.callback('🇩🇪 Deutsch', 'set_lang_de')],
-            [Markup.button.callback('◀️ Menu', 'main_menu')]
+            [Markup.button.callback(t(user, 'btn_back_menu', '◀️ Menu'), 'main_menu')]
         ]);
         return ctx.reply(text, { parse_mode: 'HTML', ...keyboard });
     });
@@ -324,12 +325,13 @@ function setupStartHandler(bot) {
         const text = `⚙️ <b>RÉGLAGES</b>\n\nQue souhaitez-vous modifier ?`;
         const keyboard = Markup.inlineKeyboard([
             [Markup.button.callback('🌐 Langue / Language', 'set_language_menu')],
-            [Markup.button.callback('◀️ Retour Menu', 'main_menu')]
+            [Markup.button.callback(t(user, 'btn_back_menu', '◀️ Menu'), 'main_menu')]
         ]);
         return safeEdit(ctx, text, keyboard);
     });
 
     bot.action('set_language_menu', async (ctx) => {
+        const user = ctx.state.user || { language_code: ctx.from.language_code || 'fr' };
         await ctx.answerCbQuery();
         const text = `🌐 <b>CHOIX DE LA LANGUE / LANGUAGE CHOICE</b>\n\nChoisissez votre langue préférée :`;
         const keyboard = Markup.inlineKeyboard([
@@ -357,7 +359,7 @@ function setupStartHandler(bot) {
             `• Crédit gagné : ${user.wallet || 0}€`;
         
         const keyboard = Markup.inlineKeyboard([
-            [Markup.button.callback('◀️ Retour Menu', 'main_menu')]
+            [Markup.button.callback(t(user, 'btn_back_menu', '◀️ Menu'), 'main_menu')]
         ]);
         return safeEdit(ctx, text, keyboard);
     });
@@ -391,7 +393,7 @@ function setupStartHandler(bot) {
         if (settings.private_contact_wa_url) {
             buttons.push([Markup.button.url('📲 WhatsApp : Admin', settings.private_contact_wa_url)]);
         }
-        buttons.push([Markup.button.callback('◀️ Retour', 'main_menu')]);
+        buttons.push([Markup.button.callback(t(user, 'btn_back_menu', '◀️ Menu'), 'main_menu')]);
         
         let text = `${settings.ui_icon_contact || '💬'} <b>${settings.label_contact || 'Contact Admin'}</b>\n\n` +
                    `Bonjour <b>${ctx.from.first_name}</b>, vous pouvez nous contacter en direct :\n\n` +
@@ -403,10 +405,11 @@ function setupStartHandler(bot) {
     });
 
     bot.action('channel_link', async (ctx) => {
+        const user = ctx.state.user || { language_code: ctx.from.language_code || 'fr' };
         await ctx.answerCbQuery();
         const settings = ctx.state?.settings || await getAppSettings();
         const buttons = [
-            [Markup.button.url('📢 Rejoindre le canal', settings.channel_url || 'https://t.me/channel'), Markup.button.callback('◀️ Retour', 'main_menu')]
+            [Markup.button.url('📢 Rejoindre le canal', settings.channel_url || 'https://t.me/channel'), Markup.button.callback(t(user, 'btn_back_menu', '◀️ Menu'), 'main_menu')]
         ];
         let text = `${settings.ui_icon_channel} <b>${settings.label_channel || 'Lien Canal'}</b>\n\n` +
                    (settings.channel_url ? `📢 Lien direct : <a href="${settings.channel_url}">${settings.channel_url}</a>\n\n` : '') +

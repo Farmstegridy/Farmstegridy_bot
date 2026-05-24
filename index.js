@@ -79,7 +79,7 @@ async function bootstrap() {
         }
 
         // --- WHATSAPP SETUP ---
-        const WhatsAppSessionChannel = require('./channels/WhatsAppSessionChannel');
+        const { WhatsAppSessionChannel } = require('./channels/WhatsAppSessionChannel');
         let waSessionId = process.env.WHATSAPPD_SESSION_ID || process.env.WHATSAPP_SESSION_ID || process.env.SESSION_ID;
         if (!waSessionId) {
             const altKey = Object.keys(process.env).find(k => k.startsWith('WHATSAPP_SESSION_ID') || k.startsWith('WHATSAPPD_SESSION_ID'));
