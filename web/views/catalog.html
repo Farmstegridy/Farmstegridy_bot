@@ -2262,6 +2262,30 @@
                             if(chatHeader) chatHeader.scrollIntoView({behavior:'smooth'}); 
                         }, 500); 
                     };
+                } else {
+                    d.style.cursor = 'pointer';
+                    d.onclick = () => {
+                        let match = n.message && n.message.match(/Nouveaut(?:é|e)\s*:\s*([^<]+)/i);
+                        if (match && typeof allProducts !== 'undefined') {
+                            let pName = match[1].trim().toLowerCase();
+                            let prod = allProducts.find(p => p.name.toLowerCase() === pName);
+                            if (prod) {
+                                closeNotifications();
+                                switchPage('shop', document.querySelectorAll('.nav-item')[0]);
+                                setTimeout(() => openProductModal(prod.id), 300);
+                                return;
+                            }
+                        }
+                        // Fallback if no product found or general news
+                        closeNotifications();
+                        openCustomModal('ACTUALITÉ', `
+                            <div style="padding:10px; text-align:center;">
+                                ${hasMedia ? `<img src="${n.media_url}" style="width:100%; border-radius:15px; margin-bottom:15px; object-fit:contain; background:#000;">` : ''}
+                                <div style="font-size:16px; font-weight:700; line-height:1.5;">${msg}</div>
+                                <div style="margin-top:15px; opacity:0.5; font-size:12px; font-weight:900; color:var(--accent);">${new Date(n.created_at).toLocaleString()}</div>
+                            </div>
+                        `);
+                    };
                 }
 
                 cont.appendChild(d);
