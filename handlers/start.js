@@ -205,24 +205,14 @@ function setupStartHandler(bot) {
                 const isAvail = registeredUser.is_available || registeredUser.data?.is_available;
 
                 const statusLabel = isAvail ? t(registeredUser, 'label_available', 'AVAILABLE') : t(registeredUser, 'label_unavailable', 'UNAVAILABLE');
-                welcomeText = t(registeredUser, 'msg_livreur_welcome', `🚴 <b>Welcome, {first_name} !</b>`, { first_name: user.first_name }) + '
-
-' +
-                    t(registeredUser, 'msg_livreur_city', `📍 Sector: <b>{city}</b>`, { city: city.toUpperCase() }) + '
-' +
-                    t(registeredUser, 'msg_livreur_status', `🔘 Status: <b>{status}</b>`, { status: (isAvail ? (settings.ui_icon_success || '✅') : (settings.ui_icon_error || '❌')) + ' ' + statusLabel }) + '
-
-';
+                welcomeText = t(registeredUser, 'msg_livreur_welcome', `🚴 <b>Welcome, {first_name} !</b>`, { first_name: user.first_name }) + '\n\n' +
+                    t(registeredUser, 'msg_livreur_city', `📍 Sector: <b>{city}</b>`, { city: city.toUpperCase() }) + '\n' +
+                    t(registeredUser, 'msg_livreur_status', `🔘 Status: <b>{status}</b>`, { status: (isAvail ? (settings.ui_icon_success || '✅') : (settings.ui_icon_error || '❌')) + ' ' + statusLabel }) + '\n\n';
 
                 if (hasActive) {
-                    welcomeText += t(registeredUser, 'msg_livreur_active_count', `🚀 <b>YOU HAVE {count} ACTIVE ORDER(S) !</b>`, { count: activeOrders.length }) + '
-
-' +
-                        activeOrders.map(o => `📦 #${o.id.slice(-5)} - ${o.address || '?'}`).join('
-') +
-                        '
-
-' + t(registeredUser, 'msg_livreur_active_help', `<i>Click on "Active Deliveries" to manage them.</i>`);
+                    welcomeText += t(registeredUser, 'msg_livreur_active_count', `🚀 <b>YOU HAVE {count} ACTIVE ORDER(S) !</b>`, { count: activeOrders.length }) + '\n\n' +
+                        activeOrders.map(o => `📦 #${o.id.slice(-5)} - ${o.address || '?'}`).join('\n') +
+                        '\n\n' + t(registeredUser, 'msg_livreur_active_help', `<i>Click on "Active Deliveries" to manage them.</i>`);
                 }
             } else {
                 const paymentLine = settings.payment_modes
@@ -299,7 +289,9 @@ function setupStartHandler(bot) {
                     ]
                 };
                 const userCmds = cmds[cmdLang] || cmds['fr'];
-                await ctx.telegram.setMyCommands(userCmds, { scope: { type: 'chat', chat_id: ctx.chat.id } }).catch(()=>{});
+                if (ctx.telegram && ctx.telegram.instance) {
+                    await ctx.telegram.instance.setMyCommands(userCmds, { scope: { type: 'chat', chat_id: ctx.chat.id } }).catch(()=>{});
+                }
             }
 
 
@@ -332,6 +324,7 @@ function setupStartHandler(bot) {
     bot.action('user_settings', async (ctx) => {
         await ctx.answerCbQuery();
         const settings = ctx.state?.settings || await getAppSettings();
+        const user = ctx.state?.user || { language_code: ctx.from?.language_code || 'fr' };
         const text = `⚙️ <b>RÉGLAGES</b>\n\nQue souhaitez-vous modifier ?`;
         const keyboard = Markup.inlineKeyboard([
             [Markup.button.callback('🌐 Langue / Language', 'set_language_menu')],
