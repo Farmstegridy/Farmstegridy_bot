@@ -872,6 +872,18 @@ const translations = {
         "addr_hotel": "Hôtel",
         "addr_other": "Autre",
         "add_address": "AJOUTER UNE ADRESSE"
+    ,
+        "all_cat": "TOUT",
+        "badge_new": "NOUVEAU 🔥",
+        "badge_bestseller": "BESTSELLER ⭐",
+        "badge_hurry": "VITE! PLUS QUE {qty}",
+        "news_support_title": "Nouveau message du support !",
+        "news_support_desc": "Consultez l'onglet support pour voir le message.",
+        "news_order_title": "Mise à jour Commande",
+        "news_order_desc": "Votre commande a été mise à jour :\nNouveau statut : {status}",
+        "news_courier_title": "Nouveau message du Livreur !",
+        "msg_code_success": "appliqué avec succès ! Réduction de",
+        "added_to_cart_notif": "Ajouté au panier"
     },
     "en": {
         "discussion_entamee": "Chat started",
@@ -3590,6 +3602,7 @@ function t(key, defaultTextOrVariables = {}, vars = {}) {
         variables = vars;
     } else {
         variables = defaultTextOrVariables;
+        defaultText = variables.default || "";
     }
     let text = (translations[currentLang] && translations[currentLang][key]) ? translations[currentLang][key] : (translations['fr'][key] || defaultText || key);
     for (const [k, v] of Object.entries(variables)) {

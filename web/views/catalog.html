@@ -616,7 +616,7 @@
                 ]);
                 setLoader(80);
                 allProducts = await pRes.json();
-                allCategories = ['TOUT', t('favorites_cat', {default: 'FAVORIS ❤️'}), ...new Set(allProducts.map(p => p.category).filter(c => c))];
+                allCategories = [t('all_cat', {default: 'TOUT'}), t('favorites_cat', {default: 'FAVORIS ❤️'}), ...new Set(allProducts.map(p => p.category).filter(c => c))];
                 
                 if (uRes && uRes.ok) {
                     userInfo = await uRes.json();
@@ -746,7 +746,7 @@
     const cat = (p.raw_category || p.category || "").toUpperCase();
     return !(cat.includes('PACK') || cat.includes('MODULE') || cat.includes('BAAS'));
 });
-            if (activeCat === 'TOUT') renderGrid(demoProducts, 'products');
+            if (activeCat === t('all_cat', {default: 'TOUT'})) renderGrid(demoProducts, 'products');
             else if (activeCat === t('favorites_cat', {default: 'FAVORIS ❤️'})) renderGrid(demoProducts.filter(p => favorites.includes(p.id)), 'products');
             else renderGrid(demoProducts.filter(p => compareCategories(p.category, activeCat)), 'products');
             
@@ -790,7 +790,7 @@
                 d.onclick = () => { 
                     document.querySelectorAll('#bots-categories .cat-chip').forEach(t => t.classList.remove('active')); 
                     d.classList.add('active'); 
-                    if (c === 'TOUT') renderGrid(botProducts, 'bots-products');
+                    if (c === t('all_cat', {default: 'TOUT'})) renderGrid(botProducts, 'bots-products');
                     else renderGrid(botProducts.filter(p => p.category === c), 'bots-products'); 
                 };
                 if (catContainer) catContainer.appendChild(d);
@@ -827,7 +827,7 @@
                 d.onclick = () => { 
                     document.querySelectorAll('#categories .cat-chip').forEach(t => t.classList.remove('active')); 
                     d.classList.add('active'); 
-                    if (c === 'TOUT') renderGrid(demoProducts, 'products');
+                    if (c === t('all_cat', {default: 'TOUT'})) renderGrid(demoProducts, 'products');
                     else if (c === t('favorites_cat', {default: 'FAVORIS ❤️'})) renderGrid(demoProducts.filter(p => favorites.includes(p.id)), 'products');
                     else renderGrid(demoProducts.filter(p => compareCategories(p.category, c)), 'products'); 
                 };
@@ -849,11 +849,11 @@
                 let badgeHtml = '';
                 const ageDays = p.created_at ? (Date.now() - new Date(p.created_at).getTime()) / (1000*3600*24) : 0;
                 if (ageDays < 5 && ageDays >= 0) {
-                    badgeHtml = `<div style="position:absolute; top:10px; left:10px; background:var(--accent); color:#fff; font-size:10px; font-weight:900; padding:4px 8px; border-radius:8px; box-shadow:0 4px 10px rgba(255,0,80,0.5); animation: pulse 2s infinite;">NOUVEAU 🔥</div>`;
+                    badgeHtml = `<div style="position:absolute; top:10px; left:10px; background:var(--accent); color:#fff; font-size:10px; font-weight:900; padding:4px 8px; border-radius:8px; box-shadow:0 4px 10px rgba(255,0,80,0.5); animation: pulse 2s infinite;">${t('badge_new', {default: 'NOUVEAU 🔥'})}</div>`;
                 } else if (Math.random() > 0.8) {
-                    badgeHtml = `<div style="position:absolute; top:10px; left:10px; background:#00ff88; color:#000; font-size:10px; font-weight:900; padding:4px 8px; border-radius:8px; box-shadow:0 4px 10px rgba(0,255,136,0.3);">BESTSELLER ⭐</div>`;
+                    badgeHtml = `<div style="position:absolute; top:10px; left:10px; background:#00ff88; color:#000; font-size:10px; font-weight:900; padding:4px 8px; border-radius:8px; box-shadow:0 4px 10px rgba(0,255,136,0.3);">${t('badge_bestseller', {default: 'BESTSELLER ⭐'})}</div>`;
                 } else if (getAvailableQuantity(p) > 0 && getAvailableQuantity(p) < 10) {
-                    badgeHtml = `<div style="position:absolute; top:10px; left:10px; background:#ffaa00; color:#000; font-size:10px; font-weight:900; padding:4px 8px; border-radius:8px; box-shadow:0 4px 10px rgba(255,170,0,0.5); animation: pulse 2s infinite;">VITE! PLUS QUE ${getAvailableQuantity(p)}</div>`;
+                    badgeHtml = `<div style="position:absolute; top:10px; left:10px; background:#ffaa00; color:#000; font-size:10px; font-weight:900; padding:4px 8px; border-radius:8px; box-shadow:0 4px 10px rgba(255,170,0,0.5); animation: pulse 2s infinite;">${t('badge_hurry', {default: 'VITE! PLUS QUE {qty}', qty: getAvailableQuantity(p)})}</div>`;
                 }
 
 let mediaHtml = `<img src="${img}" class="card-img" onclick="openProductModal('${p.id}')">`;
@@ -1533,7 +1533,7 @@ let mediaHtml = `<img src="${img}" class="card-img" onclick="openProductModal('$
 
             appliedPromoCode = code;
             appliedPromoDiscount = discountVal;
-            tg.showAlert(`✅ Code "${code}" appliqué avec succès ! Réduction de ${discountVal}€`);
+            tg.showAlert(t('msg_code_applied', {default: "✅ Code "}) + `"${code}" ` + t('msg_code_success', {default: "appliqué avec succès ! Réduction de "}) + `${discountVal}€`);
             tg.HapticFeedback.notificationOccurred('success');
             renderCheckout();
         }
@@ -2509,7 +2509,7 @@ let mediaHtml = `<img src="${img}" class="card-img" onclick="openProductModal('$
                             } else {
                                 const badge = document.getElementById('chat-unread-badge');
                                 if (badge) badge.style.display = 'block';
-                                showNewsPopup("Nouveau message du support !", data.messages[data.messages.length - 1].message || "Consultez l'onglet support pour voir le message.", []);
+                                showNewsPopup(t('news_support_title', {default: "Nouveau message du support !"}), data.messages[data.messages.length - 1].message || t('news_support_desc', {default: "Consultez l'onglet support pour voir le message."}), []);
                             }
                         }
                     }
@@ -2549,12 +2549,12 @@ let mediaHtml = `<img src="${img}" class="card-img" onclick="openProductModal('$
                                     'cancelled': 'Annulée ❌'
                                 };
                                 const statusText = statusMap[no.status] || no.status;
-                                showNewsPopup("Mise à jour Commande", `Votre commande a été mise à jour :\nNouveau statut : ${statusText}`, []);
+                                showNewsPopup(t('news_order_title', {default: "Mise à jour Commande"}), t('news_order_desc', {default: "Votre commande a été mise à jour :\nNouveau statut : {status}", status: statusText}), []);
                             }
                             if (old && parseInt(old.chat_count) < parseInt(no.chat_count)) {
                                 statusChanged = true; // Trigger UI refresh for active orders
                                 if (no.chatHistory && no.chatHistory.senderRole === 'livreur') {
-                                    showNewsPopup("Nouveau message du Livreur !", no.chatHistory.lastMessage, []);
+                                    showNewsPopup(t('news_courier_title', {default: "Nouveau message du Livreur !"}), no.chatHistory.lastMessage, []);
                                 }
                             }
                         });
