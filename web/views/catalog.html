@@ -1185,34 +1185,36 @@ let mediaHtml = `<img src="${img}" class="card-img" onerror="this.onerror=null;t
                 
                 const uv = parseFloat(String(activeProduct.unit_value || '1').replace(',','.')) || 1;
                 
-                let formats = [{ m: 1, pr: activeProduct.price }];
+                let formats = [{ m: 1, pr: activeProduct.price, q: uv }];
                 if (activeProduct.has_discounts && activeProduct.discounts_config && activeProduct.discounts_config.length > 0) {
                     activeProduct.discounts_config.forEach(d => {
-                        const mq = parseFloat(d.qty);
-                        if (!formats.find(f => f.m === mq)) {
-                            formats.push({ m: mq, pr: parseFloat(d.total || d.total_price) });
+                        let dq = parseFloat(d.qty);
+                        if (d.is_absolute === false) dq = dq * uv;
+                        if (!formats.find(f => Math.abs(f.q - dq) < 0.01)) {
+                            formats.push({ m: d.is_absolute === false ? parseFloat(d.qty) : dq / uv, pr: parseFloat(d.total || d.total_price), q: dq });
                         }
                     });
                 }
-                formats.sort((a, b) => a.m - b.m);
+                formats.sort((a, b) => a.q - b.q);
 
                 formats.forEach(f => {
                     const m = f.m;
+                    const q = f.q;
                     const pr = f.pr;
                     const d = document.createElement('div');
                     d.style = "background:rgba(255,255,255,0.05); padding:15px; border-radius:20px; text-align:center; border:2px solid transparent; cursor:pointer;";
                     d.onclick = () => { activeOption = { m, pr }; document.querySelectorAll('#p-options div').forEach(o => o.style.borderColor = 'transparent'); d.style.borderColor = '#fff'; };
                     
                     let qtyLabel = "";
-                    if (m % 1 === 0) {
-                        qtyLabel = `${m*uv}${activeProduct.unit || 'g'}`;
+                    if (q % 1 === 0) {
+                        qtyLabel = `${q}${activeProduct.unit || 'g'}`;
                     } else {
-                        qtyLabel = `${(m*uv).toFixed(1).replace('.0','')}${activeProduct.unit || 'g'}`;
+                        qtyLabel = `${q.toFixed(1).replace('.0','')}${activeProduct.unit || 'g'}`;
                     }
 
                     d.innerHTML = `<div style="font-weight:800; font-size:15px;">${qtyLabel}</div><div style="font-weight:900; color:var(--accent);">${pr.toFixed(0)}€</div>`;
                     cont.appendChild(d);
-                    if (m === 1) { activeOption = { m, pr }; d.style.borderColor = '#fff'; }
+                    if (Math.abs(q - uv) < 0.01) { activeOption = { m, pr }; d.style.borderColor = '#fff'; }
                 });
             }
 

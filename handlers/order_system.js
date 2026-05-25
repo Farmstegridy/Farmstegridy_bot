@@ -253,28 +253,27 @@ function setupOrderSystem(bot) {
             (promoText ? `${promoText}\n` : "") +
             (product.description ? `\n<i>${product.description}</i>\n` : "") +
             `\n💎 <b>Choisissez le format que vous souhaitez :</b>\n\n`;
-        let multipliers = [1];
+        let formats = [{ q: multiplier, pr: product.price }];
         if (product.has_discounts && product.discounts_config && product.discounts_config.length > 0) {
             product.discounts_config.forEach(d => {
-                const mq = parseFloat(d.qty);
-                if (!multipliers.includes(mq)) {
-                    multipliers.push(mq);
+                let dq = parseFloat(d.qty);
+                if (d.is_absolute === false) dq = dq * multiplier;
+                if (!formats.find(f => f.q === dq)) {
+                    formats.push({ q: dq, pr: parseFloat(d.total || d.total_price) });
                 }
             });
         }
-        multipliers.sort((a, b) => a - b);
+        formats.sort((a, b) => a.q - b.q);
         
         const qtyRows = [];
-        for (let i = 0; i < multipliers.length; i += 2) {
-            const m1 = multipliers[i];
-            const q1 = m1 * multiplier;
-            let label1 = m1 % 1 === 0 ? `${m1 * multiplier}${unitLabel}` : `${(m1 * multiplier).toFixed(1).replace('.0','')}${unitLabel}`;
+        for (let i = 0; i < formats.length; i += 2) {
+            const q1 = formats[i].q;
+            let label1 = q1 % 1 === 0 ? `${q1}${unitLabel}` : `${q1.toFixed(1).replace('.0','')}${unitLabel}`;
             const row = [Markup.button.callback(label1, `qty_${productId}_${q1}`)];
             
-            if (i + 1 < multipliers.length) {
-                const m2 = multipliers[i+1];
-                const q2 = m2 * multiplier;
-                let label2 = m2 % 1 === 0 ? `${m2 * multiplier}${unitLabel}` : `${(m2 * multiplier).toFixed(1).replace('.0','')}${unitLabel}`;
+            if (i + 1 < formats.length) {
+                const q2 = formats[i+1].q;
+                let label2 = q2 % 1 === 0 ? `${q2}${unitLabel}` : `${q2.toFixed(1).replace('.0','')}${unitLabel}`;
                 row.push(Markup.button.callback(label2, `qty_${productId}_${q2}`));
             }
             qtyRows.push(row);
@@ -315,16 +314,21 @@ function setupOrderSystem(bot) {
         const baseVal = Math.max(0.001, parseFloat(String(product.unit_value || '1').replace(',', '.')) || 1);
         const effectiveQty = (Number.isFinite(qty) && Number.isFinite(baseVal)) ? (qty / baseVal) : 0; 
         const basePrice = Math.max(0, parseFloat(product.price) || 0);
-        let totalPriceValue = basePrice * effectiveQty;
 
+        let matchedDiscount = null;
         if (product.has_discounts && product.discounts_config && Array.isArray(product.discounts_config)) {
-            const sortedDiscounts = [...product.discounts_config].sort((a, b) => b.qty - a.qty);
-            const bestDiscount = sortedDiscounts.find(d => effectiveQty >= d.qty);
-            if (bestDiscount) {
-                const discountValue = parseFloat(bestDiscount.total || bestDiscount.total_price || 0);
-                const discountQty = parseFloat(bestDiscount.qty);
-                totalPriceValue = discountValue + (effectiveQty - discountQty) * basePrice;
-            }
+            matchedDiscount = product.discounts_config.find(d => {
+                let dq = parseFloat(d.qty);
+                if (d.is_absolute === false) dq = dq * baseVal;
+                return Math.abs(dq - qty) < 0.01;
+            });
+        }
+        
+        let totalPriceValue = 0;
+        if (matchedDiscount) {
+            totalPriceValue = parseFloat(matchedDiscount.total || matchedDiscount.total_price || 0);
+        } else {
+            totalPriceValue = basePrice * effectiveQty;
         }
         
         if (!Number.isFinite(totalPriceValue)) {
