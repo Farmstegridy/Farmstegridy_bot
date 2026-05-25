@@ -252,22 +252,29 @@ function setupOrderSystem(bot) {
             t(user, 'label_unit_price', '💰 Prix Unitaire :') + ` <b>${product.price}€</b>\n` +
             (promoText ? `${promoText}\n` : "") +
             (product.description ? `\n<i>${product.description}</i>\n` : "") +
-            `\n💎 <b>Combien de sachets voulez-vous ?</b>\n\n` +
-            `💡 <i>Cliquez sur le chiffre qui correspond au nombre de sachets que vous voulez.</i>\n` +
-            `<i>(Exemple : si vous cliquez sur <b>1</b>, vous recevrez 1 sachet de ${multiplier}${unitLabel})</i>`;
-        const multipliers = [1, 2, 3, 4, 5, 10];
+            `\n💎 <b>Choisissez le format que vous souhaitez :</b>\n\n`;
+        let multipliers = [1];
+        if (product.has_discounts && product.discounts_config && product.discounts_config.length > 0) {
+            product.discounts_config.forEach(d => {
+                const mq = parseFloat(d.qty);
+                if (!multipliers.includes(mq)) {
+                    multipliers.push(mq);
+                }
+            });
+        }
+        multipliers.sort((a, b) => a - b);
         
         const qtyRows = [];
         for (let i = 0; i < multipliers.length; i += 2) {
             const m1 = multipliers[i];
             const q1 = m1 * multiplier;
-            const label1 = `${m1}`;
+            let label1 = m1 % 1 === 0 ? `${m1 * multiplier}${unitLabel}` : `${(m1 * multiplier).toFixed(1).replace('.0','')}${unitLabel}`;
             const row = [Markup.button.callback(label1, `qty_${productId}_${q1}`)];
             
             if (i + 1 < multipliers.length) {
                 const m2 = multipliers[i+1];
                 const q2 = m2 * multiplier;
-                const label2 = `${m2}`;
+                let label2 = m2 % 1 === 0 ? `${m2 * multiplier}${unitLabel}` : `${(m2 * multiplier).toFixed(1).replace('.0','')}${unitLabel}`;
                 row.push(Markup.button.callback(label2, `qty_${productId}_${q2}`));
             }
             qtyRows.push(row);
