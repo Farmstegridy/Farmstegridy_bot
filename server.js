@@ -584,6 +584,7 @@ function createServer(port = 8080) {
         try {
             const isMp = req.body.is_mp === true;
             delete req.body.is_mp; // IMPORTANT: Ne pas envoyer en DB native/MP
+            delete req.body.stock_livreurs; // Fix for missing column error
 
             const isNew = !req.body.id;
             let id;
