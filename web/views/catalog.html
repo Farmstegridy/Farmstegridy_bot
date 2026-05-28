@@ -856,7 +856,7 @@
 
 let mediaHtml = `<img src="${img}" class="card-img" onerror="this.onerror=null;this.src='/public/img/logo.png'" onclick="openProductModal('${p.id}')">`;
                 if (img.match(/\.(mp4|webm|mov)$/i)) {
-                    mediaHtml = `<video src="${img}" autoplay loop muted playsinline class="card-img" style="object-fit:cover; pointer-events:none;"></video>`;
+                    mediaHtml = `<video src="${img}#t=0.001" preload="metadata" playsinline muted class="card-img" style="object-fit:cover; pointer-events:none;"></video>`;
                 }
 
                 d.innerHTML = `
