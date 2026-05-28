@@ -566,7 +566,7 @@
             if (mediaList.length === 1) {
                 const m = mediaList[0];
                 if (m.type === 'video' || m.url.endsWith('.mp4') || m.url.endsWith('.webm') || m.url.endsWith('.mov')) {
-                    container.innerHTML = `<video controls playsinline style="width:100%; height:100%; object-fit:contain; background:#000;"><source src="${m.url}"></video>`;
+                    container.innerHTML = `<video controls playsinline style="width:100%; height:100%; object-fit:contain; background:#000;"><source src="${m.url}#t=0.1"></video>`;
                 } else {
                     container.innerHTML = `<img src="${m.url}" onerror="this.onerror=null;this.src='/public/img/logo.png'" style="width:100%; height:100%; object-fit:contain;">`;
                 }
@@ -579,7 +579,7 @@
                 const isVideo = m.type === 'video' || m.url.endsWith('.mp4') || m.url.endsWith('.webm') || m.url.endsWith('.mov');
                 if (isVideo) {
                     html += `<div style="flex:0 0 100%; scroll-snap-align:start; position:relative; width:100%; height:100%;">
-                                <video controls playsinline style="width:100%; height:100%; object-fit:contain;"><source src="${m.url}"></video>
+                                <video controls playsinline style="width:100%; height:100%; object-fit:contain;"><source src="${m.url}#t=0.1"></video>
                              </div>`;
                 } else {
                     html += `<div style="flex:0 0 100%; scroll-snap-align:start; position:relative; width:100%; height:100%;">
@@ -646,9 +646,9 @@
                 }
 
                 if (ordersRes && ordersRes.ok) {
-                    window.userOrdersCache = await ordersRes.json();
+                    userOrdersCache = await ordersRes.json();
                 } else {
-                    window.userOrdersCache = [];
+                    userOrdersCache = [];
                 }
                 
                 allNews = await newsRes.json();
@@ -854,9 +854,9 @@
                     badgeHtml = `<div style="position:absolute; top:10px; left:10px; background:#ffaa00; color:#000; font-size:10px; font-weight:900; padding:4px 8px; border-radius:8px; box-shadow:0 4px 10px rgba(255,170,0,0.5); animation: pulse 2s infinite;">${t('badge_hurry', {default: 'VITE! PLUS QUE {qty}', qty: getAvailableQuantity(p)})}</div>`;
                 }
 
-let mediaHtml = `<img src="${img}" class="card-img" onerror="this.onerror=null;this.src='/public/img/logo.png'" onclick="openProductModal('${p.id}')">`;
+                let mediaHtml = `<img src="${img}" class="card-img" onerror="this.onerror=null;this.src='/public/img/logo.png'" onclick="openProductModal('${p.id}')">`;
                 if (img.match(/\.(mp4|webm|mov)$/i)) {
-                    mediaHtml = `<video src="${img}#t=0.001" preload="metadata" playsinline muted class="card-img" style="object-fit:cover; pointer-events:none;"></video>`;
+                    mediaHtml = `<video src="${img}#t=0.1" preload="metadata" playsinline muted class="card-img" style="object-fit:cover; pointer-events:none;"></video>`;
                 }
 
                 d.innerHTML = `
@@ -941,7 +941,7 @@ let mediaHtml = `<img src="${img}" class="card-img" onerror="this.onerror=null;t
                     }
                 });
 
-                cont.innerHTML = orders.length ? statsHtml : `<div class="empty-state">${t('no_orders', {default: "Vous n\\'avez pas encore de commandes."})}</div>`;
+                cont.innerHTML = orders.length ? statsHtml : `<div class="empty-state">${t('no_orders', {default: "Vous n'avez pas encore de commandes."})}</div>`;
                 
                 orders.forEach(o => {
                     let color = '#ffaa00', icon = '<i class="notranslate ph-fill ph-clock"></i>', text = t('status_pending');
@@ -1313,7 +1313,7 @@ let mediaHtml = `<img src="${img}" class="card-img" onerror="this.onerror=null;t
                     if (r.media && r.media.length > 0) {
                         const m = r.media[0];
                         if (m.endsWith('.mp4') || m.endsWith('.webm') || m.endsWith('.mov')) {
-                            mediaHtml = `<div style="margin-top:10px;"><video src="${m}" controls style="max-height:120px; border-radius:8px; max-width:100%; border:1px solid rgba(255,255,255,0.1);"></video></div>`;
+                            mediaHtml = `<div style="margin-top:10px;"><video src="${m}#t=0.1" controls style="max-height:120px; border-radius:8px; max-width:100%; border:1px solid rgba(255,255,255,0.1);"></video></div>`;
                         } else {
                             mediaHtml = `<div style="margin-top:10px;"><img src="${m}" style="max-height:120px; border-radius:8px; max-width:100%; border:1px solid rgba(255,255,255,0.1); object-fit:contain;"></div>`;
                         }
@@ -1335,7 +1335,7 @@ let mediaHtml = `<img src="${img}" class="card-img" onerror="this.onerror=null;t
                 const res = await fetch(`/api/user/reviews?userId=telegram_${uid}`);
                 const reviews = await res.json();
                 
-                let contentHTML = reviews.length ? '' : `<div class="empty-state">${t('no_reviews_left', {default: "Vous n\\'avez laissé aucun avis."})}</div>`;
+                let contentHTML = reviews.length ? '' : `<div class="empty-state">${t('no_reviews_left', {default: "Vous n'avez laissé aucun avis."})}</div>`;
                 
                 reviews.forEach(r => {
                     const p = allProducts.find(x => String(x.id) === String(r.product_id));
@@ -1345,7 +1345,7 @@ let mediaHtml = `<img src="${img}" class="card-img" onerror="this.onerror=null;t
                     if (r.media && r.media.length > 0) {
                         const m = r.media[0];
                         if (m.endsWith('.mp4') || m.endsWith('.webm') || m.endsWith('.mov')) {
-                            mediaHtml = `<div style="margin-top:10px;"><video src="${m}" controls style="max-height:80px; border-radius:8px; border:1px solid rgba(255,255,255,0.1);"></video></div>`;
+                            mediaHtml = `<div style="margin-top:10px;"><video src="${m}#t=0.1" controls style="max-height:80px; border-radius:8px; border:1px solid rgba(255,255,255,0.1);"></video></div>`;
                         } else {
                             mediaHtml = `<div style="margin-top:10px;"><img src="${m}" style="max-height:80px; border-radius:8px; border:1px solid rgba(255,255,255,0.1); object-fit:contain;"></div>`;
                         }
@@ -1413,6 +1413,18 @@ let mediaHtml = `<img src="${img}" class="card-img" onerror="this.onerror=null;t
         function closeCustomModal() { 
             stopAllVideos();
             document.getElementById('custom-modal-overlay').classList.remove('open'); 
+        }
+
+        function showNewsPopup(title, message, buttons = []) {
+            if (window.Telegram && window.Telegram.WebApp && typeof window.Telegram.WebApp.showPopup === 'function') {
+                window.Telegram.WebApp.showPopup({
+                    title: title,
+                    message: message,
+                    buttons: buttons.length ? buttons : [{type: 'ok'}]
+                });
+            } else {
+                alert(title + "\n\n" + message);
+            }
         }
 
         function openRating(orderId) {
@@ -2157,7 +2169,7 @@ let mediaHtml = `<img src="${img}" class="card-img" onerror="this.onerror=null;t
             
             let combined = [...allNews];
             
-            if (window.userOrdersCache) {
+            if (userOrdersCache) {
                 userOrdersCache.forEach(o => {
                     let msg = '';
                     let statusColor = '#fff';
@@ -2204,7 +2216,7 @@ let mediaHtml = `<img src="${img}" class="card-img" onerror="this.onerror=null;t
                 let mediaHtml = '';
                 if (hasMedia) {
                     if (n.media_url.match(/\.(mp4|mov|webm)$/i)) {
-                        mediaHtml = `<div style="width:100%; height:200px; background:#000; border-radius:15px; overflow:hidden; margin-bottom:15px; display:flex; align-items:center; justify-content:center;"><video src="${n.media_url}" preload="metadata" controls playsinline style="width:100%; height:100%; object-fit:contain;"></video></div>`;
+                        mediaHtml = `<div style="width:100%; height:200px; background:#000; border-radius:15px; overflow:hidden; margin-bottom:15px; display:flex; align-items:center; justify-content:center;"><video src="${n.media_url}#t=0.1" preload="metadata" controls playsinline style="width:100%; height:100%; object-fit:contain;"></video></div>`;
                     } else {
                         mediaHtml = `<div style="width:100%; height:200px; background:#000; border-radius:15px; overflow:hidden; margin-bottom:15px; display:flex; align-items:center; justify-content:center;"><img src="${n.media_url}" style="width:100%; height:100%; object-fit:contain;"></div>`;
                     }
@@ -2223,7 +2235,7 @@ let mediaHtml = `<img src="${img}" class="card-img" onerror="this.onerror=null;t
                 if (n.type === 'order') {
                     d.onclick = () => { 
                         closeNotifications(); 
-                        switchPage('help', document.querySelectorAll('.nav-item')[3]); 
+                        switchPage('orders', document.querySelectorAll('.nav-item')[1]); 
                         setTimeout(()=> { 
                             const chatHeader = document.querySelector(`.order-card[data-id="${n.id.replace('order_','')}"]`); 
                             if(chatHeader) chatHeader.scrollIntoView({behavior:'smooth'}); 
@@ -2237,7 +2249,7 @@ let mediaHtml = `<img src="${img}" class="card-img" onerror="this.onerror=null;t
                             const prod = allProducts.find(x => x.name.toLowerCase() === pName.toLowerCase());
                             if (prod) {
                                 closeNotifications();
-                                switchPage('products', document.querySelectorAll('.nav-item')[1]);
+                                switchPage('shop', document.querySelectorAll('.nav-item')[0]);
                                 setTimeout(() => openProductModal(prod.id), 100);
                                 return;
                             }
