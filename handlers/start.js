@@ -598,11 +598,10 @@ async function getMainMenuKeyboard(ctx, settings, user, isFournisseur = false, i
     if (spaces.length > 0) buttons.push(spaces);
 
     // Ligne de fin : Paramètres & Admin
-    const footers = [Markup.button.callback(`${settings.btn_settings || '⚙️'} ${t(user, 'btn_settings', 'Réglages')}`, 'user_settings')];
+    buttons.push([Markup.button.callback(`${settings.btn_settings || '⚙️'} ${t(user, 'btn_settings', 'Réglages')}`, 'user_settings')]);
     if (user?.is_admin || isAdminUser) {
-        footers.push(Markup.button.callback(`${settings.ui_icon_admin || '🛠'} ${t(user, 'btn_admin', 'Admin')}`, 'admin_menu'));
+        buttons.push([Markup.button.callback(`${settings.ui_icon_admin || '🛠'} ${t(user, 'btn_admin', 'Admin')}`, 'admin_menu')]);
     }
-    if (footers.length > 0) buttons.push(footers);
 
     return Markup.inlineKeyboard(buttons);
 }
