@@ -58,6 +58,7 @@ function setBotInstance(bot) { _bot = bot; }
 function getBotInstance() { return _bot; }
 
 const JWT_SECRET = process.env.ENCRYPTION_KEY || process.env.SUPABASE_KEY || process.env.BOT_TOKEN || require('crypto').randomBytes(64).toString('hex');
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'admin123';
 const authLogs = [];
 
 
