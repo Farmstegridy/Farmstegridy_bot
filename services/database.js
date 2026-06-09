@@ -132,7 +132,7 @@ async function init() {
         console.log('✅ Database connection OK');
     } catch (e) {
         console.error('❌ Database init error:', e.message);
-        throw e;
+        console.warn('⚠️ Bot will continue starting in offline/degraded mode.');
     }
 }
 
