@@ -106,7 +106,11 @@ function setupStartHandler(bot) {
             const { isNew, user: registeredUser } = await registerUser(user, ctx.platform, referrerId);
             if (!registeredUser) {
                 console.error(`[START] Impossible d'enregistrer ou de récupérer l'utilisateur ${docId} (erreur DB)`);
-                return ctx.reply("⚠️ Une erreur technique est survenue (base de données inaccessible). Veuillez réessayer ultérieurement ou contacter l'administration.").catch(() => {});
+                const contactUrl = process.env.ADMIN_CONTACT_URL || settings?.private_contact_url || 'https://t.me/Gazolina94';
+                const keyboard = Markup.inlineKeyboard([
+                    [Markup.button.url("💬 Contacter l'administration", contactUrl)]
+                ]);
+                return ctx.reply("⚠️ Une erreur technique est survenue (base de données inaccessible). Veuillez réessayer ultérieurement ou contacter l'administration.", keyboard).catch(() => {});
             }
             ctx.state.user = registeredUser;
             await incrementDailyStat('start_commands');
@@ -470,7 +474,11 @@ async function showMainMenu(ctx) {
     // sinon récupérer les données fraîches de la DB.
     const freshUser = await getUser(userId);
     if (!freshUser) {
-        return ctx.reply("⚠️ Une erreur technique est survenue (base de données inaccessible). Veuillez réessayer ultérieurement ou contacter l'administration.").catch(() => {});
+        const contactUrl = process.env.ADMIN_CONTACT_URL || settings?.private_contact_url || 'https://t.me/Gazolina94';
+        const keyboard = Markup.inlineKeyboard([
+            [Markup.button.url("💬 Contacter l'administration", contactUrl)]
+        ]);
+        return ctx.reply("⚠️ Une erreur technique est survenue (base de données inaccessible). Veuillez réessayer ultérieurement ou contacter l'administration.", keyboard).catch(() => {});
     }
     // Fusion : préférer les données de freshUser mais garder la langue en mémoire si elle vient d'être changée
     let user = freshUser;
