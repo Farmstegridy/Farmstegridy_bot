@@ -104,6 +104,10 @@ function setupStartHandler(bot) {
             }
 
             const { isNew, user: registeredUser } = await registerUser(user, ctx.platform, referrerId);
+            if (!registeredUser) {
+                console.error(`[START] Impossible d'enregistrer ou de récupérer l'utilisateur ${docId} (erreur DB)`);
+                return ctx.reply("⚠️ Une erreur technique est survenue (base de données inaccessible). Veuillez réessayer ultérieurement ou contacter l'administration.").catch(() => {});
+            }
             ctx.state.user = registeredUser;
             await incrementDailyStat('start_commands');
 
@@ -465,6 +469,9 @@ async function showMainMenu(ctx) {
     // Utiliser ctx.state.user déjà corrigé si disponible (ex: juste après un changement de langue),
     // sinon récupérer les données fraîches de la DB.
     const freshUser = await getUser(userId);
+    if (!freshUser) {
+        return ctx.reply("⚠️ Une erreur technique est survenue (base de données inaccessible). Veuillez réessayer ultérieurement ou contacter l'administration.").catch(() => {});
+    }
     // Fusion : préférer les données de freshUser mais garder la langue en mémoire si elle vient d'être changée
     let user = freshUser;
     if (user && ctx.state.user?.language_code && ctx.state.user.language_code !== user.language_code) {
@@ -498,7 +505,7 @@ async function showMainMenu(ctx) {
         return await safeEdit(ctx, livreurText, { photo: settings.welcome_photo || null, ...keyboard });
     }
 
-    const text = t(registeredUser || user, 'menu_main', `📋 <b>Menu principal</b>`);
+    const text = t(user, 'menu_main', `📋 <b>Menu principal</b>`);
     const supplier = await getSupplierByTelegramId(String(ctx.from.id));
     const isFournisseur = !!supplier;
     const keyboard = await getMainMenuKeyboard(ctx, settings, user, isFournisseur);

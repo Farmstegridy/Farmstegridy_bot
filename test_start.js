@@ -34,5 +34,6 @@ async function test() {
     } catch(e) {
         console.error(e);
     }
+    process.exit(0);
 }
 test();
