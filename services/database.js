@@ -1,5 +1,6 @@
 const { supabase } = require('../config/supabase');
 const encryption = require('./encryption');
+const cloudinary = require('cloudinary').v2;
 
 const COL_USERS = 'bot_users';
 const COL_BROADCASTS = 'bot_broadcasts';
@@ -639,6 +640,40 @@ async function uploadMediaBuffer(buffer, filename, mimetype) {
         if (!buffer || buffer.length === 0) {
             console.error('[DB] uploadMediaBuffer: Buffer is empty');
             return null;
+        }
+
+        if (process.env.CLOUDINARY_URL) {
+            console.log('[DB] Uploading media to Cloudinary...');
+            const isVideo = mimetype.startsWith('video/') || (filename && (filename.toLowerCase().endsWith('.mov') || filename.toLowerCase().endsWith('.mp4')));
+            const resourceType = isVideo ? 'video' : 'image';
+            
+            let publicId = filename;
+            const lastDot = filename.lastIndexOf('.');
+            if (lastDot !== -1) {
+                publicId = filename.substring(0, lastDot);
+            }
+            // Remove special characters from public ID to avoid Cloudinary issues
+            publicId = publicId.replace(/[^a-zA-Z0-9_\-]/g, '_');
+
+            return new Promise((resolve) => {
+                const uploadStream = cloudinary.uploader.upload_stream(
+                    {
+                        resource_type: resourceType,
+                        public_id: publicId,
+                        overwrite: true
+                    },
+                    (error, result) => {
+                        if (error) {
+                            console.error('[DB] Cloudinary upload error:', error.message || error);
+                            resolve(null);
+                        } else {
+                            console.log(`[DB] Media uploaded successfully to Cloudinary: ${result.secure_url}`);
+                            resolve(result.secure_url);
+                        }
+                    }
+                );
+                uploadStream.end(buffer);
+            });
         }
 
         let normalizedMimetype = mimetype;
