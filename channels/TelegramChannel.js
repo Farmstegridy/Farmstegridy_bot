@@ -136,9 +136,14 @@ class TelegramChannel extends Channel {
             // Try to claim
             const claimed = await claimLock(telegramLockId, instanceId);
             if (!claimed) {
-                console.log(`[TG-LOCK] ❌ Claim failed. Retrying in 30s...`);
-                setTimeout(() => this.start(), 30000);
-                return;
+                const isReplicaZero = String(process.env.RAILWAY_REPLICA_INDEX || process.env.RENDER_REPLICA_INDEX || 0) === '0';
+                if (isReplicaZero) {
+                    console.warn(`[TG-LOCK] ⚠️ Lock claim failed (Database restricted or offline). Starting bot in fallback mode on Replica 0.`);
+                } else {
+                    console.log(`[TG-LOCK] ❌ Claim failed. Retrying in 30s...`);
+                    setTimeout(() => this.start(), 30000);
+                    return;
+                }
             }
 
             console.log(`[TG-LOCK] 🎉 Lock obtained by ${instanceId}. launching bot...`);
