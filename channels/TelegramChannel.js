@@ -100,6 +100,20 @@ class TelegramChannel extends Channel {
                 console.error('[TG-CB] ERREUR: Pas de messageHandler !');
             }
         });
+
+        this.bot.on('my_chat_member', async (ctx) => {
+            const newStatus = ctx.myChatMember?.new_chat_member?.status;
+            if (newStatus === 'kicked' || newStatus === 'left') {
+                try {
+                    console.log(`[TG] L'utilisateur ${ctx.from.id} a bloqué/supprimé le bot. is_approved = false.`);
+                    const { updateUser } = require('../services/database');
+                    const docId = `telegram_${ctx.from.id}`;
+                    await updateUser(docId, { is_approved: false });
+                } catch (e) {
+                    console.error('[TG] Erreur update my_chat_member:', e.message);
+                }
+            }
+        });
     }
 
     async start() {
@@ -165,7 +179,7 @@ class TelegramChannel extends Channel {
         // Build launch options
         const launchOptions = {
             drop_pending_updates: true,
-            allowedUpdates: ['message', 'callback_query']
+            allowedUpdates: ['message', 'callback_query', 'my_chat_member']
         };
 
         const launch = async (retryCount = 0) => {

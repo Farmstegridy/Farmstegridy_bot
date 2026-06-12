@@ -95,11 +95,9 @@ function setupStartHandler(bot) {
 
 
             
-            // --- FIX: Si l'utilisateur est restreint, on force un rafraîchissement du cache pour voir s'il a été approuvé
+            // --- FIX: Toujours forcer un rafraîchissement du cache au /start
             const { _userCache, registerUser } = require('../services/database');
-            const cached = _userCache?.get(docId);
-            if (cached && cached.data?.is_approved === false) {
-                console.log(`[WA-Refresh] Suppression du cache pour ${docId} (attente approbation)`);
+            if (_userCache) {
                 _userCache.delete(docId);
             }
 
