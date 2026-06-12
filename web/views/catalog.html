@@ -1538,6 +1538,7 @@
         function updateN(cid, d) {
             const i = cart.find(x => x.cid === cid); i.n += d;
             if (i.n <= 0) cart = cart.filter(x => x.cid !== cid);
+            safeSetStorage('stb_cart', cart);
             updateCartUI(); renderCheckout(); syncCart();
             if (cart.length === 0) {
                 appliedPromoCode = '';
@@ -1960,7 +1961,19 @@
                                 tg.openLink(adminContactLink);
                             }
                         };
+                        const clearCartUI = () => {
+                            cart = [];
+                            appliedPromoCode = '';
+                            appliedPromoDiscount = 0;
+                            safeSetStorage('stb_cart', cart);
+                            updateCartUI();
+                            closeCheckout();
+                            checkoutStep = 1;
+                            switchPage('shop', document.querySelectorAll('.nav-item')[0]);
+                        };
                         
+                        clearCartUI();
+
                         if (hasLink) {
                             tg.showConfirm("Commande enregistrée ! Voulez-vous ouvrir le lien de paiement maintenant ? (Contactez ensuite l'administration avec votre preuve)", (ok) => {
                                 if (ok) {
@@ -1982,6 +1995,7 @@
                             cart = [];
                             appliedPromoCode = '';
                             appliedPromoDiscount = 0;
+                            safeSetStorage('stb_cart', cart);
                             updateCartUI();
                             closeCheckout();
                             checkoutStep = 1;
