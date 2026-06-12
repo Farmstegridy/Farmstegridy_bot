@@ -1572,6 +1572,10 @@
                 checkoutStep = 2;
                 renderCheckout();
                 tg.HapticFeedback.impactOccurred('light');
+            } else if (checkoutStep === 2) {
+                checkoutStep = 3;
+                renderCheckout();
+                tg.HapticFeedback.impactOccurred('light');
             } else {
                 submitOrder();
             }
@@ -1586,7 +1590,11 @@
         }
 
         function prevStep() {
-            if (checkoutStep === 2) {
+            if (checkoutStep === 3) {
+                checkoutStep = 2;
+                renderCheckout();
+                tg.HapticFeedback.impactOccurred('light');
+            } else if (checkoutStep === 2) {
                 checkoutStep = 1;
                 renderCheckout();
                 tg.HapticFeedback.impactOccurred('light');
@@ -1717,7 +1725,7 @@
 
             } else if (checkoutStep === 2) {
                 document.querySelector('#checkout-overlay h2').innerText = t("delivery_title", "LIVRAISON");
-                btn.innerText = t("confirm_and_pay", "CONFIRMER & PAYER");
+                btn.innerText = t("continue", "CONTINUER");
                 back.style.display = 'block';
                 totalRow.style.display = 'none';
 
@@ -1780,17 +1788,25 @@
                         </div>
                         <div style="font-size:11px; opacity:0.5; margin-top:8px;">${t("leave_empty_asap", "Laissez vide pour une livraison \"Dès que possible\"")}</div>
                     </div>
+                `;
+                cont.innerHTML = html;
+            } else if (checkoutStep === 3) {
+                document.querySelector('#checkout-overlay h2').innerText = t("payment_method_caps", "MODE DE PAIEMENT");
+                btn.innerText = t("finalize_order", "FINALISER LA COMMANDE");
+                back.style.display = 'block';
+                totalRow.style.display = 'none';
+                
+                const html = `
                     <div style="margin-bottom:20px;">
-                        <label style="display:block; font-size:11px; font-weight:900; opacity:0.5; margin-bottom:8px; letter-spacing:1px;">${t("payment_method_caps", "MODE DE PAIEMENT")}</label>
                         ${(userInfo?.paymentModes && userInfo.paymentModes.length > 0) ? userInfo.paymentModes.map((m, i) => `
-                            <label style="display:flex; align-items:center; gap:10px; background:var(--card); border:1px solid var(--border); padding:15px; border-radius:15px; margin-bottom:10px; cursor:pointer;">
+                            <label style="display:flex; align-items:center; gap:10px; background:var(--card); border:1px solid var(--border); padding:15px; border-radius:15px; margin-bottom:10px; cursor:pointer;" onclick="updatePaymentButton('${m.id}')">
                                 <input type="radio" name="checkout_payment" value="${m.id}" ${i === 0 ? 'checked' : ''} style="accent-color:var(--accent); width:18px; height:18px;">
                                 <div style="flex:1;">
                                     <div style="font-weight:900; font-size:14px;">${m.label}</div>
                                 </div>
                             </label>
                         `).join('') : `
-                            <label style="display:flex; align-items:center; gap:10px; background:var(--card); border:1px solid var(--border); padding:15px; border-radius:15px; margin-bottom:10px; cursor:pointer;">
+                            <label style="display:flex; align-items:center; gap:10px; background:var(--card); border:1px solid var(--border); padding:15px; border-radius:15px; margin-bottom:10px; cursor:pointer;" onclick="updatePaymentButton('CASH')">
                                 <input type="radio" name="checkout_payment" value="CASH" checked style="accent-color:var(--accent); width:18px; height:18px;">
                                 <div style="flex:1;">
                                     <div style="font-weight:900; font-size:14px;">Espèces</div>
@@ -1800,6 +1816,22 @@
                     </div>
                 `;
                 cont.innerHTML = html;
+                
+                const firstRadio = document.querySelector('input[name="checkout_payment"]:checked');
+                if (firstRadio) {
+                    updatePaymentButton(firstRadio.value);
+                }
+            }
+        }
+
+        function updatePaymentButton(paymentId) {
+            const btn = document.getElementById('btn-next');
+            if (!btn) return;
+            
+            if (paymentId === 'CASH') {
+                btn.innerText = t("finalize_order", "FINALISER LA COMMANDE");
+            } else {
+                btn.innerText = "PAYER MAINTENANT";
             }
         }
 
@@ -1864,6 +1896,14 @@
                 }
 
                 const paymentMethod = document.querySelector('input[name="checkout_payment"]:checked')?.value || 'CASH';
+
+                if (paymentMethod !== 'CASH' && userInfo?.paymentModes) {
+                    const selectedMode = userInfo.paymentModes.find(m => m.id === paymentMethod);
+                    if (selectedMode && selectedMode.instructions && selectedMode.instructions.startsWith('http')) {
+                        // Open the link in a new tab/browser
+                        tg.openLink(selectedMode.instructions);
+                    }
+                }
 
                 const orderData = {
                     userId: `telegram_${uid}`,
