@@ -1941,6 +1941,10 @@
                         msgText += `📍 Livraison : ${finalAddress}\n`;
                         if (finalNote) msgText += `📝 Note : ${finalNote}\n`;
 
+                        if (!hasLink) {
+                            msgText = msgText.replace('et ma preuve de paiement :', 'en attente de paiement :\n\n❓ Pouvez-vous me fournir le lien ou les instructions pour régler cette commande s\'il vous plaît ?');
+                        }
+
                         const encodedText = encodeURIComponent(msgText);
                         let adminContactLink = userInfo?.private_contact_url || 'https://t.me/don_r91';
                         if (adminContactLink.includes('?')) {

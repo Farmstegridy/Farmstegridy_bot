@@ -1371,14 +1371,32 @@ function setupOrderSystem(bot) {
 
             const adminContact = settings.private_contact_url || 'https://t.me/don_r91';
             
+            const hasLink = detailValue.startsWith('http');
+            
+            let msgText = `Bonjour, voici ma commande en attente de paiement :\n\n`;
+            msgText += `📦 Produits : ${finalProductList}\n`;
+            msgText += `💰 Total : ${finalPrice.toFixed(2)}€\n`;
+            msgText += `📍 Livraison : ${pending.address}\n`;
+            
+            if (!hasLink) {
+                msgText += `\n❓ Pouvez-vous me fournir le lien ou les instructions pour régler cette commande s'il vous plaît ?\n`;
+            } else {
+                msgText += `\nVoici ma preuve de paiement :\n`;
+            }
+
+            const encodedText = encodeURIComponent(msgText);
+            let adminContactLink = adminContact;
+            if (adminContactLink.includes('?')) adminContactLink += `&text=${encodedText}`;
+            else adminContactLink += `?text=${encodedText}`;
+            
             const text = `💳 <b>RÈGLEMENT PAR ${detailLabel.toUpperCase()}</b>\n\n` +
                 `Veuillez effectuer le paiement de <b>${finalPrice.toFixed(2)}€</b> en utilisant les informations ci-dessous :\n\n` +
-                `📍 <b>Instructions / Lien :</b>\n${detailValue.startsWith('http') ? `<a href="${detailValue}">${detailValue}</a>` : `<code>${detailValue}</code>`}\n\n` +
+                `📍 <b>Instructions / Lien :</b>\n${hasLink ? `<a href="${detailValue}">${detailValue}</a>` : `<code>${detailValue}</code>`}\n\n` +
                 `📸 <b>POUR VALIDER LA COMMANDE :</b>\n` +
                 `Envoyez directement la <b>capture d'écran du paiement</b> ici dans la conversation avec le bot.`;
             
             return safeEdit(ctx, text, { parse_mode: 'HTML', disable_web_page_preview: true, ...Markup.inlineKeyboard([
-                [Markup.button.url('💬 Contacter l\'Admin en cas de souci', adminContact)],
+                [Markup.button.url('💬 Contacter l\'Admin', adminContactLink)],
                 [Markup.button.callback('◀️ Retour', 'view_cart')]
             ]) });
         }
