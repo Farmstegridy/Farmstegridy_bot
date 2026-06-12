@@ -1930,21 +1930,46 @@
                     if (data.requireProof) {
                         const selectedMode = userInfo?.paymentModes?.find(m => m.id === paymentMethod);
                         const hasLink = selectedMode && selectedMode.instructions && selectedMode.instructions.startsWith('http');
-                        const adminContact = userInfo?.private_contact_url || 'https://t.me/don_r91';
+                        
+                        let msgText = `Bonjour, voici ma commande et ma preuve de paiement :\n\n`;
+                        msgText += `📦 Produits :\n`;
+                        cart.forEach(i => {
+                            msgText += `- ${i.name} (x${i.m * i.n})\n`;
+                        });
+                        const totAmount = Math.max(0, subTotAfterPromo - discount);
+                        msgText += `\n💰 Total : ${totAmount}€\n`;
+                        msgText += `📍 Livraison : ${finalAddress}\n`;
+                        if (finalNote) msgText += `📝 Note : ${finalNote}\n`;
+
+                        const encodedText = encodeURIComponent(msgText);
+                        let adminContactLink = userInfo?.private_contact_url || 'https://t.me/don_r91';
+                        if (adminContactLink.includes('?')) {
+                            adminContactLink += `&text=${encodedText}`;
+                        } else {
+                            adminContactLink += `?text=${encodedText}`;
+                        }
+
+                        const openAdminChat = () => {
+                            if (adminContactLink.includes('t.me')) {
+                                tg.openTelegramLink(adminContactLink);
+                            } else {
+                                tg.openLink(adminContactLink);
+                            }
+                        };
                         
                         if (hasLink) {
                             tg.showConfirm("Commande enregistrée ! Voulez-vous ouvrir le lien de paiement maintenant ? (Contactez ensuite l'administration avec votre preuve)", (ok) => {
                                 if (ok) {
                                     tg.openLink(selectedMode.instructions);
-                                    setTimeout(() => tg.openTelegramLink(adminContact), 1000);
+                                    setTimeout(() => openAdminChat(), 1000);
                                 } else {
-                                    tg.openTelegramLink(adminContact);
+                                    openAdminChat();
                                 }
                                 tg.close();
                             });
                         } else {
                             tg.showConfirm("Aucun lien de paiement n'a été trouvé. Voulez-vous contacter l'administration pour payer et valider ?", (ok) => {
-                                if (ok) tg.openTelegramLink(adminContact);
+                                if (ok) openAdminChat();
                                 tg.close();
                             });
                         }
