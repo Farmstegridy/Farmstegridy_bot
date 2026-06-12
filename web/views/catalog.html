@@ -520,6 +520,8 @@
         let activeProduct = null;
         let activeOption = null;
         let checkoutStep = 1;
+        let finalCheckoutAddress = '';
+        let finalCheckoutNote = '';
         let appliedPromoCode = '';
         let appliedPromoDiscount = 0;
         let currentCat = t('all', {default: 'Tous'});
@@ -1567,12 +1569,60 @@
             renderCheckout();
         }
 
-        function nextStep() {
+        async function nextStep() {
             if (checkoutStep === 1) {
                 checkoutStep = 2;
                 renderCheckout();
                 tg.HapticFeedback.impactOccurred('light');
             } else if (checkoutStep === 2) {
+                let addr = '';
+                let note = '';
+                
+                const radio = document.querySelector('input[name="checkout_addr"]:checked');
+                if (radio && radio.value !== 'new') {
+                    const addrs = parseAddresses(userInfo?.address);
+                    const selected = addrs.find(a => a.id === radio.value);
+                    if (selected) {
+                        addr = selected.address;
+                        note = selected.digicode || '';
+                    }
+                } else {
+                    addr = document.getElementById('order-address')?.value?.trim();
+                    note = document.getElementById('order-note')?.value?.trim();
+                    if (addr) {
+                        savedAddresses = parseAddresses(userInfo?.address);
+                        if (!savedAddresses.some(a => a.address.toLowerCase() === addr.toLowerCase())) {
+                            savedAddresses.push({
+                                id: Date.now().toString(),
+                                name: 'Adresse ' + (savedAddresses.length + 1),
+                                address: addr,
+                                digicode: note || ''
+                            });
+                            await syncAddressesToServer();
+                        }
+                    }
+                }
+
+                if (!addr) return tg.showAlert(t('msg_veuillez_choisir_ou', "Veuillez choisir ou saisir une adresse"));
+
+                const schedule = document.getElementById('order-schedule-date')?.value;
+                if (schedule) {
+                    const d = new Date(schedule);
+                    const formatted = d.toLocaleDateString('fr-FR') + ' à ' + d.toLocaleTimeString('fr-FR', {hour: '2-digit', minute:'2-digit'});
+                    note += ` [Programmé pour le : ${formatted}]`;
+                }
+
+                const extraNote = document.getElementById('order-note-extra')?.value?.trim();
+                if (extraNote) {
+                    note += ` [Note: ${extraNote}]`;
+                }
+                if (selectedDeliveryTags.length > 0) {
+                    note += ` [Consignes: ${selectedDeliveryTags.join(', ')}]`;
+                }
+
+                finalCheckoutAddress = addr;
+                finalCheckoutNote = note;
+
                 checkoutStep = 3;
                 renderCheckout();
                 tg.HapticFeedback.impactOccurred('light');
@@ -1836,50 +1886,8 @@
         }
 
         async function submitOrder() {
-            let finalAddress = '';
-            let finalNote = '';
-            
-            const radio = document.querySelector('input[name="checkout_addr"]:checked');
-            if (radio && radio.value !== 'new') {
-                const addrs = parseAddresses(userInfo?.address);
-                const selected = addrs.find(a => a.id === radio.value);
-                if (selected) {
-                    finalAddress = selected.address;
-                    finalNote = selected.digicode || '';
-                }
-            } else {
-                finalAddress = document.getElementById('order-address')?.value?.trim();
-                finalNote = document.getElementById('order-note')?.value?.trim();
-                if (finalAddress) {
-                    savedAddresses = parseAddresses(userInfo?.address);
-                    if (!savedAddresses.some(a => a.address.toLowerCase() === finalAddress.toLowerCase())) {
-                        savedAddresses.push({
-                            id: Date.now().toString(),
-                            name: 'Adresse ' + (savedAddresses.length + 1),
-                            address: finalAddress,
-                            digicode: finalNote || ''
-                        });
-                        await syncAddressesToServer();
-                    }
-                }
-            }
-
-            if (!finalAddress) return tg.showAlert(t('msg_veuillez_choisir_ou', "Veuillez choisir ou saisir une adresse"));
-
-            const schedule = document.getElementById('order-schedule-date')?.value;
-            if (schedule) {
-                const d = new Date(schedule);
-                const formatted = d.toLocaleDateString('fr-FR') + ' à ' + d.toLocaleTimeString('fr-FR', {hour: '2-digit', minute:'2-digit'});
-                finalNote += ` [Programmé pour le : ${formatted}]`;
-            }
-
-            const extraNote = document.getElementById('order-note-extra')?.value?.trim();
-            if (extraNote) {
-                finalNote += ` [Note: ${extraNote}]`;
-            }
-            if (selectedDeliveryTags.length > 0) {
-                finalNote += ` [Consignes: ${selectedDeliveryTags.join(', ')}]`;
-            }
+            let finalAddress = finalCheckoutAddress;
+            let finalNote = finalCheckoutNote;
 
             const uid = tg.initDataUnsafe?.user?.id;
             const btn = document.getElementById('btn-next');
