@@ -1044,7 +1044,12 @@ function createServer(port = 8080) {
             if (!updates.admin_password || updates.admin_password.trim() === '') {
                 delete updates.admin_password;
             }
-            await updateAppSettings(updates);
+            const { error } = await updateAppSettings(updates);
+            if (error) fs.writeFileSync('last_supabase_error.json', JSON.stringify({error, updates}));
+            if (error) {
+                console.error('❌ Settings update error from Supabase:', error);
+                throw error;
+            }
 
             // Immediate Telegram API update for bot descriptions
             if (updates.bot_description || updates.bot_short_description) {
@@ -1516,7 +1521,7 @@ function createServer(port = 8080) {
                 points: user.points || 0,
                 referralLink: `https://t.me/${settings.bot_username}?start=${user.referral_code}`,
                 hotline: settings.admin_telegram_id || 'admin',
-                private_contact_url: settings.private_contact_url || 'https://t.me/ShopTonBot',
+                private_contact_url: settings.private_contact_url || 'https://t.me/don_r91',
                 mini_app_logo: settings.mini_app_logo || '/public/img/logo.png',
                 chat_history: user.data?.chat_history || []
             });

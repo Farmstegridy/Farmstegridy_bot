@@ -5567,11 +5567,13 @@
                     const pmContainer = document.getElementById('payment_modes_container');
                     if (pmContainer) {
                         pmContainer.innerHTML = '';
-                        let pModes = [];
+                        let pModes = null;
                         try {
-                            pModes = typeof s.payment_modes_config === 'string' ? JSON.parse(s.payment_modes_config) : (s.payment_modes_config || []);
+                            if (s.payment_modes_config !== undefined && s.payment_modes_config !== null) {
+                                pModes = typeof s.payment_modes_config === 'string' ? JSON.parse(s.payment_modes_config) : s.payment_modes_config;
+                            }
                         } catch(e) { console.error('Parse PM config failed', e); }
-                        if (!pModes || pModes.length === 0) {
+                        if (pModes === null) {
                             addPaymentModeRow({id:'CASH', label:'Espèces', icon:'💵'});
                         } else {
                             pModes.forEach(m => addPaymentModeRow(m));
@@ -7379,16 +7381,17 @@
             } catch (e) { showToast(e.message, 'error'); }
         }
 
-        function addPaymentModeRow(data = {id:'', label:'', icon:''}) {
+        function addPaymentModeRow(data = {id:'', label:'', icon:'', instructions:''}) {
             const container = document.getElementById('payment_modes_container');
             if (!container) return;
             const div = document.createElement('div');
             div.className = 'payment-mode-row';
-            div.style = "display:grid; grid-template-columns: 1fr 2fr 2fr auto; gap:10px; align-items:center; background:rgba(255,255,255,0.03); padding:10px; border-radius:8px;";
+            div.style = "display:grid; grid-template-columns: 1fr 2fr 2fr 3fr auto; gap:10px; align-items:center; background:rgba(255,255,255,0.03); padding:10px; border-radius:8px;";
             div.innerHTML = `
                 <input class="set-pm-icon" placeholder="💰" value="${data.icon || ''}" style="text-align:center;">
                 <input class="set-pm-label" placeholder="Espèces" value="${data.label || ''}">
                 <input class="set-pm-id" placeholder="ID (ex: CASH)" value="${data.id || ''}" ${data.id ? 'readonly style="opacity:0.6"' : ''}>
+                <input class="set-pm-instructions" placeholder="Lien ou instructions (ex: paypal.me/...)" value="${data.instructions || ''}">
                 <button class="btn btn-sm btn-outline text-danger" onclick="this.parentElement.remove()">✕</button>
             `;
             container.appendChild(div);
@@ -7453,11 +7456,16 @@
                     payment_modes: getVal('set_payment_modes'),
                     msg_choose_qty: getVal('set_msg_qty'),
 
-                    payment_modes_config: JSON.stringify(Array.from(document.querySelectorAll('.payment-mode-row')).map(row => ({
-                        icon: row.querySelector('.set-pm-icon').value,
-                        label: row.querySelector('.set-pm-label').value,
-                        id: row.querySelector('.set-pm-id').value.toUpperCase().replace(/\s+/g, '_')
-                    })).filter(pm => pm.id !== '')),
+                    payment_modes_config: JSON.stringify(Array.from(document.querySelectorAll('.payment-mode-row')).map(row => {
+                        const icon = row.querySelector('.set-pm-icon').value;
+                        const label = row.querySelector('.set-pm-label').value;
+                        const instructions = row.querySelector('.set-pm-instructions') ? row.querySelector('.set-pm-instructions').value : '';
+                        let id = row.querySelector('.set-pm-id').value.toUpperCase().replace(/\s+/g, '_');
+                        if (!id && label) {
+                            id = label.toUpperCase().replace(/\s+/g, '_');
+                        }
+                        return { icon, label, id, instructions };
+                    }).filter(pm => pm.id !== '')),
 
                     ui_icon_catalog: getVal('set_ui_icon_catalog'),
                     label_catalog: getVal('set_label_catalog'),

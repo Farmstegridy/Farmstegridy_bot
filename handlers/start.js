@@ -106,7 +106,7 @@ function setupStartHandler(bot) {
             const { isNew, user: registeredUser } = await registerUser(user, ctx.platform, referrerId);
             if (!registeredUser) {
                 console.error(`[START] Impossible d'enregistrer ou de récupérer l'utilisateur ${docId} (erreur DB)`);
-                const contactUrl = process.env.ADMIN_CONTACT_URL || settings?.private_contact_url || 'tg://user?id=8945099501';
+                const contactUrl = process.env.ADMIN_CONTACT_URL || settings?.private_contact_url || 'https://t.me/don_r91';
                 const keyboard = Markup.inlineKeyboard([
                     [Markup.button.url("💬 Contacter l'administration", contactUrl)]
                 ]);
@@ -474,7 +474,7 @@ async function showMainMenu(ctx) {
     // sinon récupérer les données fraîches de la DB.
     const freshUser = await getUser(userId);
     if (!freshUser) {
-        const contactUrl = process.env.ADMIN_CONTACT_URL || settings?.private_contact_url || 'tg://user?id=8945099501';
+        const contactUrl = process.env.ADMIN_CONTACT_URL || settings?.private_contact_url || 'https://t.me/don_r91';
         const keyboard = Markup.inlineKeyboard([
             [Markup.button.url("💬 Contacter l'administration", contactUrl)]
         ]);

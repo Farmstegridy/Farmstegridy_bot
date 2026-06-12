@@ -403,7 +403,7 @@ function setupOrderSystem(bot) {
         const buttons = [
             [
                 Markup.button.callback(t(user, 'btn_add_to_cart', '🛒 Mettre dans mon panier'), 'add_to_cart'),
-                Markup.button.callback(t(user, 'btn_checkout_now', '💳 Paiement à la livraison'), 'checkout_now')
+                Markup.button.callback(t(user, 'btn_checkout_now', '💳 Acheter maintenant'), 'checkout_now')
             ],
             [
                 Markup.button.callback(t(user, 'btn_review', '⭐️ Avis / Comment'), 'leave_review'),
@@ -541,7 +541,7 @@ function setupOrderSystem(bot) {
         });
         summary += `\n💰 <b>` + t(user, 'label_total_price', 'TOTAL :') + ` ${formatPrice(total)}€</b>`;
 
-        buttons.push([Markup.button.callback(t(user, 'btn_checkout', '💳 Commander'), 'start_checkout'), Markup.button.callback(t(user, 'btn_add_more', '🛍️ Continuer'), 'view_catalog')]);
+        buttons.push([Markup.button.callback(t(user, 'btn_checkout', '💳 Commander', { total: formatPrice(total) }), 'start_checkout'), Markup.button.callback(t(user, 'btn_add_more', '🛍️ Continuer'), 'view_catalog')]);
         buttons.push([Markup.button.callback(t(user, 'btn_clear_cart', '❌ Vider'), 'clear_cart'), Markup.button.callback(t(user, 'btn_back_menu', '◀️ Menu'), 'main_menu')]);
 
         await safeEdit(ctx, summary, Markup.inlineKeyboard(buttons));
@@ -1242,7 +1242,7 @@ function setupOrderSystem(bot) {
         }
 
         const hasAlternativePayment = pModes.some(m => m.id !== 'CASH');
-        const adminContact = settings.private_contact_url || 'https://t.me/admin';
+        const adminContact = settings.private_contact_url || 'https://t.me/don_r91';
 
         // Si 1 seul mode, bouton "Confirmer" direct
         if (pModes.length === 1) {
@@ -1351,18 +1351,36 @@ function setupOrderSystem(bot) {
         const settings = ctx.state?.settings || await getAppSettings();
         const method = paymentMethod.toUpperCase();
 
-        if (method === 'CRYPTO' || method === 'VIREMENT') {
-            const detailLabel = method === 'CRYPTO' ? 'Wallet Crypto' : 'RIB / IBAN';
-            const detailValue = method === 'CRYPTO' ? (settings.payment_crypto_wallet || '<i>Non configuré</i>') : (settings.payment_bank_rib || '<i>Non configuré</i>');
+        let pModes = [];
+        try { pModes = typeof settings.payment_modes_config === 'string' ? JSON.parse(settings.payment_modes_config) : (settings.payment_modes_config || []); } catch(e) {}
+        
+        const selectedMode = pModes.find(m => m.id.toUpperCase() === method);
+
+        if (method !== 'CASH') {
+            const detailLabel = selectedMode?.label || method;
+            let detailValue = selectedMode?.instructions;
+            
+            // Fallback for legacy configs
+            if (!detailValue) {
+                if (method === 'CRYPTO') detailValue = settings.payment_crypto_wallet || 'Aucune instruction configurée.';
+                else if (method === 'VIREMENT') detailValue = settings.payment_bank_rib || 'Aucune instruction configurée.';
+                else detailValue = 'Aucune instruction configurée.';
+            }
             
             awaitingPaymentProof.set(userId, { orderData, method, finalProductList, pending });
 
-            const text = `💳 <b>RÈGLEMENT PAR ${method}</b>\n\n` +
-                `Veuillez effectuer le virement de <b>${finalPrice.toFixed(2)}€</b> vers :\n\n` +
-                `📍 <b>${detailLabel} :</b>\n<code>${detailValue}</code>\n\n` +
-                `✅ Une fois fait, envoyez une <b>capture d'écran</b> ici.`;
+            const adminContact = settings.private_contact_url || 'https://t.me/don_r91';
             
-            return safeEdit(ctx, text, { parse_mode: 'HTML', ...Markup.inlineKeyboard([[Markup.button.callback('◀️ Retour', 'view_cart')]]) });
+            const text = `💳 <b>RÈGLEMENT PAR ${detailLabel.toUpperCase()}</b>\n\n` +
+                `Veuillez effectuer le paiement de <b>${finalPrice.toFixed(2)}€</b> en utilisant les informations ci-dessous :\n\n` +
+                `📍 <b>Instructions / Lien :</b>\n${detailValue.startsWith('http') ? `<a href="${detailValue}">${detailValue}</a>` : `<code>${detailValue}</code>`}\n\n` +
+                `📸 <b>POUR VALIDER LA COMMANDE :</b>\n` +
+                `Envoyez directement la <b>capture d'écran du paiement</b> ici dans la conversation avec le bot.`;
+            
+            return safeEdit(ctx, text, { parse_mode: 'HTML', disable_web_page_preview: true, ...Markup.inlineKeyboard([
+                [Markup.button.url('💬 Contacter l\'Admin en cas de souci', adminContact)],
+                [Markup.button.callback('◀️ Retour', 'view_cart')]
+            ]) });
         }
 
         // --- 3. TRAVAIL PARALLÈLE (Vitesse Maximale) ---
@@ -1439,7 +1457,7 @@ function setupOrderSystem(bot) {
             (async () => {
                 // Notif Nouveau Client
                 if (isFirstOrder) {
-                    const adminContact = dbSettings.private_contact_url || 'https://t.me/Farmstegridy_bot';
+                    const adminContact = dbSettings.private_contact_url || 'https://t.me/don_r91';
                     ctx.reply(t(user, 'msg_first_order_welcome', `👋 <b>Première commande !</b>\nContactez l'admin pour valider : {contact}`, { contact: adminContact }), { parse_mode: 'HTML' }).catch(() => {});
                 }
 
