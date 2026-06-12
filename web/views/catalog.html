@@ -1905,14 +1905,6 @@
 
                 const paymentMethod = document.querySelector('input[name="checkout_payment"]:checked')?.value || 'CASH';
 
-                if (paymentMethod !== 'CASH' && userInfo?.paymentModes) {
-                    const selectedMode = userInfo.paymentModes.find(m => m.id === paymentMethod);
-                    if (selectedMode && selectedMode.instructions && selectedMode.instructions.startsWith('http')) {
-                        // Open the link in a new tab/browser
-                        tg.openLink(selectedMode.instructions);
-                    }
-                }
-
                 const orderData = {
                     userId: `telegram_${uid}`,
                     items: cart.map(i => ({ id: i.id, name: i.name, qty: i.m * i.n, price: i.pr, totalPrice: i.pr * i.n })),
@@ -1936,9 +1928,26 @@
                 if (res.ok) {
                     const data = await res.json();
                     if (data.requireProof) {
-                        tg.showAlert(data.message || "Veuillez vérifier vos messages Telegram pour finaliser le paiement.", () => {
-                            tg.close();
-                        });
+                        const selectedMode = userInfo?.paymentModes?.find(m => m.id === paymentMethod);
+                        const hasLink = selectedMode && selectedMode.instructions && selectedMode.instructions.startsWith('http');
+                        const adminContact = userInfo?.private_contact_url || 'https://t.me/don_r91';
+                        
+                        if (hasLink) {
+                            tg.showConfirm("Commande enregistrée ! Voulez-vous ouvrir le lien de paiement maintenant ? (Contactez ensuite l'administration avec votre preuve)", (ok) => {
+                                if (ok) {
+                                    tg.openLink(selectedMode.instructions);
+                                    setTimeout(() => tg.openTelegramLink(adminContact), 1000);
+                                } else {
+                                    tg.openTelegramLink(adminContact);
+                                }
+                                tg.close();
+                            });
+                        } else {
+                            tg.showConfirm("Aucun lien de paiement n'a été trouvé. Voulez-vous contacter l'administration pour payer et valider ?", (ok) => {
+                                if (ok) tg.openTelegramLink(adminContact);
+                                tg.close();
+                            });
+                        }
                     } else {
                         tg.showConfirm(t('msg_commande_envoy_e_ave', "Commande envoyée avec succès ! Souhaitez-vous retourner au shop ?"), (ok) => {
                             cart = [];
