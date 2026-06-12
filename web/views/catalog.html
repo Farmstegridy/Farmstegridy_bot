@@ -1780,6 +1780,24 @@
                         </div>
                         <div style="font-size:11px; opacity:0.5; margin-top:8px;">${t("leave_empty_asap", "Laissez vide pour une livraison \"Dès que possible\"")}</div>
                     </div>
+                    <div style="margin-bottom:20px;">
+                        <label style="display:block; font-size:11px; font-weight:900; opacity:0.5; margin-bottom:8px; letter-spacing:1px;">${t("payment_method_caps", "MODE DE PAIEMENT")}</label>
+                        ${(userInfo?.paymentModes && userInfo.paymentModes.length > 0) ? userInfo.paymentModes.map((m, i) => `
+                            <label style="display:flex; align-items:center; gap:10px; background:var(--card); border:1px solid var(--border); padding:15px; border-radius:15px; margin-bottom:10px; cursor:pointer;">
+                                <input type="radio" name="checkout_payment" value="${m.id}" ${i === 0 ? 'checked' : ''} style="accent-color:var(--accent); width:18px; height:18px;">
+                                <div style="flex:1;">
+                                    <div style="font-weight:900; font-size:14px;">${m.label}</div>
+                                </div>
+                            </label>
+                        `).join('') : `
+                            <label style="display:flex; align-items:center; gap:10px; background:var(--card); border:1px solid var(--border); padding:15px; border-radius:15px; margin-bottom:10px; cursor:pointer;">
+                                <input type="radio" name="checkout_payment" value="CASH" checked style="accent-color:var(--accent); width:18px; height:18px;">
+                                <div style="flex:1;">
+                                    <div style="font-weight:900; font-size:14px;">Espèces</div>
+                                </div>
+                            </label>
+                        `}
+                    </div>
                 `;
                 cont.innerHTML = html;
             }
@@ -1845,6 +1863,8 @@
                     finalNote += ` [Code Promo Appliqué : ${appliedPromoCode} (-${appliedPromoDiscount}€)]`;
                 }
 
+                const paymentMethod = document.querySelector('input[name="checkout_payment"]:checked')?.value || 'CASH';
+
                 const orderData = {
                     userId: `telegram_${uid}`,
                     items: cart.map(i => ({ id: i.id, name: i.name, qty: i.m * i.n, price: i.pr, totalPrice: i.pr * i.n })),
@@ -1855,6 +1875,7 @@
                     walletDiscount: discount,
                     address: finalAddress,
                     note: finalNote,
+                    paymentMethod: paymentMethod,
                     platform: 'telegram'
                 };
 
@@ -1865,15 +1886,22 @@
                 });
 
                 if (res.ok) {
-                    tg.showConfirm(t('msg_commande_envoy_e_ave', "Commande envoyée avec succès ! Souhaitez-vous retourner au shop ?"), (ok) => {
-                        cart = [];
-                        appliedPromoCode = '';
-                        appliedPromoDiscount = 0;
-                        updateCartUI();
-                        closeCheckout();
-                        checkoutStep = 1;
-                        if (ok) switchPage('shop', document.querySelectorAll('.nav-item')[0]);
-                    });
+                    const data = await res.json();
+                    if (data.requireProof) {
+                        tg.showAlert(data.message || "Veuillez vérifier vos messages Telegram pour finaliser le paiement.", () => {
+                            tg.close();
+                        });
+                    } else {
+                        tg.showConfirm(t('msg_commande_envoy_e_ave', "Commande envoyée avec succès ! Souhaitez-vous retourner au shop ?"), (ok) => {
+                            cart = [];
+                            appliedPromoCode = '';
+                            appliedPromoDiscount = 0;
+                            updateCartUI();
+                            closeCheckout();
+                            checkoutStep = 1;
+                            if (ok) switchPage('shop', document.querySelectorAll('.nav-item')[0]);
+                        });
+                    }
                 } else {
                     tg.showAlert(t('msg_erreur_lors_de_l_env', "Erreur lors de l'envoi de la commande."));
                 }

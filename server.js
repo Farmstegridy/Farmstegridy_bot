@@ -1523,6 +1523,7 @@ function createServer(port = 8080) {
                 hotline: settings.admin_telegram_id || 'admin',
                 private_contact_url: settings.private_contact_url || 'https://t.me/don_r91',
                 mini_app_logo: settings.mini_app_logo || '/public/img/logo.png',
+                paymentModes: (typeof settings.payment_modes_config === 'string' ? JSON.parse(settings.payment_modes_config || '[]') : settings.payment_modes_config) || [],
                 chat_history: user.data?.chat_history || []
             });
         } catch (e) {
@@ -1727,7 +1728,7 @@ function createServer(port = 8080) {
 
     app.post('/api/mini-app/create-order', async (req, res) => {
         try {
-            const { userId, items, total, address, note, platform, discount, promoCode, promoDiscount, walletDiscount } = req.body;
+            const { userId, items, total, address, note, platform, discount, promoCode, promoDiscount, walletDiscount, paymentMethod } = req.body;
             const { createOrder, getUser, updateUserWallet, adjustOrderStock } = require('./services/database');
             const { notifyAdmins } = require('./services/notifications');
             
@@ -1762,6 +1763,48 @@ function createServer(port = 8080) {
                 first_name: user?.first_name || 'Inconnu'
             };
 
+            const bot = getBotInstance();
+            const { getAppSettings } = require('./services/database');
+            const settings = await getAppSettings();
+
+            if (paymentMethod && paymentMethod !== 'CASH') {
+                const { createPersistentMap } = require('./services/persistent_map');
+                const awaitingPaymentProof = createPersistentMap('awaitingPaymentProof');
+                const tgId = userId.split('_')[1];
+
+                awaitingPaymentProof.set(`telegram_${tgId}`, {
+                    orderData: orderData,
+                    method: paymentMethod,
+                    finalProductList: productListStr,
+                    pending: null
+                });
+
+                if (bot) {
+                    let pModes = [];
+                    try { pModes = typeof settings.payment_modes_config === 'string' ? JSON.parse(settings.payment_modes_config) : (settings.payment_modes_config || []); } catch(e) {}
+                    const selectedMode = pModes.find(m => m.id.toUpperCase() === paymentMethod);
+                    const detailLabel = selectedMode?.label || paymentMethod;
+                    const detailValue = selectedMode?.instructions || 'Aucune instruction configurée.';
+                    const adminContact = settings.private_contact_url || 'https://t.me/don_r91';
+
+                    const { Markup } = require('telegraf');
+                    const text = `💳 <b>RÈGLEMENT PAR ${detailLabel.toUpperCase()}</b>\n\n` +
+                        `Veuillez effectuer le paiement de <b>${total}€</b> en utilisant les informations ci-dessous :\n\n` +
+                        `📍 <b>Instructions / Lien :</b>\n${detailValue.startsWith('http') ? `<a href="${detailValue}">${detailValue}</a>` : `<code>${detailValue}</code>`}\n\n` +
+                        `📸 <b>POUR VALIDER LA COMMANDE :</b>\n` +
+                        `Envoyez directement la <b>capture d'écran du paiement</b> ici dans la conversation avec le bot.`;
+                    
+                    await bot.telegram.sendMessage(tgId, text, {
+                        parse_mode: 'HTML', disable_web_page_preview: true,
+                        ...Markup.inlineKeyboard([
+                            [Markup.button.url('💬 Contacter l\'Admin en cas de souci', adminContact)]
+                        ])
+                    }).catch(() => {});
+                }
+
+                return res.json({ success: true, requireProof: true, message: "Veuillez vérifier vos messages Telegram pour valider le paiement." });
+            }
+
             let { order, error } = await createOrder(orderData);
             if (error) {
                 // Fallback si 'cart' manque aussi (vieille DB)
@@ -1787,7 +1830,6 @@ function createServer(port = 8080) {
             }
 
             // Notification Admin & User
-            const bot = getBotInstance();
             if (bot) {
                 const promoStr = promoCode ? `\n🏷️ Code Promo : <b>${promoCode}</b> (-${appliedPromoDiscount}€)` : '';
                 const adminMsg = `🛒 <b>NOUVELLE COMMANDE (MINI APP)</b>\n\n` +
