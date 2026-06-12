@@ -301,6 +301,11 @@ function setupStartHandler(bot) {
         }
     });
 
+    bot.action('start', async (ctx) => {
+        await ctx.answerCbQuery('🔄 Rafraîchissement...').catch(() => {});
+        return bot.handleUpdate({ ...ctx.update, message: { text: '/start', from: ctx.from, chat: ctx.chat } });
+    });
+
     bot.action('check_sub', async (ctx) => {
         await ctx.answerCbQuery().catch(() => {});
         const settings = ctx.state?.settings || await getAppSettings();
