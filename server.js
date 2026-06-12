@@ -1720,6 +1720,18 @@ function createServer(port = 8080) {
             const { userId, cart } = req.body;
             const { syncUserCart } = require('./services/database');
             await syncUserCart(userId, cart);
+            
+            const { userCarts } = require('./handlers/order_system');
+            if (userCarts) {
+                if (!cart || cart.length === 0) {
+                    userCarts.delete(userId);
+                } else {
+                    // Convert mini-app cart format if necessary, or just save it directly
+                    // mini-app cart format: [{id, name, pr, n, m, cid}, ...]
+                    userCarts.set(userId, cart);
+                }
+            }
+
             res.json({ success: true });
         } catch (e) {
             res.status(500).json({ error: e.message });
@@ -1747,7 +1759,7 @@ function createServer(port = 8080) {
 
             // On construit la liste textuelle des produits (comme le fait le bot)
             const productListStr = items.map(it => `${it.name} (x${it.qty})`).join(', ');
-            const totalQty = items.reduce((acc, it) => acc + it.qty, 0);
+            const totalQty = Math.ceil(items.reduce((acc, it) => acc + (parseFloat(it.qty) || 1), 0));
 
             const orderData = {
                 user_id: userId,

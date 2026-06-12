@@ -1293,7 +1293,7 @@ function setupOrderSystem(bot) {
 
         const cart = userCarts.get(userId) || [];
         const productList = cart.map(item => `${item.productName} (x${item.qty})${item.chosen_unit_amount ? ` [${item.chosen_unit_amount}]` : ''}`).join(', ');
-        const totalQty = cart.reduce((acc, item) => acc + item.qty, 0);
+        const totalQty = Math.ceil(cart.reduce((acc, item) => acc + (parseFloat(item.qty) || 1), 0));
         const discount = useDiscount ? (pending.possibleDiscount || 0) : 0;
         const finalPrice = Math.max(0, parseFloat(pending.totalPrice || 0) - discount);
 
@@ -1389,14 +1389,19 @@ function setupOrderSystem(bot) {
             if (adminContactLink.includes('?')) adminContactLink += `&text=${encodedText}`;
             else adminContactLink += `?text=${encodedText}`;
             
-            const text = `💳 <b>RÈGLEMENT PAR ${detailLabel.toUpperCase()}</b>\n\n` +
-                `Veuillez effectuer le paiement de <b>${finalPrice.toFixed(2)}€</b> en utilisant les informations ci-dessous :\n\n` +
-                `📍 <b>Instructions / Lien :</b>\n${hasLink ? `<a href="${detailValue}">${detailValue}</a>` : `<code>${detailValue}</code>`}\n\n` +
-                `📸 <b>POUR VALIDER LA COMMANDE :</b>\n` +
-                `Envoyez directement la <b>capture d'écran du paiement</b> ici dans la conversation avec le bot.`;
+            const text = hasLink
+                ? `💳 <b>RÈGLEMENT PAR ${detailLabel.toUpperCase()}</b>\n\n` +
+                  `Veuillez effectuer le paiement de <b>${finalPrice.toFixed(2)}€</b> en utilisant les informations ci-dessous :\n\n` +
+                  `📍 <b>Instructions / Lien :</b>\n<a href="${detailValue}">${detailValue}</a>\n\n` +
+                  `📸 <b>POUR VALIDER LA COMMANDE :</b>\n` +
+                  `Envoyez directement la <b>capture d'écran du paiement</b> ici dans la conversation avec le bot.`
+                : `💳 <b>RÈGLEMENT PAR ${detailLabel.toUpperCase()}</b>\n\n` +
+                  `Veuillez effectuer le paiement de <b>${finalPrice.toFixed(2)}€</b>.\n\n` +
+                  `⚠️ <b>Aucun lien de paiement automatique configuré.</b>\n` +
+                  `Veuillez contacter l'administration en cliquant sur le bouton ci-dessous pour obtenir les instructions de paiement, puis envoyez votre capture d'écran ici pour valider.`;
             
             return safeEdit(ctx, text, { parse_mode: 'HTML', disable_web_page_preview: true, ...Markup.inlineKeyboard([
-                [Markup.button.url('💬 Contacter l\'Admin', adminContactLink)],
+                [Markup.button.url(hasLink ? '💬 Contacter l\'Admin' : '💬 Demander le lien de paiement', adminContactLink)],
                 [Markup.button.callback('◀️ Retour', 'view_cart')]
             ]) });
         }

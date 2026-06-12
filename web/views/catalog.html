@@ -1776,7 +1776,7 @@
 
             } else if (checkoutStep === 2) {
                 document.querySelector('#checkout-overlay h2').innerText = t("delivery_title", "LIVRAISON");
-                btn.innerText = t("continue", "CONTINUER");
+                btn.innerText = t("confirm_btn", "CONFIRMER");
                 back.style.display = 'block';
                 totalRow.style.display = 'none';
 
@@ -1975,23 +1975,18 @@
                         clearCartUI();
 
                         if (hasLink) {
-                            tg.showConfirm("Commande enregistrée ! Voulez-vous ouvrir le lien de paiement maintenant ? (Contactez ensuite l'administration avec votre preuve)", (ok) => {
-                                if (ok) {
-                                    tg.openLink(selectedMode.instructions);
-                                    setTimeout(() => openAdminChat(), 1000);
-                                } else {
-                                    openAdminChat();
-                                }
-                                tg.close();
+                            tg.showAlert("Commande enregistrée ! Vous allez être redirigé vers le paiement.\n\nMerci de contacter l'administration ensuite avec votre preuve de paiement.", () => {
+                                tg.openLink(selectedMode.instructions);
+                                setTimeout(() => tg.close(), 500);
                             });
                         } else {
-                            tg.showConfirm("Aucun lien de paiement n'a été trouvé. Voulez-vous contacter l'administration pour payer et valider ?", (ok) => {
-                                if (ok) openAdminChat();
-                                tg.close();
+                            tg.showAlert("Commande enregistrée ! Redirection vers l'administration pour finaliser le paiement...", () => {
+                                openAdminChat();
+                                setTimeout(() => tg.close(), 500);
                             });
                         }
                     } else {
-                        tg.showConfirm(t('msg_commande_envoy_e_ave', "Commande envoyée avec succès ! Souhaitez-vous retourner au shop ?"), (ok) => {
+                        tg.showAlert(t('msg_commande_envoy_e_ave', "Commande envoyée avec succès !"), () => {
                             cart = [];
                             appliedPromoCode = '';
                             appliedPromoDiscount = 0;
@@ -1999,7 +1994,7 @@
                             updateCartUI();
                             closeCheckout();
                             checkoutStep = 1;
-                            if (ok) switchPage('shop', document.querySelectorAll('.nav-item')[0]);
+                            switchPage('shop', document.querySelectorAll('.nav-item')[0]);
                         });
                     }
                 } else {
@@ -2009,7 +2004,7 @@
                 tg.showAlert(t('msg_erreur_r_seau', "Erreur réseau."));
             } finally {
                 btn.disabled = false;
-                btn.innerText = t("confirm_and_pay", "CONFIRMER & PAYER");
+                btn.innerText = t("confirm_btn", "CONFIRMER");
             }
         }
 

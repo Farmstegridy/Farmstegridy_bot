@@ -334,6 +334,19 @@ async function markUserUnblocked(userId) {
 }
 
 async function deleteUser(userId) {
+    if (_userCache) _userCache.delete(userId);
+    
+    try {
+        const docId = String(userId).startsWith('telegram_') ? String(userId) : `telegram_${userId}`;
+        const rawId = docId.split('_')[1];
+        if (rawId) {
+            const { clearAuthCache } = require('../handlers/admin');
+            if (clearAuthCache) clearAuthCache(rawId);
+        }
+    } catch (e) {
+        console.error('[DB] Error clearing auth cache during deleteUser:', e.message);
+    }
+
     return await supabase.from(COL_USERS).delete().eq('id', userId);
 }
 
