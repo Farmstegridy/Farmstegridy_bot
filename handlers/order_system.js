@@ -1356,7 +1356,7 @@ function setupOrderSystem(bot) {
         
         const selectedMode = pModes.find(m => m.id.toUpperCase() === method);
 
-        if (method !== 'CASH') {
+        if (!method.includes('CASH')) {
             const detailLabel = selectedMode?.label || method;
             let detailValue = selectedMode?.instructions;
             
