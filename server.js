@@ -1779,7 +1779,7 @@ function createServer(port = 8080) {
             const { getAppSettings } = require('./services/database');
             const settings = await getAppSettings();
 
-            if (paymentMethod && paymentMethod !== 'CASH') {
+            if (paymentMethod && paymentMethod.toUpperCase() !== 'CASH') {
                 const { createPersistentMap } = require('./services/persistent_map');
                 const awaitingPaymentProof = createPersistentMap('awaitingPaymentProof');
                 const tgId = userId.split('_')[1];
