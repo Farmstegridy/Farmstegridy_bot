@@ -1084,10 +1084,18 @@ async function updateOrderStatus(orderId, status, extraData = {}) {
 
 async function adjustOrderStock(orderId, action) {
     const { data: order } = await supabase.from(COL_ORDERS).select('*').eq('id', orderId).maybeSingle();
-    if (!order || !order.notes) return;
+    if (!order) return;
     try {
-        const cart = JSON.parse(order.notes);
-        if (!Array.isArray(cart)) return;
+        let cart = [];
+        if (order.cart && Array.isArray(order.cart)) {
+            cart = order.cart;
+        } else if (order.notes) {
+            try {
+                cart = JSON.parse(order.notes);
+            } catch(e) {}
+        }
+        
+        if (!Array.isArray(cart) || cart.length === 0) return;
         const { logStockMovement } = require('./inventory_manager');
         
         for (const item of cart) {
