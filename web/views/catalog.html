@@ -1133,9 +1133,10 @@
                         `;
                     }
 
-                    const btnContact = (!['delivered', 'cancelled', 'refused'].includes(o.status) && o.livreur_id) ? `<button class="btn-primary" style="margin-top:10px; background:rgba(0,255,255,0.1); border:1px solid var(--secondary); color:var(--secondary); height:40px;" onclick="toggleChatModule('${o.id}')"><i class="notranslate ph-fill ph-chat-circle-dots"></i> CHAT LIVREUR (${count}/6)</button>` : '';
+                    const btnContactLivreur = (!['delivered', 'cancelled', 'refused'].includes(o.status) && o.livreur_id) ? `<button class="btn-primary" style="flex:1; background:rgba(0,255,255,0.1); border:1px solid var(--secondary); color:var(--secondary); height:40px;" onclick="openOrderSupport(${JSON.stringify(o).replace(/"/g, '&quot;')})"><i class="notranslate ph-fill ph-moped"></i> ${t('courier', {default: 'LIVREUR'})}</button>` : '';
+                    
                     const btnNoter = ['delivered'].includes(o.status) && !o.feedback_rating ? `<button class="btn-primary" style="margin-top:10px; background:var(--card); border:1px solid var(--accent); color:var(--accent); height:40px;" onclick="openRating('${o.id}')"><i class="notranslate ph-fill ph-star"></i> ${t('rate_btn', {default: 'NOTER'})}</button>` : '';
-                    const btnReorder = `<button class="btn-primary" style="margin-top:10px; background:none; border:1px solid var(--border); color:#fff; height:40px;" onclick="reorder('${o.id}')"><i class="notranslate ph-fill ph-arrows-clockwise"></i> ${t('btn_reorder')}</button>`;
+                    const btnReorder = `<button class="btn-primary" style="flex:1; background:none; border:1px solid var(--border); color:#fff; height:40px;" onclick="reorder('${o.id}')"><i class="notranslate ph-fill ph-arrows-clockwise"></i> ${t('btn_reorder')}</button>`;
                     const btnCancel = (o.status === 'pending') ? `<button class="btn-primary" style="margin-top:10px; background:rgba(30,58,138,0.1); border:1px solid rgba(30,58,138,0.5); color:#1e3a8a; height:40px;" onclick="cancelOrder('${o.id}')"><i class="notranslate ph-bold ph-x"></i> ${t('btn_cancel')}</button>` : '';
 
                     const d = document.createElement('div'); d.className = 'order-card';
@@ -1152,21 +1153,11 @@
                         </div>
                         ${progressBar}
                         ${btnCancel}
-                        ${btnContact}
                         ${btnNoter}
-                        <div style="display:flex; gap:10px; margin-top:10px;">
+                        <div style="display:flex; gap:10px; margin-top:10px; flex-wrap:wrap;">
                             ${btnReorder}
-                            <button class="btn-primary" style="flex:1; background:rgba(255,170,0,0.1); border:1px solid rgba(255,170,0,0.5); color:#ffaa00; height:40px;" onclick="contactSupportForOrder('${o.id}')"><i class="notranslate ph-fill ph-headset"></i> ${t('btn_help')}</button>
-                        </div>
-
-                        <div class="chat-module" id="chat-module-${o.id}" style="display:${prevState.isOpen ? 'block' : 'none'};">
-                            <div style="font-size:10px; font-weight:900; opacity:0.5; margin-bottom:8px; letter-spacing:1px;">MESSAGERIE SÉCURISÉE :</div>
-                            ${chatSection}
-                            <div class="chat-input-group">
-                                <input type="text" class="chat-input" id="chat-input-${o.id}" value="${safeQuote(prevState.text)}" placeholder="Votre message..." data-i18n-placeholder="your_message" onkeydown="if(event.key==='Enter') sendChatMessage('${o.id}')">
-                                <button class="btn-send" onclick="sendChatMessage('${o.id}')">${t('send_btn', {default: 'ENVOYER'})}</button>
-                            </div>
-                            <div style="font-size:9px; opacity:0.3; margin-top:6px; text-align:center;">Échange direct avec l'équipe de livraison.</div>
+                            <button class="btn-primary" style="flex:1; background:rgba(255,170,0,0.1); border:1px solid rgba(255,170,0,0.5); color:#ffaa00; height:40px;" onclick="contactSupportForOrder('${o.id}')"><i class="notranslate ph-fill ph-headset"></i> ${t('btn_help', {default: 'AIDE'})}</button>
+                            ${btnContactLivreur}
                         </div>
                     `;
                     cont.appendChild(d);
