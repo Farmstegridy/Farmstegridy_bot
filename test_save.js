@@ -8,7 +8,11 @@ const { getAppSettings, updateAppSettings } = require('./services/database');
         
         const updates = { 
             payment_modes_config: '[{"icon":"💸","label":"Cash","id":"CASH"}]',
+<<<<<<< HEAD
             bot_name: settings.bot_name || 'Thegreenvalley'
+=======
+            bot_name: settings.bot_name || 'Farmstegridy'
+>>>>>>> 693a485 (feat: upgrade chat support with audio, ephemeral messages, and nav button)
         };
         const { error } = await updateAppSettings(updates);
         if (error) {
