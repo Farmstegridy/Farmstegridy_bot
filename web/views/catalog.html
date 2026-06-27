@@ -1038,8 +1038,8 @@
                 
                 let statsHtml = '';
                 if(orders.length > 0) {
-                    const activeOrders = orders.filter(o => o.status !== 'cancelled');
-                    const totalSpent = activeOrders.reduce((sum, o) => sum + (o.total_price || o.total || 0), 0);
+                    const activeOrders = orders.filter(o => !['cancelled', 'annulée', 'annulee', 'refused'].includes(o.status?.toLowerCase()));
+                    const totalSpent = activeOrders.reduce((sum, o) => sum + parseFloat(o.total_price || o.total || 0), 0);
                     
                     const pCount = {};
                     activeOrders.forEach(o => {
