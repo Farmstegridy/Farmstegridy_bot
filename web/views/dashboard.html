@@ -3009,7 +3009,7 @@
                             style="flex:1; background:rgba(255,255,255,0.05); border:1px solid rgba(0,150,255,0.4); border-radius:12px; color:#fff; padding:12px 15px; font-size:13px; outline:none;"
                             onkeydown="if(event.key==='Enter') sendAdminReply()">
                         <button id="admin-record-btn" onclick="toggleAdminRecording()" style="background:rgba(255,255,255,0.1); border:none; border-radius:12px; color:#fff; width:48px; height:48px; font-size:20px; cursor:pointer; flex-shrink:0; transition:0.3s;">🎤</button>
-                        <button onclick="sendAdminReply()" style="background:linear-gradient(135deg,#0096ff,#0050cc); border:none; border-radius:12px; color:#fff; width:48px; height:48px; font-size:20px; cursor:pointer; flex-shrink:0;">➤</button>
+                        <button onclick="sendAdminReply(null)" style="background:linear-gradient(135deg,#0096ff,#0050cc); border:none; border-radius:12px; color:#fff; width:48px; height:48px; font-size:20px; cursor:pointer; flex-shrink:0;">➤</button>
                     </div>
                     <div id="admin-recording-indicator" style="display:none; color:#ff3b30; font-size:12px; font-weight:bold; margin-top:8px; text-align:center; animation:pulseOpacity 1s infinite alternate;">🔴 Enregistrement en cours...</div>
                 </div>
@@ -8716,6 +8716,52 @@
             } finally {
                 input.disabled = false;
                 input.focus();
+            }
+        }
+
+        let adminMediaRecorder;
+        let adminAudioChunks = [];
+        let adminIsRecording = false;
+
+        async function toggleAdminRecording() {
+            if (adminIsRecording) {
+                adminMediaRecorder.stop();
+                adminIsRecording = false;
+                document.getElementById('admin-record-btn').style.background = 'rgba(255,255,255,0.1)';
+                document.getElementById('admin-recording-indicator').style.display = 'none';
+            } else {
+                try {
+                    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                    adminMediaRecorder = new MediaRecorder(stream);
+                    adminAudioChunks = [];
+                    adminMediaRecorder.ondataavailable = e => adminAudioChunks.push(e.data);
+                    adminMediaRecorder.onstop = sendAdminAudio;
+                    adminMediaRecorder.start();
+                    adminIsRecording = true;
+                    document.getElementById('admin-record-btn').style.background = '#ff3b30';
+                    document.getElementById('admin-recording-indicator').style.display = 'block';
+                } catch (e) {
+                    showToast('Microphone non accessible', 'error');
+                }
+            }
+        }
+
+        async function sendAdminAudio() {
+            if (!window._currentReplyUserId) return;
+            const audioBlob = new Blob(adminAudioChunks, { type: 'audio/webm' });
+            const formData = new FormData();
+            formData.append('audio', audioBlob, 'record.webm');
+            
+            try {
+                const res = await fetch('/api/admin-chat/upload-audio', { method: 'POST', body: formData });
+                const data = await res.json();
+                if (data.success && data.audioUrl) {
+                    await sendAdminReply(data.audioUrl);
+                } else {
+                    showToast('Erreur upload audio', 'error');
+                }
+            } catch (e) {
+                showToast('Erreur upload audio', 'error');
             }
         }
 

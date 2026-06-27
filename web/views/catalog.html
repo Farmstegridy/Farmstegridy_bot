@@ -487,7 +487,7 @@
             <div style="display:flex; gap:10px; align-items:center;">
                 <input type="text" id="admin-chat-input" placeholder="Votre message..." data-i18n-placeholder="your_message" style="flex:1; background:rgba(255,255,255,0.05); border:1px solid var(--border); border-radius:12px; padding:0 15px; height:50px; color:#fff; font-size:14px; outline:none;">
                 <button id="client-record-btn" onclick="toggleClientRecording()" style="background:rgba(255,255,255,0.1); border:none; border-radius:12px; color:#fff; width:50px; height:50px; font-size:20px; cursor:pointer; flex-shrink:0; transition:0.3s; display:flex; align-items:center; justify-content:center;">🎤</button>
-                <button class="btn-primary" id="admin-chat-send-btn" onclick="sendAdminChatMessage()" style="width:50px; height:50px; border-radius:12px; display:flex; align-items:center; justify-content:center; flex-shrink:0;"><i class="notranslate ph-fill ph-paper-plane-right" style="font-size:20px;"></i></button>
+                <button class="btn-primary" id="admin-chat-send-btn" onclick="sendAdminChatMessage(null)" style="width:50px; height:50px; border-radius:12px; display:flex; align-items:center; justify-content:center; flex-shrink:0;"><i class="notranslate ph-fill ph-paper-plane-right" style="font-size:20px;"></i></button>
             </div>
             <div id="client-recording-indicator" style="display:none; color:#ff3b30; font-size:12px; font-weight:bold; margin-top:8px; text-align:center; animation:pulseOpacity 1s infinite alternate;">🔴 Enregistrement en cours...</div>
         </div>
