@@ -2243,7 +2243,7 @@ function createServer(port = 8080) {
     app.post('/api/mini-app/send-chat-message', async (req, res) => {
         try {
             const { userId, orderId, text } = req.body;
-            const { getOrder, incrementChatCount, saveClientReply, getUser } = require('./services/database');
+            const { getOrder, incrementChatCount, saveClientReply, getUser, appendChatHistory } = require('./services/database');
             const { sendTelegramMessage, notifyAdmins } = require('./services/notifications');
             const { activeChatHistory } = require('./handlers/order_system');
             const { Markup } = require('telegraf');
@@ -2288,8 +2288,6 @@ function createServer(port = 8080) {
                 activeChatHistory.set(orderId, chatObj);
             }
             saveClientReply(orderId, text).catch(() => {});
-            
-            const { appendChatHistory } = require('./services/database');
             appendChatHistory(userId, {
                 role: 'client',
                 target: 'livreur',
