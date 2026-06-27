@@ -333,7 +333,14 @@
         <div class="main-grid" id="bots-products"></div>
     </div>
 
-
+        <div class="page" id="page-chats" style="display:none; padding-bottom:100px;">
+            <div class="page-header">
+                <div class="page-title"><i class="notranslate ph-fill ph-chat-circle-dots"></i> Messagerie</div>
+            </div>
+            <div id="chats-list-container" style="padding:15px; display:flex; flex-direction:column; gap:10px;">
+                <!-- Chats list will be rendered here -->
+            </div>
+        </div>
 
     <div id="page-orders" class="page" style="display:none; padding:30px 20px 150px 20px;">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
@@ -432,7 +439,13 @@
     <div class="bottom-nav">
         <div class="nav-item active" onclick="switchPage('shop', this)"><div class="nav-icon"><i class="ph-fill ph-diamond"></i></div><div class="nav-label" data-i18n="nav_shop">Shop</div></div>
         <div class="nav-item" onclick="switchPage('orders', this)"><div class="nav-icon"><i class="ph-fill ph-package"></i></div><div class="nav-label" data-i18n="nav_tracking">Suivi</div></div>
-        <div class="nav-item" onclick="openGlobalSupportModal()"><div class="nav-icon"><i class="ph-fill ph-chat-circle-text"></i><div id="chat-unread-badge" style="display:none; position:absolute; top:2px; right:15px; width:10px; height:10px; background:#ff3b30; border-radius:50%; border:2px solid #000;"></div></div><div class="nav-label" data-i18n="nav_chat">Chat</div></div>
+        <div class="nav-item" onclick="switchPage('chats', this)">
+            <div class="nav-icon">
+                <i class="notranslate ph-fill ph-chat-circle-dots"></i>
+                <div id="chat-unread-badge" class="nav-badge" style="display:none; background:var(--accent); position:absolute; top:-2px; right:-5px; font-size:10px; width:16px; height:16px; border-radius:50%; align-items:center; justify-content:center; color:#fff;">!</div>
+            </div>
+            <div class="nav-label" data-i18n="nav_chat">Chat</div>
+        </div>
         <div class="nav-item" onclick="switchPage('profile', this)"><div class="nav-icon"><i class="ph-fill ph-user"></i></div><div class="nav-label" data-i18n="nav_profile">Profil</div></div>
     </div>
 
@@ -834,6 +847,7 @@
             if (el) el.classList.add('active');
             if (p === 'orders') loadOrders();
             else if (p === 'shop') renderShop();
+            else if (p === 'chats') renderChatsList();
             if(typeof renderBots==="function") renderBots();
             else if (p === 'bots') renderBots();
             tg.HapticFeedback.impactOccurred('medium');
@@ -2574,6 +2588,77 @@
         // CHAT SUPPORT ADMIN-CLIENT (permanent)
         // ═══════════════════════════════════════════════════════
 
+        async function renderChatsList() {
+            const cont = document.getElementById('chats-list-container');
+            if (!cont) return;
+
+            // Load orders if needed
+            if (!userOrdersCache.length) {
+                const uid = getTgUser()?.id;
+                try {
+                    const res = await fetch(`/api/user-orders?userId=telegram_${uid}&lang=${window.currentLang || 'fr'}`);
+                    userOrdersCache = await res.json();
+                } catch(e){}
+            }
+
+            // Global Support Item
+            let unreadGlobal = '';
+            const unreadBadge = document.getElementById('chat-unread-badge');
+            if (unreadBadge && unreadBadge.style.display !== 'none') {
+                unreadGlobal = '<div style="width:10px; height:10px; background:var(--accent); border-radius:50%;"></div>';
+            }
+
+            let lastSupportMsg = adminChatMessages.length ? adminChatMessages[adminChatMessages.length-1].text : 'Discutez avec notre équipe';
+            if (adminChatMessages.length && adminChatMessages[adminChatMessages.length-1].audio) lastSupportMsg = '🎤 Message vocal';
+
+            let html = `
+                <div onclick="openGlobalSupportModal()" style="background:var(--card); border:1px solid var(--border); border-radius:18px; padding:15px; display:flex; gap:15px; align-items:center; cursor:pointer; transition:0.2s;">
+                    <div style="width:48px; height:48px; border-radius:16px; background:linear-gradient(135deg, var(--accent), #0050cc); display:flex; align-items:center; justify-content:center; font-size:24px; color:#fff; flex-shrink:0;">
+                        <i class="notranslate ph-fill ph-headset"></i>
+                    </div>
+                    <div style="flex:1; overflow:hidden;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                            <div style="font-weight:900; font-size:15px; color:#fff;">Support Officiel</div>
+                            ${unreadGlobal}
+                        </div>
+                        <div style="font-size:13px; opacity:0.6; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+                            ${lastSupportMsg}
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            // Active Orders Courier Chats
+            const activeOrders = userOrdersCache.filter(o => o.status === 'delivering' || o.status === 'accepted' || o.status === 'pending');
+            const ordersWithCourier = activeOrders.filter(o => o.courier_id); // only show if there is a courier assigned? Wait, the user can talk to courier anytime but it's more relevant when assigned. But let's show all active.
+            
+            if (activeOrders.length > 0) {
+                html += `<div style="font-size:11px; opacity:0.5; font-weight:800; letter-spacing:1px; margin-top:10px;">VOS COMMANDES EN COURS</div>`;
+                activeOrders.forEach(o => {
+                    const statusText = o.status === 'delivering' ? 'En livraison' : (o.status === 'accepted' ? 'En préparation' : 'En attente');
+                    html += `
+                        <div onclick="openOrderSupport(${JSON.stringify(o).replace(/"/g, '&quot;')})" style="background:var(--card); border:1px solid rgba(255,165,0,0.3); border-radius:18px; padding:15px; display:flex; gap:15px; align-items:center; cursor:pointer; transition:0.2s;">
+                            <div style="width:48px; height:48px; border-radius:16px; background:rgba(255,165,0,0.1); display:flex; align-items:center; justify-content:center; font-size:24px; color:orange; flex-shrink:0;">
+                                <i class="notranslate ph-fill ph-moped"></i>
+                            </div>
+                            <div style="flex:1; overflow:hidden;">
+                                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                                    <div style="font-weight:900; font-size:15px; color:#fff;">Livreur #${o.ref || o.id.slice(-4).toUpperCase()}</div>
+                                    <div style="font-size:10px; color:orange; font-weight:800;">${statusText}</div>
+                                </div>
+                                <div style="font-size:13px; opacity:0.6; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+                                    Cliquez pour discuter avec le livreur
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+            }
+
+            cont.innerHTML = html;
+        }
+
+
         function openGlobalSupportModal() {
             const modal = document.getElementById('support-modal');
             if (modal) modal.classList.add('open');
@@ -2900,14 +2985,18 @@
                             adminChatMessages = data.messages;
                             safeSetStorage('stb_admin_chat', adminChatMessages);
                             
-                            if (document.getElementById('page-chat')?.style.display === 'block') {
+                            if (document.getElementById('support-modal')?.classList.contains('open')) {
                                 renderAdminChatMessages();
                             } else {
                                 const badge = document.getElementById('chat-unread-badge');
-                                if (badge) badge.style.display = 'block';
+                                if (badge) badge.style.display = 'flex';
                                 const badgeBtn = document.getElementById('chat-unread-badge-btn');
                                 if (badgeBtn) badgeBtn.style.display = 'block';
-                                showNewsPopup(t('news_support_title', {default: "Nouveau message du support !"}), data.messages[data.messages.length - 1].message || t('news_support_desc', {default: "Consultez l'onglet support pour voir le message."}), []);
+                                showNewsPopup(t('news_support_title', {default: "Nouveau message du support !"}), data.messages[data.messages.length - 1].text || t('news_support_desc', {default: "Consultez l'onglet support pour voir le message."}), []);
+                            }
+                            // Always re-render chats list if the page is open
+                            if (document.getElementById('page-chats')?.style.display === 'block') {
+                                renderChatsList();
                             }
                         }
                     }
