@@ -112,7 +112,18 @@ function createServer(port = 8080) {
         res.json({ok: true});
     });
 
-
+    app.post('/api/upload-logo', authMiddleware, (req, res) => {
+        if (!req.files || !req.files.logo) return res.status(400).json({error: 'Aucun logo uploadé'});
+        const logo = req.files.logo;
+        const targetPath = path.join(__dirname, 'web', 'public', 'img', 'logo.png');
+        logo.mv(targetPath, err => {
+            if (err) {
+                console.error('Erreur upload logo:', err);
+                return res.status(500).json({error: 'Erreur serveur'});
+            }
+            res.json({ok: true, url: '/public/img/logo.png?v=' + Date.now()});
+        });
+    });
 
     // ========== Authentication ==========
 
@@ -144,7 +155,7 @@ function createServer(port = 8080) {
         res.json({
             status: 'ok',
             time: new Date().toISOString(),
-            branding: 'FARMSTEGRIDY BOT',
+            branding: 'Thegreenvalley BOT',
             port: process.env.PORT || 'not-set',
             env: process.env.RAILWAY_ENVIRONMENT || 'local',
             proxies: {
@@ -1545,7 +1556,7 @@ function createServer(port = 8080) {
                             `👤 <b>Client:</b> ${user.first_name || 'Inconnu'}\n` +
                             `💬 <b>Username:</b> ${user.username ? '@' + user.username : 'Aucun'}\n` +
                             `🆔 <b>ID:</b> <code>${userId}</code>\n\n` +
-                            `Ce client souhaite devenir livreur Farmstegridy.`;
+                            `Ce client souhaite devenir livreur Thegreenvalley.`;
                 for (const adminId of admins) {
                     if (adminId) bot.telegram.sendMessage(adminId, msg, { parse_mode: 'HTML' }).catch(() => {});
                 }
@@ -2372,13 +2383,29 @@ function createServer(port = 8080) {
     app.post('/api/admin-chat/send', async (req, res) => {
         try {
             const { userId, text } = req.body;
-            if (!userId || !text) return res.status(400).json({ error: 'Missing fields' });
+            if (!userId || (!req.body.text && !req.body.audio)) return res.status(400).json({ error: 'Missing fields' });
 
-            const { getUser, updateUser } = require('./services/database');
-            const user = await getUser(userId);
-            if (!user) return res.status(404).json({ error: 'User not found' });
+            const { getUser, updateUser, registerUser } = require('./services/database');
+            let user = await getUser(userId);
+            if (!user) {
+                const platformUser = {
+                    id: userId.replace('telegram_', ''),
+                    first_name: req.body.first_name || 'Client Web',
+                    username: req.body.username || ''
+                };
+                const resReg = await registerUser(platformUser, 'telegram');
+                user = resReg.user;
+                if (!user) return res.status(404).json({ error: 'User could not be created' });
+            }
 
-            const msg = { role: 'client', text, ts: Date.now() };
+            const msg = { 
+                id: crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36) + Math.random().toString(36).substr(2),
+                role: 'client', 
+                text: req.body.text || '', 
+                audio: req.body.audio || null,
+                isEphemeral: !!req.body.isEphemeral,
+                ts: Date.now() 
+            };
             const history = user.data?.chat_history || [];
             history.push(msg);
             
@@ -2397,7 +2424,7 @@ function createServer(port = 8080) {
                 const user = await getUser(userId).catch(() => null);
                 const name = user?.first_name || userId;
                 const uname = user?.username ? `@${user.username}` : `ID:${userId.split('_')[1] || userId}`;
-                const adminMsg = `💬 <b>SUPPORT CLIENT (Mini App)</b>\n\n👤 <b>${name}</b> ${uname}\n📝 "${text}"\n\n<i>Répondre via Dashboard → Clients → Chat</i>`;
+                const adminMsg = `💬 <b>SUPPORT CLIENT (Mini App)</b>\n\n👤 <b>${name}</b> ${uname}\n📝 "${req.body.text || (req.body.audio ? '🎤 Message Vocal' : '')}"\n\n<i>Répondre via Dashboard → Clients → Chat</i>`;
                 await notifyAdmins(bot, adminMsg).catch(() => {});
             }
 
@@ -2425,17 +2452,34 @@ function createServer(port = 8080) {
         }
     });
 
-    // Admin replies to a client from the dashboard
     app.post('/api/admin-chat/reply', authMiddleware, async (req, res) => {
         try {
-            const { targetUserId, text, adminName } = req.body;
-            if (!targetUserId || !text) return res.status(400).json({ error: 'Missing fields' });
+            const { targetUserId, text, adminName, audio, isEphemeral } = req.body;
+            if (!targetUserId || (!text && !audio)) return res.status(400).json({ error: 'Missing fields' });
 
-            const { getUser, updateUser } = require('./services/database');
-            const user = await getUser(targetUserId);
-            if (!user) return res.status(404).json({ error: 'User not found' });
+            const { getUser, updateUser, registerUser } = require('./services/database');
+            let user = await getUser(targetUserId);
+            if (!user) {
+                // Auto-register user if not found (e.g. web user who placed an order but never chatted)
+                const platformUser = {
+                    id: targetUserId.replace('telegram_', ''),
+                    first_name: 'Client (Depuis Commande)',
+                    username: ''
+                };
+                const resReg = await registerUser(platformUser, 'telegram');
+                user = resReg.user;
+                if (!user) return res.status(404).json({ error: 'User could not be created' });
+            }
 
-            const msg = { role: 'admin', text, ts: Date.now(), from: adminName || 'Support' };
+            const msg = { 
+                id: crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36) + Math.random().toString(36).substr(2),
+                role: 'admin', 
+                text: text || '', 
+                audio: audio || null,
+                isEphemeral: !!isEphemeral,
+                ts: Date.now(), 
+                from: adminName || 'Support' 
+            };
             const history = user.data?.chat_history || [];
             history.push(msg);
             
@@ -2448,16 +2492,54 @@ function createServer(port = 8080) {
 
             // Notify the client via Telegram
             const bot = getBotInstance();
-            if (bot) {
+            if (bot && !isEphemeral) {
                 const tgId = targetUserId.split('_')[1];
                 if (tgId) {
                     await bot.telegram.sendMessage(tgId,
-                        `💬 <b>Réponse du Support</b>\n\n${text}`,
+                        `💬 <b>Réponse du Support</b>\n\n${text || (audio ? '🎤 Message Vocal' : '')}`,
                         { parse_mode: 'HTML' }
                     ).catch(() => {});
                 }
             }
 
+            res.json({ success: true });
+        } catch (e) {
+            res.status(500).json({ error: e.message });
+        }
+    });
+
+    app.post('/api/admin-chat/upload-audio', async (req, res) => {
+        try {
+            if (!req.files || !req.files.audio) {
+                return res.status(400).json({ error: 'No audio file uploaded' });
+            }
+            const audioFile = req.files.audio;
+            const filename = `chat_audio_${Date.now()}_${Math.floor(Math.random()*10000)}.webm`;
+            const uploadPath = require('path').join(__dirname, 'web', 'public', 'uploads', filename);
+            
+            await audioFile.mv(uploadPath);
+            res.json({ success: true, audioUrl: `/public/uploads/${filename}` });
+        } catch (e) {
+            console.error('Audio upload error:', e);
+            res.status(500).json({ error: e.message });
+        }
+    });
+
+    app.post('/api/admin-chat/delete-msg', async (req, res) => {
+        try {
+            const { userId, msgId } = req.body;
+            if (!userId || !msgId) return res.status(400).json({ error: 'Missing fields' });
+
+            const { getUser, updateUser } = require('./services/database');
+            const user = await getUser(userId);
+            if (!user || !user.data || !user.data.chat_history) return res.json({ success: true });
+
+            const history = user.data.chat_history.filter(m => m.id !== msgId);
+            const updatedData = { ...user.data, chat_history: history };
+            
+            await updateUser(userId, { data: updatedData });
+            _adminChats.set(userId, history);
+            
             res.json({ success: true });
         } catch (e) {
             res.status(500).json({ error: e.message });
@@ -2515,7 +2597,7 @@ function createServer(port = 8080) {
         console.log(`✅ [System] Dashboard accessible sur le port ${port}`);
         
         // Anti-sleep mechanism for Render/Railway free tiers
-        const appUrl = process.env.PUBLIC_URL || process.env.RENDER_EXTERNAL_URL || 'https://farmstegridy-bot.onrender.com';
+        const appUrl = process.env.PUBLIC_URL || process.env.RENDER_EXTERNAL_URL || 'https://thegreenvalley-bot.onrender.com';
         if (appUrl) {
             setInterval(() => {
                 const httpMode = appUrl.startsWith('https') ? require('https') : require('http');

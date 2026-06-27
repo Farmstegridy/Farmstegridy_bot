@@ -92,7 +92,7 @@ function setupHotlineHandlers(bot) {
         await ctx.answerCbQuery().catch(() => {});
         
         const text = `🚀 <b>VOTRE BOT SUR-MESURE</b>\n\n` +
-            `Démarrez avec notre base ultra-performante **Farmstegridy** et ajoutez les modules nécessaires à votre croissance.\n\n` +
+            `Démarrez avec notre base ultra-performante **Thegreenvalley** et ajoutez les modules nécessaires à votre croissance.\n\n` +
             `💰 <b>Tarification :</b>\n` +
             `• <b>Pack Base (Standard) : 450€</b>\n` +
             `• Supplément : 200€ / fonctionnalité\n` +

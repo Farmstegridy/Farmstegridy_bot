@@ -568,7 +568,7 @@ async function getMainMenuKeyboard(ctx, settings, user, isFournisseur = false, i
     if (!settings) settings = ctx.state?.settings || await getAppSettings();
     const buttons = [];
 
-    const baseDomain = process.env.RENDER_EXTERNAL_URL || (process.env.RAILWAY_PUBLIC_DOMAIN ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}` : 'https://farmstegridy-bot.onrender.com');
+    const baseDomain = process.env.RENDER_EXTERNAL_URL || (process.env.RAILWAY_PUBLIC_DOMAIN ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}` : 'https://thegreenvalley-bot.onrender.com');
     const langCode = user?.data?.language || user?.language_code || 'fr';
     const catalogUrl = (settings.mini_app_url ? `${settings.mini_app_url}/catalog` : `${baseDomain}/catalog`) + `?lang=${langCode}` + `&v=${Date.now()}`;
 
@@ -626,7 +626,7 @@ async function getMainMenuKeyboard(ctx, settings, user, isFournisseur = false, i
 
 async function getLivreurMenuKeyboard(ctx, settings, user, hasActiveOrders = false, isAdminUser = false) {
     const isAvail = user?.is_available || user?.data?.is_available;
-    const baseDomain = process.env.RENDER_EXTERNAL_URL || (process.env.RAILWAY_PUBLIC_DOMAIN ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}` : 'https://farmstegridy-bot.onrender.com');
+    const baseDomain = process.env.RENDER_EXTERNAL_URL || (process.env.RAILWAY_PUBLIC_DOMAIN ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}` : 'https://thegreenvalley-bot.onrender.com');
     const langCode = user?.language_code || 'fr';
     const livreurUrl = (settings.mini_app_url ? `${settings.mini_app_url}/livreur` : `${baseDomain}/livreur`) + `?lang=${langCode}` + `&v=${Date.now()}`;
 
@@ -653,7 +653,7 @@ async function updateMenuButton(ctx, user, settings, forceClient = false) {
     if (!ctx.telegram || !ctx.chat) return;
     try {
         if (!settings) settings = await getAppSettings();
-        const baseDomain = process.env.RENDER_EXTERNAL_URL || (process.env.RAILWAY_PUBLIC_DOMAIN ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}` : 'https://farmstegridy-bot.onrender.com');
+        const baseDomain = process.env.RENDER_EXTERNAL_URL || (process.env.RAILWAY_PUBLIC_DOMAIN ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}` : 'https://thegreenvalley-bot.onrender.com');
         const langCode = user?.data?.language || user?.language_code || 'fr';
         const catalogUrl = (settings.mini_app_url ? `${settings.mini_app_url}/catalog` : `${baseDomain}/catalog`) + `?lang=${langCode}` + `&v=${Date.now()}`;
         const livreurUrl = (settings.mini_app_url ? `${settings.mini_app_url}/livreur` : `${baseDomain}/livreur`) + `?lang=${langCode}` + `&v=${Date.now()}`;

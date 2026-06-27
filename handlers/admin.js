@@ -356,7 +356,7 @@ function setupAdminHandlers(bot) {
             const supportCount = pendingSupportRequests.size;
             const supportLabel = t(user, 'btn_admin_support', '💬 Support') + (supportCount > 0 ? ` (${supportCount})` : '');
 
-            const baseDomain = process.env.RENDER_EXTERNAL_URL || (process.env.RAILWAY_PUBLIC_DOMAIN ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}` : 'https://farmstegridy-bot.onrender.com');
+            const baseDomain = process.env.RENDER_EXTERNAL_URL || (process.env.RAILWAY_PUBLIC_DOMAIN ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}` : 'https://thegreenvalley-bot.onrender.com');
             const langCode = user?.language_code || 'fr';
             const dashboardUrl = `${baseDomain}/dashboard?lang=${langCode}`;
             rows.push([Markup.button.webApp('✨ ACCÉDER AU DASHBOARD (MINI APP) ✨', dashboardUrl)]);
@@ -781,7 +781,7 @@ function setupAdminHandlers(bot) {
 
             try {
                 const targetChatId = u.platform_id.replace('telegram_', '');
-                const baseDomain = process.env.RENDER_EXTERNAL_URL || (process.env.RAILWAY_PUBLIC_DOMAIN ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}` : 'https://farmstegridy-bot.onrender.com');
+                const baseDomain = process.env.RENDER_EXTERNAL_URL || (process.env.RAILWAY_PUBLIC_DOMAIN ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}` : 'https://thegreenvalley-bot.onrender.com');
                 const settings = await getAppSettings();
                 if (newStatus) {
                     const langCode = u?.language_code || 'fr';
@@ -919,7 +919,7 @@ function setupAdminHandlers(bot) {
 
             try {
                 const targetChatId = u.platform_id.replace('telegram_', '');
-                const baseDomain = process.env.RENDER_EXTERNAL_URL || (process.env.RAILWAY_PUBLIC_DOMAIN ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}` : 'https://farmstegridy-bot.onrender.com');
+                const baseDomain = process.env.RENDER_EXTERNAL_URL || (process.env.RAILWAY_PUBLIC_DOMAIN ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}` : 'https://thegreenvalley-bot.onrender.com');
                 const settings = await getAppSettings();
                 if (newState) {
                     const langCode = u?.language_code || 'fr';

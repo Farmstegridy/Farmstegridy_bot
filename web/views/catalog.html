@@ -5,7 +5,8 @@
     <meta name="google" content="notranslate">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Farmstegridy</title>
+    <title>Thegreenvalley</title>
+    <link rel="icon" href="/public/img/logo.png">
     <script>
         window.addEventListener('error', function(e) {
             var err = e.error ? e.error.stack : e.message;
@@ -21,8 +22,8 @@
     <style>
         :root {
             --bg: #000000;
-            --accent: #ff0050;
-            --accent-glow: rgba(255, 0, 80, 0.5);
+            --accent: #1e3a8a;
+            --accent-glow: rgba(30, 58, 138, 0.5);
             --secondary: #0096ff;
             --secondary-glow: rgba(0, 150, 255, 0.4);
             --card: rgba(255, 255, 255, 0.04);
@@ -35,11 +36,46 @@
 
         body {
             background: var(--bg); color: #fff; padding: 0; margin: 0; overflow-x: hidden;
-            background-image: 
-                radial-gradient(circle at 100% 0%, rgba(255, 0, 80, 0.12) 0%, transparent 40%),
-                radial-gradient(circle at 0% 100%, rgba(0, 150, 255, 0.08) 0%, transparent 40%);
             min-height: 100vh;
         }
+
+        /* SHADERS & ADVANCED ANIMATIONS */
+        @keyframes aurora {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+        @keyframes staggerFadeUp {
+            0% { opacity: 0; transform: translateY(30px) scale(0.9); filter: blur(10px); }
+            100% { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
+        }
+        @keyframes pulseOpacity {
+            0% { opacity: 0.15; filter: url(#remove-white) drop-shadow(0 0 10px rgba(255,255,255,0.05)); }
+            50% { opacity: 0.4; filter: url(#remove-white) drop-shadow(0 0 20px rgba(255,255,255,0.15)); }
+            100% { opacity: 0.15; filter: url(#remove-white) drop-shadow(0 0 10px rgba(255,255,255,0.05)); }
+        }
+        .aurora-bg {
+            position: fixed;
+            top: -50%; left: -50%; width: 200%; height: 200%;
+            background: radial-gradient(circle at 50% 50%, rgba(30,58,138,0.15) 0%, transparent 50%),
+                        radial-gradient(circle at 80% 20%, rgba(0,255,80,0.08) 0%, transparent 40%),
+                        radial-gradient(circle at 20% 80%, rgba(255,0,80,0.08) 0%, transparent 40%);
+            background-size: 200% 200%;
+            animation: aurora 15s ease-in-out infinite;
+            z-index: -1;
+            pointer-events: none;
+            filter: blur(40px);
+        }
+        .stagger-item { animation: staggerFadeUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards; opacity: 0; }
+        .stagger-item:nth-child(1) { animation-delay: 0.05s; }
+        .stagger-item:nth-child(2) { animation-delay: 0.1s; }
+        .stagger-item:nth-child(3) { animation-delay: 0.15s; }
+        .stagger-item:nth-child(4) { animation-delay: 0.2s; }
+        .stagger-item:nth-child(5) { animation-delay: 0.25s; }
+        .stagger-item:nth-child(6) { animation-delay: 0.3s; }
+        .stagger-item:nth-child(7) { animation-delay: 0.35s; }
+        .stagger-item:nth-child(8) { animation-delay: 0.4s; }
+        .stagger-item:nth-child(n+9) { animation-delay: 0.45s; }
 
         /* NAVIGATION BAR */
         .bottom-nav {
@@ -94,7 +130,17 @@
 
         /* GRID */
         .main-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; padding: 0 20px 180px 20px; }
-        .card { background: var(--card); border-radius: 18px; border: 1px solid var(--border); overflow: hidden; position: relative; }
+        .card { 
+            background: rgba(255, 255, 255, 0.03); backdrop-filter: blur(20px) saturate(150%); -webkit-backdrop-filter: blur(20px) saturate(150%);
+            border-radius: 18px; border: 1px solid rgba(255, 255, 255, 0.08); overflow: hidden; position: relative;
+            transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1); box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+        .card:hover {
+            transform: translateY(-5px) scale(1.02);
+            background: rgba(255, 255, 255, 0.06);
+            border-color: rgba(255, 255, 255, 0.2);
+            box-shadow: 0 15px 35px rgba(0,0,0,0.4), 0 0 20px var(--accent-glow);
+        }
         .card-img-wrapper { width: 100%; padding-top: 100%; position: relative; overflow: hidden; }
         .card-img { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; }
         .card-content { padding: 10px; }
@@ -196,6 +242,7 @@
     <script src="/js/translations.js?v=1779629206"></script>
 </head>
 <body>
+    <div class="aurora-bg"></div>
     <div id="loading-screen">
         <div style="margin-bottom:15px; text-align:center;">
             <img id="main-logo-1" class="app-dynamic-logo" src="/public/img/logo.png" style="width:100px; height:100px; object-fit:contain; border-radius:50%; margin-bottom:10px;" onerror="this.onerror=null; document.getElementById('loading-text-logo').style.display='block';">
@@ -229,7 +276,7 @@
             <div>
                 <div class="logo" style="display:flex; align-items:center; gap:10px;">
                     <img id="main-logo-2" class="app-dynamic-logo" src="/public/img/logo.png" style="height:32px; width:32px; object-fit:cover; border-radius:50%;" onerror="this.onerror=null; this.style.display='none';">
-                    <div id="header-text-logo" style="font-size:18px; font-weight:900; letter-spacing:-0.5px; display:block;"><span style="color:#fff;">Farmstegridy</span></div>
+                    <div id="header-text-logo" style="font-size:18px; font-weight:900; letter-spacing:-0.5px; display:block;"><span style="color:#fff;">THE GREEN VALLEY</span></div>
                 </div>
                 <div onclick="openAddressModal()" style="display:flex; align-items:center; gap:6px; margin-top:6px; font-size:12px; font-weight:900; opacity:1; cursor:pointer; background:rgba(255,255,255,0.05); padding:6px 12px; border-radius:12px;">
                     <i class="notranslate ph-fill ph-map-pin" style="color:var(--accent); font-size:14px;"></i>
@@ -307,7 +354,7 @@
             <div style="width:60px; height:60px; background:var(--accent); border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:24px; color:#fff; font-weight:900;" id="profile-initial">👤</div>
             <div style="flex:1;">
                 <h1 style="font-size:24px; font-weight:900; margin:0; line-height:1;" id="profile-name" data-i18n="Client">Client</h1>
-                <div style="font-size:13px; opacity:0.6; margin-top:5px;" id="profile-phone">Membre Farmstegridy</div>
+                <div style="font-size:13px; opacity:0.6; margin-top:5px;" id="profile-phone">Membre Thegreenvalley</div>
             </div>
         </div>
 
@@ -355,7 +402,7 @@
             <div onclick="openAdminTelegram()" style="padding:18px 20px; display:flex; justify-content:space-between; align-items:center; cursor:pointer;">
                 <div style="display:flex; align-items:center; gap:12px;">
                     <i class="notranslate ph-fill ph-telegram-logo" style="font-size:20px; opacity:0.7;"></i>
-                    <div><div style="font-weight:800; font-size:15px;" id="hotline-btn"><span data-i18n="contact_admin">Contacter l'Admin</span></div><div style="font-size:11px; opacity:0.5;"><span data-i18n="telegram_link">Lien direct Telegram</span></div></div>
+                    <div><div style="font-weight:800; font-size:15px; position:relative; width:fit-content;" id="hotline-btn"><span data-i18n="contact_admin">Contacter l'Admin</span><div id="chat-unread-badge-btn" style="display:none; position:absolute; top:-2px; right:-12px; width:8px; height:8px; background:var(--accent); border-radius:50%;"></div></div><div style="font-size:11px; opacity:0.5;"><span data-i18n="telegram_link">Lien direct Telegram</span></div></div>
                 </div>
                 <i class="notranslate ph-bold ph-caret-right" style="color:var(--accent);"></i>
             </div>
@@ -374,7 +421,7 @@
             </div>
         </div>
 
-        <button onclick="confirmDeleteAccount()" style="width:100%; background:none; border:1px solid rgba(255,0,80,0.3); height:50px; border-radius:18px; color:var(--accent); font-size:12px; font-weight:800; letter-spacing:1px;"><i class="notranslate ph-fill ph-trash"></i><span data-i18n="delete_account"> SUPPRIMER MON COMPTE</span></button>
+        <button onclick="confirmDeleteAccount()" style="width:100%; background:none; border:1px solid rgba(30,58,138,0.3); height:50px; border-radius:18px; color:var(--accent); font-size:12px; font-weight:800; letter-spacing:1px;"><i class="notranslate ph-fill ph-trash"></i><span data-i18n="delete_account"> SUPPRIMER MON COMPTE</span></button>
     </div>
 
     <div class="cart-float" id="cart-bar" onclick="openCheckout()">
@@ -384,8 +431,8 @@
 
     <div class="bottom-nav">
         <div class="nav-item active" onclick="switchPage('shop', this)"><div class="nav-icon"><i class="ph-fill ph-diamond"></i></div><div class="nav-label" data-i18n="nav_shop">Shop</div></div>
-        
         <div class="nav-item" onclick="switchPage('orders', this)"><div class="nav-icon"><i class="ph-fill ph-package"></i></div><div class="nav-label" data-i18n="nav_tracking">Suivi</div></div>
+        <div class="nav-item" onclick="openGlobalSupportModal()"><div class="nav-icon"><i class="ph-fill ph-chat-circle-text"></i><div id="chat-unread-badge" style="display:none; position:absolute; top:2px; right:15px; width:10px; height:10px; background:#ff3b30; border-radius:50%; border:2px solid #000;"></div></div><div class="nav-label" data-i18n="nav_chat">Chat</div></div>
         <div class="nav-item" onclick="switchPage('profile', this)"><div class="nav-icon"><i class="ph-fill ph-user"></i></div><div class="nav-label" data-i18n="nav_profile">Profil</div></div>
     </div>
 
@@ -410,7 +457,7 @@
             <div style="padding:25px;">
                 <div id="p-name" style="font-size:28px; font-weight:900; margin-bottom:10px;"><span data-i18n="product">Produit</span></div>
                 <div id="p-price" style="font-size:24px; font-weight:900; color:var(--accent); margin-bottom:15px;">0.00€</div>
-                <div id="p-promo-encart" style="display:none; background:linear-gradient(135deg, rgba(255,170,0,0.15), rgba(255,0,80,0.15)); border:1px solid #ffaa00; color:#ffaa00; font-size:12px; font-weight:900; padding:8px 12px; border-radius:10px; margin-bottom:15px;"></div>
+                <div id="p-promo-encart" style="display:none; background:linear-gradient(135deg, rgba(255,170,0,0.15), rgba(30,58,138,0.15)); border:1px solid #ffaa00; color:#ffaa00; font-size:12px; font-weight:900; padding:8px 12px; border-radius:10px; margin-bottom:15px;"></div>
                 <div id="p-desc" style="font-size:14px; opacity:0.6; line-height:1.6; margin-bottom:30px;" data-i18n="Description...">Description...</div>
                 
                 <div id="p-options-title" style="font-size:11px; font-weight:900; opacity:0.3; letter-spacing:1px; margin-bottom:15px;"><span data-i18n="available_formats">FORMATS DISPONIBLES 📦</span></div>
@@ -437,10 +484,12 @@
             <div id="help-recent-orders-list" style="margin-bottom:20px;"></div>
             <div style="font-size:11px; opacity:0.5; font-weight:800; letter-spacing:1px; margin-bottom:10px;"><span data-i18n="team_chat">DISCUSSION AVEC L'ÉQUIPE</span></div>
             <div id="admin-chat-messages" style="flex:1; overflow-y:auto; background:var(--card); border:1px solid var(--border); border-radius:16px; padding:15px; margin-bottom:15px;"></div>
-            <div style="display:flex; gap:10px;">
-                <input type="text" id="admin-chat-input" placeholder="Votre message..." data-i18n-placeholder="your_message" style="flex:1; background:rgba(255,255,255,0.05); border:1px solid var(--border); border-radius:12px; padding:0 15px; color:#fff; font-size:14px; outline:none;">
-                <button class="btn-primary" id="admin-chat-send-btn" onclick="sendAdminChatMessage()" style="width:50px; height:50px; border-radius:12px; display:flex; align-items:center; justify-content:center;"><i class="notranslate ph-fill ph-paper-plane-right" style="font-size:20px;"></i></button>
+            <div style="display:flex; gap:10px; align-items:center;">
+                <input type="text" id="admin-chat-input" placeholder="Votre message..." data-i18n-placeholder="your_message" style="flex:1; background:rgba(255,255,255,0.05); border:1px solid var(--border); border-radius:12px; padding:0 15px; height:50px; color:#fff; font-size:14px; outline:none;">
+                <button id="client-record-btn" onclick="toggleClientRecording()" style="background:rgba(255,255,255,0.1); border:none; border-radius:12px; color:#fff; width:50px; height:50px; font-size:20px; cursor:pointer; flex-shrink:0; transition:0.3s; display:flex; align-items:center; justify-content:center;">🎤</button>
+                <button class="btn-primary" id="admin-chat-send-btn" onclick="sendAdminChatMessage()" style="width:50px; height:50px; border-radius:12px; display:flex; align-items:center; justify-content:center; flex-shrink:0;"><i class="notranslate ph-fill ph-paper-plane-right" style="font-size:20px;"></i></button>
             </div>
+            <div id="client-recording-indicator" style="display:none; color:#ff3b30; font-size:12px; font-weight:bold; margin-top:8px; text-align:center; animation:pulseOpacity 1s infinite alternate;">🔴 Enregistrement en cours...</div>
         </div>
     </div>
 
@@ -501,7 +550,67 @@
         };
 
         const tg = window.Telegram.WebApp;
-        tg.expand(); tg.ready();
+        
+        window.getTgUser = function() {
+            if (tg.initDataUnsafe && tg.initDataUnsafe.user && tg.initDataUnsafe.user.id) {
+                return tg.initDataUnsafe.user;
+            }
+            let webUid = localStorage.getItem('stb_web_uid');
+            if (!webUid) {
+                webUid = Math.floor(Math.random() * 1000000000).toString();
+                localStorage.setItem('stb_web_uid', webUid);
+            }
+            return {
+                id: webUid,
+                first_name: 'Client Web',
+                username: 'client_web_' + webUid
+            };
+        };
+        try { tg.expand(); } catch(e) {}
+        try { tg.ready(); } catch(e) {}
+
+        // Wrappers sécurisés pour fonctionner hors Telegram
+        const origShowAlert = tg.showAlert;
+        tg.showAlert = function(msg, cb) {
+            try {
+                if (tg.platform === 'unknown') throw new Error('not in tg');
+                origShowAlert(msg, cb);
+            } catch(e) {
+                alert(msg);
+                if(cb) cb();
+            }
+        };
+
+        const origShowConfirm = tg.showConfirm;
+        tg.showConfirm = function(msg, cb) {
+            try {
+                if (tg.platform === 'unknown') throw new Error('not in tg');
+                origShowConfirm(msg, cb);
+            } catch(e) {
+                const res = confirm(msg);
+                if(cb) cb(res);
+            }
+        };
+
+        if (tg.HapticFeedback) {
+            ['impactOccurred', 'notificationOccurred', 'selectionChanged'].forEach(method => {
+                const orig = tg.HapticFeedback[method];
+                tg.HapticFeedback[method] = function(...args) {
+                    try { orig.apply(tg.HapticFeedback, args); } catch(e) {}
+                };
+            });
+        }
+
+        const origOpenLink = tg.openLink;
+        tg.openLink = function(url) {
+            try { if (tg.platform === 'unknown') throw new Error(); origOpenLink(url); } catch(e) { window.open(url, '_blank'); }
+        };
+        const origOpenTgLink = tg.openTelegramLink;
+        tg.openTelegramLink = function(url) {
+            try { if (tg.platform === 'unknown') throw new Error(); origOpenTgLink(url); } catch(e) { window.open(url, '_blank'); }
+        };
+
+
         
         function safeGetStorage(key, def) {
             try { return JSON.parse(localStorage.getItem(key) || def); }
@@ -607,7 +716,7 @@
             setLoader(30);
             fetch('/api/log-error', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({error: 'Init Started', type: 'debug'}) }).catch(e=>{});
             try {
-                const uid = tg.initDataUnsafe?.user?.id;
+                const uid = getTgUser()?.id;
                 const [pRes, uRes, newsRes, ordersRes] = await Promise.all([
                     fetch(`/api/products?lang=${window.currentLang || 'fr'}`),
                     uid ? fetch(`/api/user-info?userId=telegram_${uid}&t=${Date.now()}`) : Promise.resolve(null),
@@ -841,15 +950,31 @@
             const container = document.getElementById(containerId);
             if (!container) return;
             container.innerHTML = '';
+
+            if (prods.length === 0) {
+                container.innerHTML = `
+                    <svg width="0" height="0" style="position:absolute;">
+                      <filter id="remove-white" color-interpolation-filters="sRGB">
+                        <feColorMatrix in="SourceGraphic" type="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  -4 -4 -4 0 11.5" result="newAlpha" />
+                        <feComposite in="newAlpha" in2="SourceGraphic" operator="in" />
+                      </filter>
+                    </svg>
+                    <div style="grid-column: 1 / -1; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:60px 20px; pointer-events:none; margin-top:10vh;">
+                        <img src="/public/img/logo.png" style="width:200px; height:200px; object-fit:contain; animation: pulseOpacity 4s infinite alternate;">
+                    </div>
+                `;
+                return;
+            }
+
             prods.forEach((p, i) => {
-                const d = document.createElement('div'); d.className = 'card';
+                const d = document.createElement('div'); d.className = 'card stagger-item';
                 const img = getImgUrl(p) || `/public/img/logo.png`;
                 const rating = (4.5 + Math.random() * 0.5).toFixed(1);
                 
                 let badgeHtml = '';
                 const ageDays = p.created_at ? (Date.now() - new Date(p.created_at).getTime()) / (1000*3600*24) : 0;
                 if (ageDays < 5 && ageDays >= 0) {
-                    badgeHtml = `<div style="position:absolute; top:10px; left:10px; background:var(--accent); color:#fff; font-size:10px; font-weight:900; padding:4px 8px; border-radius:8px; box-shadow:0 4px 10px rgba(255,0,80,0.5); animation: pulse 2s infinite;">${t('badge_new', {default: 'NOUVEAU 🔥'})}</div>`;
+                    badgeHtml = `<div style="position:absolute; top:10px; left:10px; background:var(--accent); color:#fff; font-size:10px; font-weight:900; padding:4px 8px; border-radius:8px; box-shadow:0 4px 10px rgba(30,58,138,0.5); animation: pulse 2s infinite;">${t('badge_new', {default: 'NOUVEAU 🔥'})}</div>`;
                 } else if (Math.random() > 0.8) {
                     badgeHtml = `<div style="position:absolute; top:10px; left:10px; background:#00ff88; color:#000; font-size:10px; font-weight:900; padding:4px 8px; border-radius:8px; box-shadow:0 4px 10px rgba(0,255,136,0.3);">${t('badge_bestseller', {default: 'BESTSELLER ⭐'})}</div>`;
                 } else if (getAvailableQuantity(p) > 0 && getAvailableQuantity(p) < 10) {
@@ -866,7 +991,7 @@
                         ${mediaHtml}
                         <div style="position:absolute; bottom:10px; left:10px; background:rgba(0,0,0,0.6); backdrop-filter:blur(5px); padding:4px 8px; border-radius:8px; font-size:10px; font-weight:900; color:#ffaa00;"><i class="notranslate ph-fill ph-star"></i> ${rating}</div>
                         <div style="position:absolute; top:10px; right:10px; background:rgba(0,0,0,0.6); backdrop-filter:blur(5px); padding:6px; border-radius:50%; font-size:16px; display:flex; align-items:center; justify-content:center; cursor:pointer;" onclick="toggleFavorite('${p.id}', event)">
-                            <i class="notranslate ${favorites.includes(p.id) ? 'ph-fill ph-heart' : 'ph-bold ph-heart'}" style="${favorites.includes(p.id) ? 'color:#ff0050;' : 'color:#fff;'}"></i>
+                            <i class="notranslate ${favorites.includes(p.id) ? 'ph-fill ph-heart' : 'ph-bold ph-heart'}" style="${favorites.includes(p.id) ? 'color:#1e3a8a;' : 'color:#fff;'}"></i>
                         </div>
                         ${badgeHtml}
                     </div>
@@ -891,7 +1016,7 @@
 
         async function loadOrders() {
             const cont = document.getElementById('orders-list');
-            const uid = tg.initDataUnsafe?.user?.id;
+            const uid = getTgUser()?.id;
             try {
                 const res = await fetch(`/api/user-orders?userId=telegram_${uid}&lang=${window.currentLang || 'fr'}`);
                 const orders = await res.json();
@@ -943,14 +1068,19 @@
                     }
                 });
 
-                cont.innerHTML = orders.length ? statsHtml : `<div class="empty-state">${t('no_orders', {default: "Vous n'avez pas encore de commandes."})}</div>`;
+                cont.innerHTML = orders.length ? statsHtml : `
+                    <div style="grid-column: 1 / -1; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:60px 20px; pointer-events:none; margin-top:10vh;">
+                        <img src="/public/img/logo.png" style="width:200px; height:200px; object-fit:contain; animation: pulseOpacity 4s infinite alternate;">
+                        <div style="font-weight:900; font-size:16px; margin-top:20px; letter-spacing:1px; opacity:0.5; color:#fff;">${t('no_orders', {default: "Vous n'avez pas encore de commandes."})}</div>
+                    </div>
+                `;
                 
                 orders.forEach(o => {
                     let color = '#ffaa00', icon = '<i class="notranslate ph-fill ph-clock"></i>', text = t('status_pending');
                     let progressPct = 33;
                     if (o.status === 'delivered') { color = '#00ff88'; icon = '<i class="notranslate ph-fill ph-check-circle"></i>'; text = t('status_delivered'); progressPct = 100; }
                     else if (o.status === 'taken') { color = 'var(--secondary)'; icon = '<i class="notranslate ph-fill ph-truck"></i>'; text = t('status_en_route'); progressPct = 66; }
-                    else if (o.status === 'cancelled') { color = '#ff0050'; icon = '<i class="notranslate ph-fill ph-x-circle"></i>'; text = t('status_cancelled'); progressPct = 0; }
+                    else if (o.status === 'cancelled') { color = '#1e3a8a'; icon = '<i class="notranslate ph-fill ph-x-circle"></i>'; text = t('status_cancelled'); progressPct = 0; }
 
                     const progressBar = o.status !== 'cancelled' ? `
                         <div style="margin:15px 0;">
@@ -992,7 +1122,7 @@
                     const btnContact = (!['delivered', 'cancelled', 'refused'].includes(o.status) && o.livreur_id) ? `<button class="btn-primary" style="margin-top:10px; background:rgba(0,255,255,0.1); border:1px solid var(--secondary); color:var(--secondary); height:40px;" onclick="toggleChatModule('${o.id}')"><i class="notranslate ph-fill ph-chat-circle-dots"></i> CHAT LIVREUR (${count}/6)</button>` : '';
                     const btnNoter = ['delivered'].includes(o.status) && !o.feedback_rating ? `<button class="btn-primary" style="margin-top:10px; background:var(--card); border:1px solid var(--accent); color:var(--accent); height:40px;" onclick="openRating('${o.id}')"><i class="notranslate ph-fill ph-star"></i> ${t('rate_btn', {default: 'NOTER'})}</button>` : '';
                     const btnReorder = `<button class="btn-primary" style="margin-top:10px; background:none; border:1px solid var(--border); color:#fff; height:40px;" onclick="reorder('${o.id}')"><i class="notranslate ph-fill ph-arrows-clockwise"></i> ${t('btn_reorder')}</button>`;
-                    const btnCancel = (o.status === 'pending') ? `<button class="btn-primary" style="margin-top:10px; background:rgba(255,0,80,0.1); border:1px solid rgba(255,0,80,0.5); color:#ff0050; height:40px;" onclick="cancelOrder('${o.id}')"><i class="notranslate ph-bold ph-x"></i> ${t('btn_cancel')}</button>` : '';
+                    const btnCancel = (o.status === 'pending') ? `<button class="btn-primary" style="margin-top:10px; background:rgba(30,58,138,0.1); border:1px solid rgba(30,58,138,0.5); color:#1e3a8a; height:40px;" onclick="cancelOrder('${o.id}')"><i class="notranslate ph-bold ph-x"></i> ${t('btn_cancel')}</button>` : '';
 
                     const d = document.createElement('div'); d.className = 'order-card';
                     d.setAttribute('data-id', o.id);
@@ -1063,7 +1193,7 @@
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        userId: `telegram_${tg.initDataUnsafe?.user?.id}`,
+                        userId: `telegram_${getTgUser()?.id}`,
                         orderId: id,
                         text: text
                     })
@@ -1103,7 +1233,7 @@
             tg.showConfirm(t('msg_voulez_vous_ajouter', "Voulez-vous ajouter tous les articles de cette commande à votre panier ?"), async (ok) => {
                 if (!ok) return;
                 try {
-                    const uid = tg.initDataUnsafe?.user?.id;
+                    const uid = getTgUser()?.id;
                     const res = await fetch(`/api/user-orders?userId=telegram_${uid}&lang=${window.currentLang || 'fr'}`);
                     const orders = await res.json();
                     const order = orders.find(x => x.id === orderId);
@@ -1133,7 +1263,7 @@
             if (!activeProduct) return;
 
             // X-Engine Tracking Ping
-            const uid = tg.initDataUnsafe?.user?.id;
+            const uid = getTgUser()?.id;
             if (uid) {
                 fetch('/api/tracking/view', {
                     method: 'POST',
@@ -1266,7 +1396,7 @@
 
         async function submitProductReview(pid) {
             const text = document.getElementById('review-text').value;
-            const uid = tg.initDataUnsafe?.user?.id;
+            const uid = getTgUser()?.id;
             const fileInput = document.getElementById('review-media-upload');
             const btn = document.getElementById('btn-submit-review');
             let media = [];
@@ -1323,7 +1453,7 @@
                     
                     const d = document.createElement('div');
                     d.style = 'background:var(--card); border:1px solid var(--border); border-radius:18px; padding:15px; margin-bottom:12px;';
-                    d.innerHTML = `<div style="display:flex; justify-content:space-between; margin-bottom:5px;"><div style="font-weight:800; font-size:12px;">${t('client_bot_name', {default: 'Client Farmstegridy'})}</div><div style="color:#ffaa00;">${'⭐'.repeat(r.rating)}</div></div><div style="font-size:12px; opacity:0.7;">${r.text}</div>${mediaHtml}`;
+                    d.innerHTML = `<div style="display:flex; justify-content:space-between; margin-bottom:5px;"><div style="font-weight:800; font-size:12px;">${t('client_bot_name', {default: 'Client Thegreenvalley'})}</div><div style="color:#ffaa00;">${'⭐'.repeat(r.rating)}</div></div><div style="font-size:12px; opacity:0.7;">${r.text}</div>${mediaHtml}`;
                     cont.appendChild(d);
                 });
             } catch(e) {}
@@ -1333,7 +1463,7 @@
             stopAllVideos();
             openCustomModal('MES AVIS', '<div style="font-size:12px; opacity:0.4; text-align:center;">Chargement de vos avis...</div>');
             try {
-                const uid = tg.initDataUnsafe?.user?.id;
+                const uid = getTgUser()?.id;
                 const res = await fetch(`/api/user/reviews?userId=telegram_${uid}`);
                 const reviews = await res.json();
                 
@@ -1362,7 +1492,7 @@
                             <div style="font-size:12px; opacity:0.8;">${r.text}</div>
                             ${mediaHtml}
                             <div style="margin-top:10px; text-align:right;">
-                                <button class="btn-primary" style="background:rgba(255,0,80,0.1); border:1px solid rgba(255,0,80,0.5); color:#ff0050; padding:5px 10px; height:auto; font-size:11px; display:inline-block; width:auto;" onclick="deleteUserReview('${r.id}')"><i class="notranslate ph-bold ph-trash"></i> ${t('delete_btn', {default: 'SUPPRIMER'})}</button>
+                                <button class="btn-primary" style="background:rgba(30,58,138,0.1); border:1px solid rgba(30,58,138,0.5); color:#1e3a8a; padding:5px 10px; height:auto; font-size:11px; display:inline-block; width:auto;" onclick="deleteUserReview('${r.id}')"><i class="notranslate ph-bold ph-trash"></i> ${t('delete_btn', {default: 'SUPPRIMER'})}</button>
                             </div>
                         </div>
                     `;
@@ -1513,7 +1643,7 @@
         }
 
         async function syncCart() {
-            const uid = tg.initDataUnsafe?.user?.id;
+            const uid = getTgUser()?.id;
             if (!uid) return;
             fetch('/api/mini-app/sync-cart', {
                 method: 'POST',
@@ -1715,7 +1845,7 @@
                             <div style="width: 120px; flex-shrink: 0; background: var(--card); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; scroll-snap-align: start; cursor: pointer;" onclick="openProductModal('${p.id}')">
                                 <div style="width: 100%; height: 90px; background: #111; position: relative;">
                                     <img src="${getImgUrl(p) || `/public/img/logo.png`}" style="width:100%; height:100%; object-fit:cover;">
-                                    <div style="position:absolute; bottom:5px; right:5px; background:var(--accent); color:#fff; font-size:8px; font-weight:900; padding:3px 6px; border-radius:6px; box-shadow:0 2px 5px rgba(255,0,80,0.5);">+ ${t("recommended", "RECOMMANDÉ")}</div>
+                                    <div style="position:absolute; bottom:5px; right:5px; background:var(--accent); color:#fff; font-size:8px; font-weight:900; padding:3px 6px; border-radius:6px; box-shadow:0 2px 5px rgba(30,58,138,0.5);">+ ${t("recommended", "RECOMMANDÉ")}</div>
                                 </div>
                                 <div style="padding: 10px;">
                                     <div style="font-size: 11px; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 4px;">${p.name}</div>
@@ -1890,7 +2020,7 @@
             let finalAddress = finalCheckoutAddress;
             let finalNote = finalCheckoutNote;
 
-            const uid = tg.initDataUnsafe?.user?.id;
+            const uid = getTgUser()?.id;
             const btn = document.getElementById('btn-next');
             btn.disabled = true;
             btn.innerText = "ENVOI EN COURS...";
@@ -2004,7 +2134,16 @@
                 tg.showAlert(t('msg_erreur_r_seau', "Erreur réseau."));
             } finally {
                 btn.disabled = false;
-                btn.innerText = t("confirm_btn", "CONFIRMER");
+                if (checkoutStep === 3) {
+                    const paymentMethod = document.querySelector('input[name="checkout_payment"]:checked')?.value || 'CASH';
+                    if (paymentMethod.toUpperCase().includes('CASH')) {
+                        btn.innerText = t("finalize_order", "FINALISER LA COMMANDE");
+                    } else {
+                        btn.innerText = "PAYER MAINTENANT";
+                    }
+                } else {
+                    btn.innerText = t("confirm_btn", "CONFIRMER");
+                }
             }
         }
 
@@ -2079,7 +2218,7 @@
                 <div style="font-size:14px; font-weight:800; margin-bottom:15px; color:var(--accent); text-align:center;">${addr.name}</div>
                 <button class="btn-primary" style="background:var(--card); border:1px solid var(--border); color:#fff; margin-bottom:10px; font-weight:800;" onclick="editAddress('${addr.id}')"><i class="notranslate ph-bold ph-pencil"></i> ÉDITER L'ADRESSE</button>
                 <button class="btn-primary" style="background:var(--card); border:1px solid var(--accent); color:var(--accent); margin-bottom:10px; font-weight:800;" onclick="setAddressDefault('${addr.id}')"><i class="notranslate ph-bold ph-star"></i> ${t('set_default_btn', {default: 'DÉFINIR PAR DÉFAUT'})}</button>
-                <button class="btn-primary" style="background:rgba(255,0,80,0.1); border:1px solid rgba(255,0,80,0.3); color:#ff0050; margin-bottom:10px; font-weight:800;" onclick="removeAddress('${addr.id}')"><i class="notranslate ph-bold ph-trash"></i> ${t('delete_btn', {default: 'SUPPRIMER'})}</button>
+                <button class="btn-primary" style="background:rgba(30,58,138,0.1); border:1px solid rgba(30,58,138,0.3); color:#1e3a8a; margin-bottom:10px; font-weight:800;" onclick="removeAddress('${addr.id}')"><i class="notranslate ph-bold ph-trash"></i> ${t('delete_btn', {default: 'SUPPRIMER'})}</button>
                 <button class="btn-primary" style="background:none; border:none; color:#fff; opacity:0.5; margin-top:5px;" onclick="renderAddressModal()">${t('cancel_btn', {default: 'ANNULER'})}</button>
             `;
             openCustomModal('OPTIONS ADRESSE', html);
@@ -2102,8 +2241,8 @@
                 <div style="margin-bottom:14px;">
                     <div style="font-size:11px; font-weight:800; text-transform:uppercase; letter-spacing:1px; opacity:0.5; margin-bottom:8px;">${t('addr_type', "Type d'adresse")}</div>
                     <div class="address-type-carousel" style="display:flex; gap:8px; overflow-x:auto; padding-bottom:6px; -webkit-overflow-scrolling:touch;">
-                        ${presets.map(p => `<div class="addr-chip${addr.name === p ? ' active' : ''}" onclick="selectAddressType('${p}', this, 'edit')" style="flex-shrink:0; padding:10px 18px; border-radius:30px; font-size:13px; font-weight:700; cursor:pointer; border:1.5px solid ${addr.name === p ? 'var(--accent)' : 'var(--border)'}; background:${addr.name === p ? 'rgba(255,0,80,0.15)' : 'rgba(255,255,255,0.04)'}; color:${addr.name === p ? 'var(--accent)' : '#fff'}; transition:all 0.2s;">${p === 'Domicile' ? '🏠' : p === 'Bureau' ? '💼' : p === 'Ami(e)' ? '👥' : '🏨'} ${tPresets[p]}</div>`).join('')}
-                        <div class="addr-chip${!isPreset ? ' active' : ''}" onclick="selectAddressType('Autre', this, 'edit')" style="flex-shrink:0; padding:10px 18px; border-radius:30px; font-size:13px; font-weight:700; cursor:pointer; border:1.5px solid ${!isPreset ? 'var(--accent)' : 'var(--border)'}; background:${!isPreset ? 'rgba(255,0,80,0.15)' : 'rgba(255,255,255,0.04)'}; color:${!isPreset ? 'var(--accent)' : '#fff'}; transition:all 0.2s;">📍 ${tPresets['Autre']}</div>
+                        ${presets.map(p => `<div class="addr-chip${addr.name === p ? ' active' : ''}" onclick="selectAddressType('${p}', this, 'edit')" style="flex-shrink:0; padding:10px 18px; border-radius:30px; font-size:13px; font-weight:700; cursor:pointer; border:1.5px solid ${addr.name === p ? 'var(--accent)' : 'var(--border)'}; background:${addr.name === p ? 'rgba(30,58,138,0.15)' : 'rgba(255,255,255,0.04)'}; color:${addr.name === p ? 'var(--accent)' : '#fff'}; transition:all 0.2s;">${p === 'Domicile' ? '🏠' : p === 'Bureau' ? '💼' : p === 'Ami(e)' ? '👥' : '🏨'} ${tPresets[p]}</div>`).join('')}
+                        <div class="addr-chip${!isPreset ? ' active' : ''}" onclick="selectAddressType('Autre', this, 'edit')" style="flex-shrink:0; padding:10px 18px; border-radius:30px; font-size:13px; font-weight:700; cursor:pointer; border:1.5px solid ${!isPreset ? 'var(--accent)' : 'var(--border)'}; background:${!isPreset ? 'rgba(30,58,138,0.15)' : 'rgba(255,255,255,0.04)'}; color:${!isPreset ? 'var(--accent)' : '#fff'}; transition:all 0.2s;">📍 ${tPresets['Autre']}</div>
                     </div>
                     <input type="hidden" id="edit-addr-type" value="${isPreset ? addr.name : 'Autre'}">
                     <input type="text" id="edit-addr-custom" placeholder="Nom personnalisé" value="${!isPreset ? currentName : ''}" style="width:100%; padding:15px; background:rgba(0,0,0,0.3); border:1px solid var(--border); border-radius:12px; color:#fff; font-family:'Outfit',sans-serif; font-size:14px; margin-top:10px; box-sizing:border-box; display:${!isPreset ? 'block' : 'none'};">
@@ -2198,7 +2337,7 @@
                 <div style="margin-bottom:14px;">
                     <div style="font-size:11px; font-weight:800; text-transform:uppercase; letter-spacing:1px; opacity:0.5; margin-bottom:8px;">${t('addr_type', "Type d'adresse")}</div>
                     <div class="address-type-carousel" style="display:flex; gap:8px; overflow-x:auto; padding-bottom:6px; -webkit-overflow-scrolling:touch;">
-                        ${presets.map((p, i) => `<div class="addr-chip${i === 0 ? ' active' : ''}" onclick="selectAddressType('${p}', this, 'new')" style="flex-shrink:0; padding:10px 18px; border-radius:30px; font-size:13px; font-weight:700; cursor:pointer; border:1.5px solid ${i === 0 ? 'var(--accent)' : 'var(--border)'}; background:${i === 0 ? 'rgba(255,0,80,0.15)' : 'rgba(255,255,255,0.04)'}; color:${i === 0 ? 'var(--accent)' : '#fff'}; transition:all 0.2s;">${p === 'Domicile' ? '🏠' : p === 'Bureau' ? '💼' : p === 'Ami(e)' ? '👥' : '🏨'} ${tPresets[p]}</div>`).join('')}
+                        ${presets.map((p, i) => `<div class="addr-chip${i === 0 ? ' active' : ''}" onclick="selectAddressType('${p}', this, 'new')" style="flex-shrink:0; padding:10px 18px; border-radius:30px; font-size:13px; font-weight:700; cursor:pointer; border:1.5px solid ${i === 0 ? 'var(--accent)' : 'var(--border)'}; background:${i === 0 ? 'rgba(30,58,138,0.15)' : 'rgba(255,255,255,0.04)'}; color:${i === 0 ? 'var(--accent)' : '#fff'}; transition:all 0.2s;">${p === 'Domicile' ? '🏠' : p === 'Bureau' ? '💼' : p === 'Ami(e)' ? '👥' : '🏨'} ${tPresets[p]}</div>`).join('')}
                         <div class="addr-chip" onclick="selectAddressType('Autre', this, 'new')" style="flex-shrink:0; padding:10px 18px; border-radius:30px; font-size:13px; font-weight:700; cursor:pointer; border:1.5px solid var(--border); background:rgba(255,255,255,0.04); color:#fff; transition:all 0.2s;">📍 ${tPresets['Autre']}</div>
                     </div>
                     <input type="hidden" id="new-addr-type" value="Domicile">
@@ -2224,7 +2363,7 @@
             });
             chipEl.classList.add('active');
             chipEl.style.borderColor = 'var(--accent)';
-            chipEl.style.background = 'rgba(255,0,80,0.15)';
+            chipEl.style.background = 'rgba(30,58,138,0.15)';
             chipEl.style.color = 'var(--accent)';
             document.getElementById(prefix + '-addr-type').value = val;
             const customInput = document.getElementById(prefix + '-addr-custom');
@@ -2255,7 +2394,7 @@
         }
 
         async function syncAddressesToServer() {
-            const uid = tg.initDataUnsafe?.user?.id;
+            const uid = getTgUser()?.id;
             try {
                 const addrStr = JSON.stringify(savedAddresses);
                 const res = await fetch('/api/user-address', {
@@ -2270,7 +2409,7 @@
         async function confirmDeleteAccount() {
             tg.showConfirm(t('msg_attention_cette_act', "⚠️ ATTENTION : Cette action est irréversible. Voulez-vous vraiment supprimer définitivement votre compte et perdre tous vos points ?"), async (ok) => {
                 if (!ok) return;
-                const uid = tg.initDataUnsafe?.user?.id;
+                const uid = getTgUser()?.id;
                 try {
                     const res = await fetch('/api/delete-account', {
                         method: 'POST',
@@ -2408,14 +2547,14 @@
             openCustomModal("DEMANDE DE LIVREUR", 
                 `<div style="text-align:center; padding:20px 0;">
                     <div style="font-size:40px; margin-bottom:15px;">🚴</div>
-                    <div style="font-size:16px; font-weight:800; margin-bottom:10px;">Votre demande d'admission a bien été reçue par Farmstegridy !</div>
+                    <div style="font-size:16px; font-weight:800; margin-bottom:10px;">Votre demande d'admission a bien été reçue par Thegreenvalley !</div>
                     <div style="font-size:13px; opacity:0.7;">Nous reviendrons vers vous très prochainement pour vous donner notre décision.</div>
                 </div>`
             );
             tg.HapticFeedback.notificationOccurred('success');
             try {
-                if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initDataUnsafe && window.Telegram.WebApp.initDataUnsafe.user) {
-                    const uid = window.Telegram.WebApp.initDataUnsafe.user.id;
+                if (tg && tg.initDataUnsafe && getTgUser()) {
+                    const uid = getTgUser().id;
                     await fetch('/api/courier-application', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
@@ -2443,6 +2582,11 @@
                 const c = document.getElementById('admin-chat-messages');
                 if (c) c.scrollTop = c.scrollHeight;
             }, 50);
+            
+            const badge = document.getElementById('chat-unread-badge');
+            if (badge) badge.style.display = 'none';
+            const badgeBtn = document.getElementById('chat-unread-badge-btn');
+            if (badgeBtn) badgeBtn.style.display = 'none';
         }
 
         function closeSupportModal() {
@@ -2455,7 +2599,7 @@
 
         async function loadSupportChat() {
             renderAdminChatMessages();
-            const uid = tg.initDataUnsafe?.user?.id;
+            const uid = getTgUser()?.id;
             try {
                 const res = await fetch(`/api/user-orders?userId=telegram_${uid}&lang=${window.currentLang || 'fr'}`);
                 const orders = await res.json();
@@ -2561,7 +2705,7 @@
                 const res = await fetch('/api/mini-app/send-chat-message', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ userId: `telegram_${tg.initDataUnsafe?.user?.id}`, orderId, text })
+                    body: JSON.stringify({ userId: `telegram_${getTgUser()?.id}`, orderId, text })
                 });
                 const data = await res.json();
                 input.disabled = false;
@@ -2582,11 +2726,30 @@
                 const isMe = m.role === 'client';
                 const bubble = document.createElement('div');
                 
+                let contentHtml = '';
+                if (m.isEphemeral && !isMe) {
+                    contentHtml = `
+                    <div id="ephemeral-wrapper-${m.id}">
+                        <div style="font-size:12px; font-style:italic; opacity:0.8; margin-bottom:5px;">⏱️ Message éphémère</div>
+                        <button onclick="viewEphemeralMessage('${m.id}')" style="background:rgba(255,255,255,0.2); border:1px solid rgba(255,255,255,0.4); border-radius:8px; color:#fff; padding:6px 12px; font-size:12px; cursor:pointer;">👁️ Voir le message</button>
+                    </div>
+                    <div id="ephemeral-content-${m.id}" style="display:none;">
+                        ${m.text ? `<div>${m.text}</div>` : ''}
+                        ${m.audio ? `<audio controls src="${m.audio}" style="height:30px; margin-top:5px; max-width:200px;"></audio>` : ''}
+                        <div style="font-size:10px; color:#ff3b30; margin-top:5px; font-weight:bold;">Disparaît dans <span id="ephemeral-timer-${m.id}">15</span>s...</div>
+                    </div>`;
+                } else {
+                    contentHtml = m.text ? `<div>${m.text}</div>` : '';
+                    if (m.audio) {
+                        contentHtml += `<audio controls src="${m.audio}" style="height:30px; margin-top:5px; max-width:200px;"></audio>`;
+                    }
+                }
+
                 if (m.role === 'system') {
                     bubble.style = `display:flex; justify-content:center; margin: 8px 0;`;
                     bubble.innerHTML = `
-                        <div style="background:rgba(255,255,255,0.1); color:rgba(255,255,255,0.7); padding:6px 12px; border-radius:12px; font-size:11px; text-align:center; max-width:90%;">
-                            ${m.text}
+                        <div style="background:rgba(255,255,255,0.05); color:rgba(255,255,255,0.7); padding:6px 12px; border-radius:12px; font-size:11px; text-align:center; max-width:90%;">
+                            ${contentHtml}
                             <div style="font-size:9px; opacity:0.4; margin-top:2px;">${new Date(m.ts).toLocaleTimeString('fr-FR', {hour:'2-digit',minute:'2-digit'})}</div>
                         </div>
                     `;
@@ -2595,7 +2758,7 @@
                     bubble.innerHTML = `
                         <div style="max-width:80%; background:rgba(255,165,0,0.2); border:1px solid rgba(255,165,0,0.5); color:#fff; padding:10px 14px; border-radius:18px 18px 18px 4px; font-size:13px; line-height:1.5;">
                             <div style="font-size:10px; font-weight:900; color:orange; margin-bottom:4px;">🚴 LIVREUR</div>
-                            ${m.text}
+                            ${contentHtml}
                             <div style="font-size:9px; opacity:0.5; margin-top:4px; text-align:left;">${new Date(m.ts).toLocaleTimeString('fr-FR', {hour:'2-digit',minute:'2-digit'})}</div>
                         </div>
                     `;
@@ -2604,7 +2767,7 @@
                     bubble.innerHTML = `
                         <div style="max-width:80%; background:rgba(0,150,255,0.2); border:1px solid rgba(0,150,255,0.5); color:#fff; padding:10px 14px; border-radius:18px 18px 18px 4px; font-size:13px; line-height:1.5;">
                             <div style="font-size:10px; font-weight:900; color:#0096ff; margin-bottom:4px;">🎧 SUPPORT</div>
-                            ${m.text}
+                            ${contentHtml}
                             <div style="font-size:9px; opacity:0.5; margin-top:4px; text-align:left;">${new Date(m.ts).toLocaleTimeString('fr-FR', {hour:'2-digit',minute:'2-digit'})}</div>
                         </div>
                     `;
@@ -2613,7 +2776,7 @@
                     bubble.innerHTML = `
                         <div style="max-width:80%; background:var(--accent); color:#fff; padding:10px 14px; border-radius:18px 18px 4px 18px; font-size:13px; line-height:1.5;">
                             ${m.target === 'livreur' ? '<div style="font-size:10px; font-weight:900; color:rgba(255,255,255,0.7); margin-bottom:4px;">Au livreur :</div>' : ''}
-                            ${m.text}
+                            ${contentHtml}
                             <div style="font-size:9px; opacity:0.5; margin-top:4px; text-align:right;">${new Date(m.ts).toLocaleTimeString('fr-FR', {hour:'2-digit',minute:'2-digit'})}</div>
                         </div>
                     `;
@@ -2624,28 +2787,109 @@
             cont.scrollTop = cont.scrollHeight;
         }
 
-        async function sendAdminChatMessage() {
+        let clientMediaRecorder;
+        let clientAudioChunks = [];
+        let clientIsRecording = false;
+
+        async function toggleClientRecording() {
+            if (clientIsRecording) {
+                clientMediaRecorder.stop();
+                clientIsRecording = false;
+                document.getElementById('client-record-btn').style.background = 'rgba(255,255,255,0.1)';
+                document.getElementById('client-recording-indicator').style.display = 'none';
+            } else {
+                try {
+                    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                    clientMediaRecorder = new MediaRecorder(stream);
+                    clientAudioChunks = [];
+                    clientMediaRecorder.ondataavailable = e => clientAudioChunks.push(e.data);
+                    clientMediaRecorder.onstop = sendClientAudio;
+                    clientMediaRecorder.start();
+                    clientIsRecording = true;
+                    document.getElementById('client-record-btn').style.background = '#ff3b30';
+                    document.getElementById('client-recording-indicator').style.display = 'block';
+                } catch (e) {
+                    tg.showAlert('Microphone non accessible. Veuillez autoriser l\'accès dans votre navigateur.');
+                }
+            }
+        }
+
+        async function sendClientAudio() {
+            const audioBlob = new Blob(clientAudioChunks, { type: 'audio/webm' });
+            const formData = new FormData();
+            formData.append('audio', audioBlob, 'record.webm');
+            
+            try {
+                const res = await fetch('/api/admin-chat/upload-audio', { method: 'POST', body: formData });
+                const data = await res.json();
+                if (data.success && data.audioUrl) {
+                    await sendAdminChatMessage(data.audioUrl);
+                }
+            } catch (e) {
+                tg.showAlert('Erreur lors de l\'envoi de l\'audio.');
+            }
+        }
+
+        async function viewEphemeralMessage(msgId) {
+            const wrapper = document.getElementById(`ephemeral-wrapper-${msgId}`);
+            const content = document.getElementById(`ephemeral-content-${msgId}`);
+            const timerSpan = document.getElementById(`ephemeral-timer-${msgId}`);
+            if (!wrapper || !content) return;
+            
+            wrapper.style.display = 'none';
+            content.style.display = 'block';
+
+            const uid = getTgUser()?.id;
+            if (uid) {
+                fetch('/api/admin-chat/delete-msg', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ userId: `telegram_${uid}`, msgId })
+                }).catch(() => {});
+            }
+
+            let timeLeft = 15;
+            const interval = setInterval(() => {
+                timeLeft--;
+                if (timerSpan) timerSpan.innerText = timeLeft;
+                if (timeLeft <= 0) {
+                    clearInterval(interval);
+                    content.innerHTML = '<div style="font-size:12px; opacity:0.5; font-style:italic;">Message expiré et supprimé.</div>';
+                    // Remove from local memory
+                    adminChatMessages = adminChatMessages.filter(m => m.id !== msgId);
+                    safeSetStorage('stb_admin_chat', adminChatMessages);
+                }
+            }, 1000);
+        }
+
+        async function sendAdminChatMessage(audioUrl = null) {
             const input = document.getElementById('admin-chat-input');
             const text = input?.value?.trim();
-            if (!text) return;
-            const uid = tg.initDataUnsafe?.user?.id;
-            const msg = { role: 'client', text, ts: Date.now() };
+            if (!text && !audioUrl) return;
+            const uid = getTgUser()?.id;
+            const msg = { role: 'client', text: text || '', audio: audioUrl, ts: Date.now() };
             adminChatMessages.push(msg);
             safeSetStorage('stb_admin_chat', adminChatMessages);
-            input.value = '';
+            if (input) input.value = '';
             renderAdminChatMessages();
             try { tg.HapticFeedback.notificationOccurred('success'); } catch(e){}
             try {
                 await fetch('/api/admin-chat/send', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ userId: `telegram_${uid}`, text })
+                    body: JSON.stringify({ 
+                        userId: `telegram_${uid}`, 
+                        text: text || '',
+                        audio: audioUrl,
+                        first_name: getTgUser()?.first_name || 'Client Web',
+                        username: getTgUser()?.username || ''
+                    })
                 });
             } catch(e) {}
         }
 
         async function pollUpdatesSilent() {
-            const uid = tg.initDataUnsafe?.user?.id;
+            const uid = getTgUser()?.id;
             try {
                 // Poll Chat
                 if (uid) {
@@ -2661,6 +2905,8 @@
                             } else {
                                 const badge = document.getElementById('chat-unread-badge');
                                 if (badge) badge.style.display = 'block';
+                                const badgeBtn = document.getElementById('chat-unread-badge-btn');
+                                if (badgeBtn) badgeBtn.style.display = 'block';
                                 showNewsPopup(t('news_support_title', {default: "Nouveau message du support !"}), data.messages[data.messages.length - 1].message || t('news_support_desc', {default: "Consultez l'onglet support pour voir le message."}), []);
                             }
                         }
@@ -2753,7 +2999,7 @@
     
     <script>
         async function requestRestockAlert(pid) {
-            const uid = tg.initDataUnsafe?.user?.id;
+            const uid = getTgUser()?.id;
             if (!uid) return;
             try {
                 tg.HapticFeedback.notificationOccurred('success');

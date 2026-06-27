@@ -2835,7 +2835,7 @@ function setupOrderSystem(bot) {
             const settings = await getAppSettings();
             const activeOrders = await getClientActiveOrders(`${ctx.platform}_${ctx.from.id}`);
 
-            let text = `<b>✨ CENTRE D’ASSISTANCE — ${settings.bot_name || 'Farmstegridy_bot'}</b>\n\n` +
+            let text = `<b>✨ CENTRE D’ASSISTANCE — ${settings.bot_name || 'Thegreenvalley_BOT'}</b>\n\n` +
                 `<i>Votre satisfaction est notre priorité. Nos équipes sont disponibles pour vous accompagner.</i>\n\n` +
                 `<b>Comment pouvons-nous vous aider aujourd'hui ?</b>`;
 

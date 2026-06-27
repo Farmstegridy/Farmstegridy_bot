@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Farmstegridy - Livreur Console</title>
+    <title>THE GREEN VALLEY - Livreur Console</title>
+    <link rel="icon" href="/public/img/logo.png">
     <script>
         window.addEventListener('error', function(e) {
             var err = e.error ? e.error.stack : e.message;
@@ -33,7 +34,46 @@
             font-family: 'Inter', sans-serif;
             background: var(--bg); color: var(--text);
             overflow-x: hidden;
+            min-height: 100vh;
         }
+
+        /* SHADERS & ADVANCED ANIMATIONS */
+        @keyframes aurora {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+        @keyframes staggerFadeUp {
+            0% { opacity: 0; transform: translateY(30px) scale(0.95); filter: blur(10px); }
+            100% { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
+        }
+        @keyframes pulseOpacity {
+            0% { opacity: 0.15; filter: url(#remove-white) drop-shadow(0 0 10px rgba(255,255,255,0.05)); }
+            50% { opacity: 0.4; filter: url(#remove-white) drop-shadow(0 0 20px rgba(255,255,255,0.15)); }
+            100% { opacity: 0.15; filter: url(#remove-white) drop-shadow(0 0 10px rgba(255,255,255,0.05)); }
+        }
+        .aurora-bg {
+            position: fixed;
+            top: -50%; left: -50%; width: 200%; height: 200%;
+            background: radial-gradient(circle at 50% 50%, rgba(30,58,138,0.15) 0%, transparent 50%),
+                        radial-gradient(circle at 80% 20%, rgba(0,255,80,0.08) 0%, transparent 40%),
+                        radial-gradient(circle at 20% 80%, rgba(255,0,80,0.08) 0%, transparent 40%);
+            background-size: 200% 200%;
+            animation: aurora 15s ease-in-out infinite;
+            z-index: -1;
+            pointer-events: none;
+            filter: blur(40px);
+        }
+        .stagger-item { animation: staggerFadeUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards; opacity: 0; }
+        .stagger-item:nth-child(1) { animation-delay: 0.05s; }
+        .stagger-item:nth-child(2) { animation-delay: 0.1s; }
+        .stagger-item:nth-child(3) { animation-delay: 0.15s; }
+        .stagger-item:nth-child(4) { animation-delay: 0.2s; }
+        .stagger-item:nth-child(5) { animation-delay: 0.25s; }
+        .stagger-item:nth-child(6) { animation-delay: 0.3s; }
+        .stagger-item:nth-child(7) { animation-delay: 0.35s; }
+        .stagger-item:nth-child(8) { animation-delay: 0.4s; }
+        .stagger-item:nth-child(n+9) { animation-delay: 0.45s; }
 
         .app-container { padding: calc(20px + var(--safe-area-top)) 20px calc(100px + var(--safe-area-bottom)) 20px; }
 
@@ -56,9 +96,17 @@
         .section-title { font-size: 11px; font-weight: 900; opacity: 0.3; letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 15px; }
 
         .order-card {
-            background: var(--card); border-radius: 25px; padding: 20px;
-            margin-bottom: 15px; border: 1px solid var(--border);
-            transition: 0.3s;
+            background: rgba(255, 255, 255, 0.03); backdrop-filter: blur(20px) saturate(150%); -webkit-backdrop-filter: blur(20px) saturate(150%);
+            border-radius: 25px; padding: 20px;
+            margin-bottom: 15px; border: 1px solid rgba(255, 255, 255, 0.08);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+        }
+        .order-card:hover {
+            transform: translateY(-4px) scale(1.01);
+            background: rgba(255, 255, 255, 0.06);
+            border-color: rgba(255, 255, 255, 0.15);
+            box-shadow: 0 15px 35px rgba(0,0,0,0.4), 0 0 20px var(--accent-glow);
         }
 
         .order-header { display: flex; justify-content: space-between; margin-bottom: 15px; align-items: center; }
@@ -156,7 +204,7 @@
 </head>
 <body>
     <div id="loading-screen"><div class="loader"></div><p style="margin-top:20px; font-weight:800; font-size:12px; opacity:0.5;"><span ><span data-i18n="loading_console">CHARGEMENT CONSOLE...</span></span></p></div>
-
+    <div class="aurora-bg"></div>
     <div class="app-container">
         <header>
             <div class="logo">Farm<span>stegridy</span> <span style="font-size:12px; color:#fff; font-weight:400;"><span ><span data-i18n="courier">LIVREUR</span></span></span></div>
@@ -329,7 +377,18 @@
         function renderActive(list) {
             const cont = document.getElementById('active-orders-list');
             if (!list.length) {
-                cont.innerHTML = '<div class="empty-state">Aucune livraison en cours.</div>';
+                cont.innerHTML = `
+                    <svg width="0" height="0" style="position:absolute;">
+                      <filter id="remove-white" color-interpolation-filters="sRGB">
+                        <feColorMatrix in="SourceGraphic" type="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  -4 -4 -4 0 11.5" result="newAlpha" />
+                        <feComposite in="newAlpha" in2="SourceGraphic" operator="in" />
+                      </filter>
+                    </svg>
+                    <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; padding:60px 20px; pointer-events:none; margin-top:10vh;">
+                        <img src="/public/img/logo.png" style="width:200px; height:200px; object-fit:contain; animation: pulseOpacity 4s infinite alternate;">
+                        <div style="font-weight:900; font-size:16px; margin-top:20px; letter-spacing:1px; opacity:0.5; color:#fff;">Aucune livraison en cours</div>
+                    </div>
+                `;
                 return;
             }
 
@@ -561,7 +620,22 @@
 
         function renderAvailable(list) {
             const cont = document.getElementById('available-orders-list');
-            cont.innerHTML = list.length ? '' : '<div class="empty-state">Aucune commande disponible dans votre secteur.</div>';
+            if (list.length === 0) {
+                cont.innerHTML = `
+                    <svg width="0" height="0" style="position:absolute;">
+                      <filter id="remove-white" color-interpolation-filters="sRGB">
+                        <feColorMatrix in="SourceGraphic" type="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  -4 -4 -4 0 11.5" result="newAlpha" />
+                        <feComposite in="newAlpha" in2="SourceGraphic" operator="in" />
+                      </filter>
+                    </svg>
+                    <div style="grid-column: 1 / -1; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:60px 20px; pointer-events:none; margin-top:10vh;">
+                        <img src="/public/img/logo.png" style="width:200px; height:200px; object-fit:contain; animation: pulseOpacity 4s infinite alternate;">
+                        <div style="font-weight:900; font-size:16px; margin-top:20px; letter-spacing:1px; opacity:0.5; color:#fff;">Aucune commande disponible</div>
+                    </div>
+                `;
+            } else {
+                cont.innerHTML = '';
+            }
             list.forEach(o => {
                 const d = document.createElement('div'); d.className = 'order-card';
                 d.innerHTML = `
@@ -691,6 +765,6 @@
 
     
 
-<script src="/js/translations.js"></script>
+
 </body>
 </html>

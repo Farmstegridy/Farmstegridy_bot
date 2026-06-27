@@ -27,7 +27,7 @@ async function bootstrap() {
         const portToUse = process.env.PORT || 8080;
         
         console.log(`[System] Final PORT determined: ${portToUse}`);
-        console.log('🚀 DÉMARRAGE VERSION RAILWAY STABLE FARMSTEGRIDY BOT...');
+        console.log('🚀 DÉMARRAGE VERSION RAILWAY STABLE Thegreenvalley BOT...');
         
         // 1. Initialisation de la BDD
         if (database && database.init) {
@@ -57,9 +57,8 @@ async function bootstrap() {
         server.setDispatcherInstance(dispatcher);
         const app = server.createServer(portToUse);
         
-        // --- IMPORTANT: Enregistrement du bot dans le serveur pour les notifs admin ---
         const { TelegramChannel } = require('./channels/TelegramChannel');
-        let tgToken = process.env.BOT_TOKEN;
+        let tgToken = null;
         
         try {
             const settings = await getAppSettings();
@@ -68,7 +67,7 @@ async function bootstrap() {
                 console.log('[System] Using Telegram token from Database configuration');
             }
         } catch (e) {
-            console.warn('[System] Failed to load telegram token from Database, using env fallback:', e.message);
+            console.warn('[System] Failed to load telegram token from Database:', e.message);
         }
         
         let telegramChannel = null;
@@ -76,6 +75,8 @@ async function bootstrap() {
             telegramChannel = new TelegramChannel(tgToken);
             dispatcher.registerChannel('telegram', telegramChannel);
             server.setBotInstance(telegramChannel.bot); // Permet au dashboard d'envoyer des messages
+        } else {
+            console.warn('⚠️ [System] No Telegram Token configured! Please configure it via the Admin Dashboard.');
         }
 
 
