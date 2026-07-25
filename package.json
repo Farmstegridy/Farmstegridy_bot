@@ -15,7 +15,7 @@
     "admin"
   ],
   "engines": {
-    "node": "20.x"
+    "node": "22.x"
   },
   "author": "",
   "license": "ISC",
