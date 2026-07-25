@@ -573,7 +573,7 @@ async function getMainMenuKeyboard(ctx, settings, user, isFournisseur = false, i
     const catalogUrl = (settings.mini_app_url ? `${settings.mini_app_url}/catalog` : `${baseDomain}/catalog`) + `?lang=${langCode}` + `&v=${Date.now()}`;
 
     // Ligne 1 : Commander (Gros bouton principal)
-    buttons.push([Markup.button.callback(`${settings.ui_icon_catalog || '🛍'} ${t(user, 'btn_catalog_classic', 'CATALOGUE CLASSIQUE')}`, 'view_catalog')]);
+
     buttons.push([Markup.button.webApp(t(user, 'btn_catalog_miniapp', '✨ CATALOGUE MINI APP ✨'), catalogUrl)]);
     
     // Suivi commande (Uniquement si panier plein)

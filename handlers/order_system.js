@@ -172,7 +172,7 @@ function setupOrderSystem(bot) {
                 if (true) {
             
         } else {
-            buttons.push([Markup.button.callback(t(user, 'btn_view_classic', '🛍️ Retour au Catalogue Classique'), 'view_catalog')]);
+            buttons.push([Markup.button.callback(t(user, 'btn_view_classic', '🛍️ Retour au Catalogue Classique'), 'main_menu')]);
         }
 
         buttons.push([Markup.button.callback(t(user, 'btn_back_menu', settings.btn_back_menu || '◀️ Retour Menu'), 'main_menu')]);
@@ -198,14 +198,7 @@ function setupOrderSystem(bot) {
         return Number.isFinite(num) ? num.toFixed(2) : "0.00";
     };
 
-    bot.action('view_catalog', async (ctx) => {
-        await ctx.answerCbQuery().catch(() => {});
-        // Nettoyer les états marketplace pour éviter l'interception des messages
-        clearAllAwaitingMaps(ctx.from.id);
-        // Quitter le contexte produit → libérer le media group pour le cleanup
-        clearActiveMediaGroup(`${ctx.platform}_${ctx.from.id}`);
-        await displayCatalog(ctx);
-    });
+
 
     bot.action(/^product_(.+)$/, async (ctx) => {
         await ctx.answerCbQuery().catch(() => {});
@@ -216,7 +209,7 @@ function setupOrderSystem(bot) {
         const product = products.find(p => p.id == productId);
         const settings = ctx.state?.settings || await getAppSettings();
 
-        if (!product) return safeEdit(ctx, settings.msg_product_not_found || '❌ Produit non trouvé.', Markup.inlineKeyboard([[Markup.button.callback(settings.btn_back_menu || '◀️ Retour Menu', 'view_catalog')]]));
+        if (!product) return safeEdit(ctx, settings.msg_product_not_found || '❌ Produit non trouvé.', Markup.inlineKeyboard([[Markup.button.callback(settings.btn_back_menu || '◀️ Retour Menu', 'main_menu')]]));
 
         let promoText = "";
         if (product.is_bundle) {
@@ -278,7 +271,7 @@ function setupOrderSystem(bot) {
             }
             qtyRows.push(row);
         }
-        qtyRows.push([Markup.button.callback(t(user, 'btn_cancel', '❌ Annuler'), 'view_catalog')]);
+        qtyRows.push([Markup.button.callback(t(user, 'btn_cancel', '❌ Annuler'), 'main_menu')]);
         const keyboard = Markup.inlineKeyboard(qtyRows);
 
         const userId = `${ctx.platform}_${ctx.from.id}`;
@@ -307,7 +300,7 @@ function setupOrderSystem(bot) {
 
         if (!product) {
             console.error(`❌ Product not found: ${productId}.`);
-            return safeEdit(ctx, settings.msg_product_not_found || '❌ Produit non trouvé.', Markup.inlineKeyboard([[Markup.button.callback(settings.btn_back_generic || '◀️ Retour', 'view_catalog')]]));
+            return safeEdit(ctx, settings.msg_product_not_found || '❌ Produit non trouvé.', Markup.inlineKeyboard([[Markup.button.callback(settings.btn_back_generic || '◀️ Retour', 'main_menu')]]));
         }
 
         // Calcul du prix avec gestion des paliers dégressifs et NaN Fix
@@ -489,7 +482,7 @@ function setupOrderSystem(bot) {
         pendingOrders.delete(userId);
         const text = t(user, 'msg_product_added', '✅ C\'est noté ! Produit ajouté au panier.') + '\n\n' + t(user, 'msg_cart_count', 'Votre panier contient <b>{count}</b> article(s).', { count: cart.length });
         const buttons = [
-            [Markup.button.callback(t(user, 'btn_continue', '🛍️ Acheter autre chose'), 'view_catalog'), Markup.button.callback(t(user, 'btn_cart_view', '💳 Payer ma commande'), 'view_cart')],
+            [Markup.button.callback(t(user, 'btn_continue', '🛍️ Acheter autre chose'), 'main_menu'), Markup.button.callback(t(user, 'btn_cart_view', '💳 Payer ma commande'), 'view_cart')],
             [Markup.button.callback(t(user, 'btn_clear', settings.btn_clear_cart || '❌ Tout enlever'), 'clear_cart')]
         ];
         await safeEdit(ctx, text, Markup.inlineKeyboard(buttons));
@@ -518,7 +511,7 @@ function setupOrderSystem(bot) {
         const cart = userCarts.get(userId) || [];
         const settings = (ctx.state?.settings || await getAppSettings());
         if (cart.length === 0) {
-            return safeEdit(ctx, t(user, 'msg_cart_empty', 'Votre panier est vide 📭'), Markup.inlineKeyboard([[Markup.button.callback(t(user, 'btn_add_more', '🛍️ Retour au Catalogue'), 'view_catalog')]]));
+            return safeEdit(ctx, t(user, 'msg_cart_empty', 'Votre panier est vide 📭'), Markup.inlineKeyboard([[Markup.button.callback(t(user, 'btn_add_more', '🛍️ Retour au Catalogue'), 'main_menu')]]));
         }
 
         let total = 0;
@@ -541,7 +534,7 @@ function setupOrderSystem(bot) {
         });
         summary += `\n💰 <b>` + t(user, 'label_total_price', 'TOTAL :') + ` ${formatPrice(total)}€</b>`;
 
-        buttons.push([Markup.button.callback(t(user, 'btn_checkout', '💳 Commander', { total: formatPrice(total) }), 'start_checkout'), Markup.button.callback(t(user, 'btn_add_more', '🛍️ Continuer'), 'view_catalog')]);
+        buttons.push([Markup.button.callback(t(user, 'btn_checkout', '💳 Commander', { total: formatPrice(total) }), 'start_checkout'), Markup.button.callback(t(user, 'btn_add_more', '🛍️ Continuer'), 'main_menu')]);
         buttons.push([Markup.button.callback(t(user, 'btn_clear_cart', '❌ Vider'), 'clear_cart'), Markup.button.callback(t(user, 'btn_back_menu', '◀️ Menu'), 'main_menu')]);
 
         await safeEdit(ctx, summary, Markup.inlineKeyboard(buttons));
@@ -570,10 +563,9 @@ function setupOrderSystem(bot) {
         const userId = `${ctx.platform}_${ctx.from.id}`;
         userCarts.delete(userId);
         try {
-            await displayCatalog(ctx);
+            await safeEdit(ctx, settings.msg_cart_cleared || '✅ Panier vidé !', Markup.inlineKeyboard([[Markup.button.callback(settings.btn_back_quick_menu || '◀️ Menu', 'main_menu')]]));
         } catch (e) {
-            console.error('Error displaying catalog after clear:', e.message);
-            await safeEdit(ctx, settings.msg_cart_cleared || '✅ Panier vidé !', Markup.inlineKeyboard([[Markup.button.callback('🛍️ Voir le Catalogue', 'view_catalog')], [Markup.button.callback(settings.btn_back_quick_menu || '◀️ Menu', 'main_menu')]]));
+            console.error('Error clearing cart:', e.message);
         }
     });
 
@@ -597,7 +589,7 @@ function setupOrderSystem(bot) {
             return safeEdit(ctx,
                 t(user, 'msg_min_order_error', `⚠️ <b>Minimum de commande non atteint</b>\n\nNous ne livrons pas en dessous de <b>{min}€</b>.\nVotre total actuel : <b>{total}€</b>\n\nVeuillez ajouter d'autres produits à votre panier.`, { min: minOrder, total: total.toFixed(2) }),
                 Markup.inlineKeyboard([
-                    [Markup.button.callback(t(user, 'btn_add_products', '🛍️ Ajouter des produits'), 'view_catalog')],
+                    [Markup.button.callback(t(user, 'btn_add_products', '🛍️ Ajouter des produits'), 'main_menu')],
                     [Markup.button.callback(t(user, 'btn_back_to_cart_label', '🛒 Retour au Panier'), 'view_cart')]
                 ])
             );
@@ -717,7 +709,7 @@ function setupOrderSystem(bot) {
         const rows = [];
         for (let i = 0; i < options.length; i += 2) rows.push(options.slice(i, i + 2));
         rows.push([Markup.button.callback(settings.btn_back_to_qty || '◀️ Retour Quantité', `product_${product.id}`)]);
-        rows.push([Markup.button.callback(settings.btn_cancel_alt || '❌ Annuler', 'view_catalog')]);
+        rows.push([Markup.button.callback(settings.btn_cancel_alt || '❌ Annuler', 'main_menu')]);
 
         await safeEdit(ctx, text, {
             ...Markup.inlineKeyboard(rows),
@@ -734,7 +726,7 @@ function setupOrderSystem(bot) {
         const products = await getProducts(true);
         const product = products.find(p => p.id === pId);
 
-        if (!product) return safeEdit(ctx, settings.msg_product_not_found || "❌ Produit non trouvé.", Markup.inlineKeyboard([[Markup.button.callback(settings.btn_back_generic || '◀️ Retour', 'view_catalog')]]));
+        if (!product) return safeEdit(ctx, settings.msg_product_not_found || "❌ Produit non trouvé.", Markup.inlineKeyboard([[Markup.button.callback(settings.btn_back_generic || '◀️ Retour', 'main_menu')]]));
 
         // Support comma and remove non-numeric chars for baseVal calculation
         const cleanUnitVal = String(product.unit_value || '1').replace(',', '.');
@@ -787,7 +779,7 @@ function setupOrderSystem(bot) {
                 ...Markup.inlineKeyboard([
                     ...(settings.dashboard_url ? [[Markup.button.webApp("📍 Choisir sur la carte", `${settings.dashboard_url.replace('/dashboard', '/address_picker')}`)]] : []),
                     [Markup.button.callback(settings.btn_back_to_qty || '◀️ Retour Quantité', product.unit ? `qty_${product.id}_${qty}` : `product_${product.id}`)],
-                    [Markup.button.callback(settings.btn_cancel_alt || '❌ Annuler', 'view_catalog')]
+                    [Markup.button.callback(settings.btn_cancel_alt || '❌ Annuler', 'main_menu')]
                 ]),
                 photo: product.image_url || null
             }
@@ -990,7 +982,7 @@ function setupOrderSystem(bot) {
         ]);
         buttons.push([
             Markup.button.callback(t(user, 'btn_back', settings.btn_back_to_address || '◀️ Retour'), 'back_to_address'), 
-            Markup.button.callback(t(user, 'btn_cancel', settings.btn_cancel_alt || '❌ Annuler'), 'view_catalog')
+            Markup.button.callback(t(user, 'btn_cancel', settings.btn_cancel_alt || '❌ Annuler'), 'main_menu')
         ]);
         
         await safeEdit(ctx, text, Markup.inlineKeyboard(buttons));
@@ -1264,7 +1256,7 @@ function setupOrderSystem(bot) {
             keyboard.push([Markup.button.url('💬 Parler à l\'admin (Paiement Crypto/Virement)', adminContact)]);
         }
 
-        keyboard.push([Markup.button.callback('◀️ Modifier', 'back_to_scheduling'), Markup.button.callback(settings.btn_cancel_alt || '❌ Annuler', 'view_catalog')]);
+        keyboard.push([Markup.button.callback('◀️ Modifier', 'back_to_scheduling'), Markup.button.callback(settings.btn_cancel_alt || '❌ Annuler', 'main_menu')]);
 
         await safeEdit(ctx, text, {
             ...Markup.inlineKeyboard(keyboard)
@@ -2816,7 +2808,7 @@ function setupOrderSystem(bot) {
     });
 
     // --- COMMANDES TG ---
-    bot.command('menu', async (ctx) => displayCatalog(ctx));
+    // bot.command('menu', async (ctx) => displayCatalog(ctx));
     bot.command('orders', async (ctx) => {
         if (ctx.callbackQuery) await ctx.answerCbQuery().catch(() => {});
         const settings = ctx.state?.settings || await getAppSettings();
@@ -3200,7 +3192,7 @@ async function checkAbandonedCarts(bot) {
                 await sendTelegramMessage(userId, msg, {
                     ...Markup.inlineKeyboard([
                         [Markup.button.callback('💳 Voir mon panier / Commander', 'view_cart')],
-                        [Markup.button.callback('🛍️ Retour au Catalogue', 'view_catalog')]
+                        [Markup.button.callback('🛍️ Retour au Catalogue', 'main_menu')]
                     ])
                 });
                 // On marque comme notifié en reculant le temps ou en supprimant l'activité (pour ne pas spammer)
