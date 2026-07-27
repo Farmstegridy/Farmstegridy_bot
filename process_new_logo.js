@@ -2,7 +2,7 @@ const Jimp = require('jimp');
 
 async function processLogo() {
     try {
-        const image = await Jimp.read('/Users/dikenson/.gemini/antigravity/brain/5da4db53-c2fb-40d5-8699-4a90950387d3/media__1782594432852.jpg');
+        const image = await Jimp.read('./logo_source.jpg');
         
         // Ensure square aspect ratio
         const size = Math.min(image.bitmap.width, image.bitmap.height);
