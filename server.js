@@ -1533,7 +1533,7 @@ function createServer(port = 8080) {
                 referralLink: `https://t.me/${settings.bot_username}?start=${user.referral_code}`,
                 hotline: settings.admin_telegram_id || 'admin',
                 private_contact_url: settings.private_contact_url || 'https://t.me/don_r91',
-                mini_app_logo: settings.mini_app_logo || '/public/img/logo.png',
+                mini_app_logo: (!settings.mini_app_logo || settings.mini_app_logo.includes('thegreenvalley')) ? '/public/img/logo.png' : settings.mini_app_logo,
                 paymentModes: (typeof settings.payment_modes_config === 'string' ? JSON.parse(settings.payment_modes_config || '[]') : settings.payment_modes_config) || [],
                 chat_history: user.data?.chat_history || []
             });

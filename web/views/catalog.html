@@ -255,16 +255,16 @@
 
     <script>
         document.addEventListener("DOMContentLoaded", () => {
-            const bust = "?v=1779629206" + Date.now();
+            const bust = "?v=" + Date.now();
             document.querySelectorAll('.app-dynamic-logo').forEach(img => {
-                if (img.src && img.src.includes('bot_media/mini_app_logo.png') && !img.src.includes('?v=1779629206')) {
-                    img.src = img.src + bust;
-                }
+                img.src = "/public/img/logo.png" + bust;
             });
         });
         
         function updateAppLogo(url) {
-            if (!url) return;
+            if (!url || url.includes('mini_app_logo.png') || url.includes('thegreenvalley')) {
+                url = '/public/img/logo.png?v=' + Date.now();
+            }
             document.querySelectorAll('.app-dynamic-logo').forEach(img => {
                 img.src = url;
             });
