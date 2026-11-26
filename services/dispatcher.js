@@ -114,7 +114,9 @@ class Dispatcher {
             settings = await getAppSettings();
             incomingMsg._settings = settings;
 
-            if (isCallback) {
+            const verifiedFrom = incomingMsg.ctx?.chat?.type === 'private' &&
+                String(incomingMsg.ctx?.from?.id) === String(userId) ? incomingMsg.ctx.from : null;
+            if (isCallback && !verifiedFrom) {
                 const docId = `telegram_${userId}`;
                 const db = require('./database');
                 let entry = db._userCache?.get(docId);
@@ -126,9 +128,9 @@ class Dispatcher {
             } else {
                 const reg = await registerUser({
                     id: userId,
-                    first_name: incomingMsg.ctx?.from?.first_name || incomingMsg.name || 'Utilisateur Telegram',
-                    username: incomingMsg.ctx?.from ? (incomingMsg.ctx.from.username || '') : incomingMsg.username,
-                    last_name: incomingMsg.ctx?.from?.last_name,
+                    first_name: verifiedFrom?.first_name || incomingMsg.name,
+                    username: verifiedFrom ? (verifiedFrom.username || '') : undefined,
+                    last_name: verifiedFrom ? (verifiedFrom.last_name || '') : undefined,
                     type: 'user'
                 }, 'telegram');
 
@@ -211,7 +213,7 @@ class Dispatcher {
         const ctx = {
             channel: channel,
             platform: 'telegram',
-            from: { id: userId, first_name: msg.name, username: msg.user?.username || msg.username || '', is_bot: false },
+            from: { id: userId, first_name: msg.ctx?.from?.first_name || msg.user?.first_name || msg.name, username: msg.ctx?.from ? (msg.ctx.from.username || '') : (msg.user?.username || undefined), last_name: msg.ctx?.from ? (msg.ctx.from.last_name || '') : msg.user?.last_name, is_bot: false },
             chat: { id: userId, type: 'private' },
             state: { user: msg.user, settings: settings },
             _handled: false,
