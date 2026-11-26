@@ -9,3 +9,19 @@
 7. Merge and deploy only after checks pass. Set CONTACT_PRIVACY_ENABLED=true only after migration and tests. Confirm the user can withdraw the preference and that blocked accounts remain unreachable. Never treat API acceptance as a read receipt.
 
 No production database changes, message sends, or deployments are performed by this draft.
+
+
+## Optional order-contact telephone number — proposed requirements, not implemented
+
+**Release blocked:** do not collect real phone numbers until exposed privileged keys have been revoked, existing customer data access has been secured, the independent database and media backup has been verified, and the maintainer has approved the changes and resolved the pull request merge conflicts.
+
+- In a private chat, offer an optional button “Partager mon numéro” for a defined current order support purpose and a “Continuer sans partager” alternative. Use Telegram's native request_contact button. Explain the purpose, retention period, access and deletion rights before asking.
+- Accept only a contact intentionally supplied after the current user's request; require contact.user_id to match ctx.from.id, private chat identity to match, and the current bot identity to be verified. Reject forwarded or third-party contacts and missing identity. Expire pending prompts. Do not infer consent from profile membership.
+- Keep phone data separate from publicly accessible profiles; restrict all reads and writes to authorized service components, enable RLS and revoke public/anon/authenticated privileges. Scope records to the current bot and relevant service purpose. Do not carry consent across bots. Do not create bulk export, marketing, SMS campaigns or alternate contact paths for blocked users.
+- Allow refusal, correction and deletion. Set an explicit short retention policy appropriate to order support and delete numbers when no longer needed. Never log contact payloads or phone numbers, including debug/error output; avoid returning numbers in general dashboard/API responses.
+- Test with synthetic data and controlled accounts: share own contact, refuse, reject another contact, reject group contact, expire prompt, update or delete, unavailable database, unauthorized access denied, existing profiles/orders/inventory unchanged, and feature disabled by default. Verify backup/restore before release.
+- Resolve this draft PR against current main; do not overwrite the already deployed database-secret fix. Have the original maintainer validate the changes and warranty implications before merging or deploying.
+
+References: https://core.telegram.org/bots/api#keyboardbutton and https://supabase.com/docs/guides/database/postgres/row-level-security
+
+This is a design and release checklist only. No telephone collection code, migration, contact request, production change or deployment is performed by this addition.
