@@ -2488,19 +2488,27 @@ function createServer(port = 8080) {
             // Update memory map
             _adminChats.set(targetUserId, history);
 
-            // Notify the client via Telegram
+            // Internal support record and external Telegram notification are distinct.
+            let telegramStatus = 'not_sent';
             const bot = getBotInstance();
             if (bot && !isEphemeral) {
-                const tgId = targetUserId.split('_')[1];
-                if (tgId) {
-                    await bot.telegram.sendMessage(tgId,
-                        `💬 <b>Réponse du Support</b>\n\n${text || (audio ? '🎤 Message Vocal' : '')}`,
-                        { parse_mode: 'HTML' }
-                    ).catch(() => {});
+                const tgId = String(user.platform_id || user.telegram_id || '').replace(/^telegram_/, '');
+                try {
+                    const { hasServiceContactConsent } = require('./services/contact_privacy');
+                    const { supabase } = require('./config/supabase');
+                    const me = bot.botInfo || await bot.telegram.getMe();
+                    if (!user.is_blocked && await hasServiceContactConsent(supabase, me.id, tgId)) {
+                        await bot.telegram.sendMessage(tgId, '💬 Réponse du Support\n\n' + (text || '🎤 Message Vocal'));
+                        telegramStatus = 'sent';
+                    } else {
+                        telegramStatus = 'not_authorized';
+                    }
+                } catch (err) {
+                    telegramStatus = 'failed';
+                    console.warn('[SUPPORT] Telegram notification failed', err?.response?.error_code || err?.code || 'unknown');
                 }
             }
-
-            res.json({ success: true });
+            res.json({ success: true, telegramStatus });
         } catch (e) {
             res.status(500).json({ error: e.message });
         }
