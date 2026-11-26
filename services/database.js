@@ -1,4 +1,4 @@
-const { supabase, getDb } = require('../config/supabase');
+const { supabase } = require('../config/supabase');
 const encryption = require('./encryption');
 const cloudinary = require('cloudinary').v2;
 
@@ -110,26 +110,18 @@ function generateReferralCode() { return Math.random().toString(36).substring(2,
 // --- INIT ---
 
 async function init() {
-    const fs = require('fs');
-    const path = require('path');
-    const logLine = (msg) => {
-        const line = `[${new Date().toISOString()}] ${msg}\n`;
-        try { fs.appendFileSync(path.join(process.cwd(), 'debug.log'), line); } catch (e) {}
-        console.log(msg);
-    };
-
-    logLine('📦 Initialisation Database (SQLite) - Thegreenvalley BOT...');
+    console.log('[DB] Checking Supabase connection with configured server secret.');
     try {
-        await getDb(); // Initialize SQLite DB and apply schema if needed
-        const { data, error } = await supabase.from(COL_STATS).select('id').eq('id', 1).maybeSingle();
+        const { data, error } = await supabase.from(COL_STATS).select('id').eq('id', '1').maybeSingle();
         if (error) throw error;
         if (!data) {
-            await supabase.from(COL_STATS).insert({ id: 1, total_users: 0 });
+            console.warn('[DB] Supabase connection succeeded; expected statistics row is missing.');
+        } else {
+            console.log('[DB] Supabase connection verified (modern server secret; no fallback).');
         }
-        console.log('✅ Local SQLite Database connection OK');
     } catch (e) {
-        console.error('❌ Database init error:', e.message);
-        console.warn('⚠️ Bot will continue starting in offline/degraded mode.');
+        console.error('[DB] Supabase verification failed:', e?.code || 'unknown');
+        console.warn('[DB] Starting in degraded mode; connection is not verified.');
     }
 }
 
