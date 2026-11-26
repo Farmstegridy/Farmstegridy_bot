@@ -2483,7 +2483,8 @@ function createServer(port = 8080) {
             
             // Save to DB
             const updatedData = { ...user.data, chat_history: history };
-            await updateUser(targetUserId, { data: updatedData });
+            const saved = await updateUser(user.id, { data: updatedData });
+            if (!saved) return res.status(500).json({ error: 'Réponse non enregistrée' });
 
             // Update memory map
             _adminChats.set(targetUserId, history);
