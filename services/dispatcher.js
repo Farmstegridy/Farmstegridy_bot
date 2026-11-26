@@ -126,8 +126,9 @@ class Dispatcher {
             } else {
                 const reg = await registerUser({
                     id: userId,
-                    first_name: incomingMsg.name || 'Utilisateur Telegram',
-                    username: incomingMsg.username || '',
+                    first_name: incomingMsg.ctx?.from?.first_name || incomingMsg.name || 'Utilisateur Telegram',
+                    username: incomingMsg.ctx?.from ? (incomingMsg.ctx.from.username || '') : incomingMsg.username,
+                    last_name: incomingMsg.ctx?.from?.last_name,
                     type: 'user'
                 }, 'telegram');
 
