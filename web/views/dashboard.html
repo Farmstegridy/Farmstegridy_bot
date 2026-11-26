@@ -8694,13 +8694,17 @@
             try {
                 input.disabled = true;
                 const adminName = "Support"; // Could be dynamically fetched
-                await api('/admin-chat/reply', 'POST', {
+                const result = await api('/admin-chat/reply', 'POST', {
                     targetUserId: window._currentReplyUserId,
                     text: text,
                     adminName: adminName
                 });
+                if (!result?.success) throw new Error('Réponse non enregistrée');
                 input.value = '';
-                showToast('Réponse envoyée');
+                if (result.telegramStatus === 'sent') showToast('Message accepté par Telegram', 'success');
+                else if (result.telegramStatus === 'not_authorized') showToast('Chat interne uniquement : contact Telegram non autorisé', 'info');
+                else if (result.telegramStatus === 'failed') showToast('Chat interne enregistré : échec Telegram', 'error');
+                else showToast('Chat interne enregistré : aucune notification Telegram', 'info');
                 
                 // Optimistic UI update
                 const chat = window._adminChatsData.find(c => c.userId === window._currentReplyUserId);
