@@ -72,4 +72,15 @@ function installContactPrivacy(bot, db, enabled = process.env.CONTACT_PRIVACY_EN
         return next();
     });
 }
-module.exports = { installContactPrivacy, identity, POLICY };
+async function hasServiceContactConsent(db, botId, userId) {
+    if (!/^\d+$/.test(String(botId)) || !/^\d+$/.test(String(userId))) return false;
+    if (process.env.CONTACT_PRIVACY_ENABLED !== 'true') return false;
+    try {
+        const { data, error } = await db.from('bot_contact_preferences')
+            .select('service_contact_allowed,policy_version')
+            .match({telegram_user_id: String(userId), telegram_bot_id: String(botId)})
+            .maybeSingle();
+        return !error && data?.policy_version === POLICY && data.service_contact_allowed === true;
+    } catch (_) { return false; }
+}
+module.exports = { installContactPrivacy, identity, POLICY, hasServiceContactConsent };
