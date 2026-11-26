@@ -217,9 +217,9 @@ async function registerUser(platformUser, platform = 'telegram', referrerId = nu
         id: docId,
         telegram_id: String(platformUser.id),
         platform: platform,
-        username: platformUser.username || '',
-        first_name: platformUser.first_name || 'Utilisateur',
-        last_name: platformUser.last_name || '',
+        username: platformUser.username === undefined ? (existing?.username || '') : (platformUser.username || ''),
+        first_name: platformUser.first_name || existing?.first_name || 'Utilisateur',
+        last_name: platformUser.last_name === undefined ? (existing?.last_name || '') : (platformUser.last_name || ''),
         referral_code: existing?.referral_code || generateReferralCode(),
         referred_by: existing?.referred_by || referrerId,
         is_approved: existing ? existing.is_approved : autoApprove,
@@ -227,13 +227,18 @@ async function registerUser(platformUser, platform = 'telegram', referrerId = nu
     };
 
     if (existing) {
-        const needsUpdate = existing.username !== (platformUser.username || '') || existing.first_name !== (platformUser.first_name || 'Utilisateur');
+        const profile = { username: encryptedData.username, first_name: encryptedData.first_name, last_name: encryptedData.last_name };
+        const needsUpdate = Object.keys(profile).some(key => existing[key] !== profile[key]);
         if (!needsUpdate) return { user: existing, isNew: false };
-        // Update in background
-        supabase.from(COL_USERS).update(encryptedData).eq('id', docId).then(() => {
-            _userCacheSet(docId, { ...existing, ...decryptUser(encryptedData) });
-        });
-        return { user: { ...existing, ...encryptedData }, isNew: false };
+        // Only modify profile fields; do not overwrite roles, approval, balances or metadata.
+        const { data: updated, error } = await supabase.from(COL_USERS).update(profile).eq('id', docId).select().single();
+        if (error || !updated) {
+            console.error('[DB] Profile update failed:', error?.code || 'no row returned');
+            return { user: existing, isNew: false };
+        }
+        const user = decryptUser(updated);
+        _userCacheSet(docId, user);
+        return { user, isNew: false };
     }
     const { data, error } = await supabase.from(COL_USERS).upsert(encryptedData).select().single();
     

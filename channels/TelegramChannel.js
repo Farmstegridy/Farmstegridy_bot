@@ -59,7 +59,7 @@ class TelegramChannel extends Channel {
             const ms = Date.now() - start;
             if (ctx.from) {
                 console.log(
-                    `[TG] @${ctx.from.username || ctx.from.id} — ${ctx.updateType} (${ms}ms)`
+                    `[TG] ${ctx.updateType} (${ms}ms)`
                 );
             }
         });
@@ -67,6 +67,11 @@ class TelegramChannel extends Channel {
         this.bot.catch((err, ctx) => {
             console.error('[TG] Erreur Global:', err.message);
         });
+
+        // Preferences are processed in the original, authenticated Telegram context.
+        const { installContactPrivacy } = require('../services/contact_privacy');
+        const { supabase } = require('../config/supabase');
+        installContactPrivacy(this.bot, supabase);
 
         // Relayer tout vers le dispatcher
         this.bot.on('message', async (ctx) => {
